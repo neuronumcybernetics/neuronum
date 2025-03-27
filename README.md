@@ -122,8 +122,3 @@ STX = "stx::id"
 cell.sync(STX)
 ```
 
-Sync data:
-```bash
-STX = "stx::id"
-cell.sync(STX)
-```
