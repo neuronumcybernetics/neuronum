@@ -1,4 +1,5 @@
 ![Neuronum Logo](https://neuronum.net/static/logo_pip.png "Neuronum")
+
 [![Website](https://img.shields.io/badge/Website-Neuronum-blue)](https://neuronum.net)
 [![Documentation](https://img.shields.io/badge/Docs-Read%20now-green)](https://neuronum.net/docs)
 [![Tutorials](https://img.shields.io/badge/Tutorials-Watch%20now-red)](https://www.youtube.com/@neuronumnet)
@@ -41,10 +42,10 @@ Activate Transmitter (TX):
 TX = "id::tx"
 
 data = {
-"key1": "value1",
-"key2": "value2",
-"key3": "value3",
-"key4": "value4"
+    "key1": "value1",
+    "key2": "value2",
+    "key3": "value3",
+    "key4": "value4"
 }
 
 cell.activate(TX, data)
@@ -114,4 +115,10 @@ Stream data:
 ```bash
 data = "your_data"
 cell.stream(data)
+```
+
+Sync data:
+```bash
+STX = "stx::id"
+cell.sync(STX)
 ```

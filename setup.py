@@ -2,12 +2,13 @@ from setuptools import setup, find_packages
 
 setup(
     name='neuronum',
-    version='1.1.2',
+    version='1.2.0',
     author='Neuronum Cybernetics',
     author_email='welcome@neuronum.net',
     description='Interact with the Neuronum Network to build, connect & automate economic data streams',
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
+    url="https://github.com/neuronumcybernetics/neuronum",
     packages=find_packages(),
     classifiers=[
         "Programming Language :: Python :: 3",
@@ -15,7 +16,13 @@ setup(
         "Operating System :: OS Independent",
     ],
     install_requires=[
-        'requests',  
+        'requests', 
+        'websocket-client', 
     ],
+    entry_points={
+    "console_scripts": [
+        "neuronum = neuronum.cli:main",
+    ],
+    },
     python_requires='>=3.6', 
 )
