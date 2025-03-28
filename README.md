@@ -119,6 +119,6 @@ cell.stream(data)
 Sync data:
 ```bash
 STX = "stx::id"
-cell.sync(STX)
+data = cell.sync(STX)
 ```
 

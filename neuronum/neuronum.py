@@ -3,6 +3,7 @@ import socket
 from typing import Optional
 import ssl
 from websocket import create_connection
+from typing import List
 
 
 class Cell:
@@ -201,22 +202,29 @@ class Cell:
         return "Authentication successful" in response
     
 
-    def sync(self, STX: str):
+    def sync(self, STX: str) -> List[str]:
+        data = []
         try:
             ws = create_connection(f"wss://{self.network}/ws/{STX}")
             print(f"Connected to Stream {STX}")
         except Exception as e:
             print(f"Failed to connect: {e}")
-            return
+            return data
 
         try:
             while True:
                 message = ws.recv()
                 print(f"Received Data: {message}")
+                data.append(message)
         except KeyboardInterrupt:
             print("Closing connection...")
+        except Exception as e:
+            print(f"Error during data collection: {e}")
         finally:
             ws.close()
+            print("Connection closed.")
+
+        return data
     
   
 __all__ = ['Cell']
