@@ -4,6 +4,7 @@ from typing import Optional
 import ssl
 from websocket import create_connection
 from typing import List
+import json
 
 
 class Cell:
@@ -24,8 +25,8 @@ class Cell:
     def __repr__(self) -> str:
         return f"Cell(host={self.host}, password={self.password}, network={self.network}, synapse={self.synapse})"
 
-    def activate(self, txID: str, data: dict, base_url: str = "https://{network}/activateTX"):
-        full_url = base_url.format(network=self.network) + f"/{txID}"
+    def activate(self, txID: str, data: dict):
+        url = f"https://{self.network}/activateTX/{txID}"
 
         TX = {
             "data": data,
@@ -34,13 +35,13 @@ class Cell:
 
         try:
             response = requests.post(
-                full_url,
+                url,
                 json=TX,
             )
 
             response.raise_for_status()
 
-            print(f"Response from FastAPI backend: {response.json()}")
+            print(f"Response from Neuronum: {response.json()}")
 
         except requests.exceptions.RequestException as e:
             print(f"Error sending request: {e}")
@@ -49,17 +50,15 @@ class Cell:
 
 
 
-    def test_connection(self, base_url: str = "https://{network}/testConnection"):
-            full_url = base_url.format(network=self.network)
-
-            print(f"Full URL: {full_url}")
+    def test_connection(self):
+            url = f"https://{self.network}/testConnection"
 
             test = {
                 "cell": self.to_dict() 
             }
 
             try:
-                response = requests.post(full_url, json=test)
+                response = requests.post(url, json=test)
                 response.raise_for_status()
                 print(response.json())
             except requests.exceptions.RequestException as e:
@@ -83,7 +82,7 @@ class Cell:
         try:
             response = requests.post(full_url, json=store)
             response.raise_for_status()
-            print(f"Response from FastAPI backend: {response.json()}")
+            print(f"Response from Neuronum: {response.json()}")
         except requests.exceptions.RequestException as e:
             print(f"Error sending request: {e}")
         except Exception as e:
@@ -161,7 +160,7 @@ class Cell:
 
 
 
-    def stream(self, data):
+    def stream(self, label: str, data: dict, stx: Optional[str] = None):
         context = ssl.create_default_context()
         context.check_hostname = True
         context.verify_mode = ssl.CERT_REQUIRED
@@ -171,16 +170,22 @@ class Cell:
         print("SSL socket set")
 
         try:
-            print(f"Connecting to {self.network} on port 55555...")
+
+            stream = {
+                "label": label,
+                "data": data,
+            }
+
+            print(f"Connecting to {self.network}")
             self.sock.connect((self.network, 55555))
             print("SSL socket connected")
 
-            if not self.authenticate(self.sock):
+            if not self.authenticate(self.sock, stx):
                 print("Authentication failed. Cannot stream.")
                 return
 
-            self.sock.sendall(data.encode('utf-8'))
-            print(f"Sent: {data}")
+            self.sock.sendall(json.dumps(stream).encode('utf-8'))
+            print(f"Sent: {stream}")
 
         except ssl.SSLError as e:
             print(f"SSL error occurred: {e}")
@@ -193,29 +198,38 @@ class Cell:
             print("SSL connection closed.")
 
 
-    def authenticate(self, sock):
-        credentials = f"{self.host}\n{self.password}\n{self.synapse}\n"
-        sock.sendall(credentials.encode('utf-8'))
-        
-        response = sock.recv(1024).decode('utf-8')
-        print(response)
-        return "Authentication successful" in response
+    def authenticate(self, sock, stx: Optional[str] = None):
+            credentials = f"{self.host}\n{self.password}\n{self.synapse}\n{stx}\n"
+            sock.sendall(credentials.encode('utf-8'))
+            
+            response = sock.recv(1024).decode('utf-8')
+            print(response)
+            return "Authentication successful" in response
     
 
-    def sync(self, STX: str) -> List[str]:
-        data = []
+    def sync(self, stx: Optional[str] = None) -> List[str]:
+        stream = []
         try:
-            ws = create_connection(f"wss://{self.network}/ws/{STX}")
-            print(f"Connected to Stream {STX}")
+            auth = {
+                "host": self.host,
+                "password": self.password,
+                "synapse": self.synapse,
+            }
+
+            ws = create_connection(f"wss://{self.network}/sync/{stx}")
+            ws.settimeout(1)
+            print(f"Auth Payload: {auth}")
+            ws.send(json.dumps(auth))
+
         except Exception as e:
             print(f"Failed to connect: {e}")
-            return data
+            return stream
 
         try:
             while True:
                 message = ws.recv()
                 print(f"Received Data: {message}")
-                data.append(message)
+                stream.append(message)
         except KeyboardInterrupt:
             print("Closing connection...")
         except Exception as e:
@@ -224,7 +238,6 @@ class Cell:
             ws.close()
             print("Connection closed.")
 
-        return data
-    
+        return stream
   
 __all__ = ['Cell']
