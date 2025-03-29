@@ -119,5 +119,12 @@ cell.stream(label, data)
 Sync stream:
 ```bash
 stream = cell.sync()
+for operation in stream:
+    label = operation.get("label")
+    data = operation.get("data")
+    key = operation.get("data").get("key1")
+    time = operation.get("time")
+    stxID = operation.get("stxID")
+    operator = operation.get("cellHost")
 ```
 

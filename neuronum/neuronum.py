@@ -1,6 +1,6 @@
 import requests
 import socket
-from typing import Optional
+from typing import Optional, Generator
 import ssl
 from websocket import create_connection
 from typing import List
@@ -207,37 +207,38 @@ class Cell:
             return "Authentication successful" in response
     
 
-    def sync(self, stx: Optional[str] = None) -> List[str]:
-        stream = []
-        try:
-            auth = {
-                "host": self.host,
-                "password": self.password,
-                "synapse": self.synapse,
-            }
+    def sync(self, stx: Optional[str] = None) -> Generator[str, None, None]:
+        auth = {
+            "host": self.host,
+            "password": self.password,
+            "synapse": self.synapse,
+        }
+        print(f"Auth Payload: {auth}")
 
-            ws = create_connection(f"wss://{self.network}/sync/{stx}")
-            ws.settimeout(1)
-            print(f"Auth Payload: {auth}")
-            ws.send(json.dumps(auth))
+        while True:
+            try:
+                ws = create_connection(f"wss://{self.network}/sync/{stx}")
+                ws.settimeout(1)
+                ws.send(json.dumps(auth))
+                print("Connected to WebSocket.")
 
-        except Exception as e:
-            print(f"Failed to connect: {e}")
-            return stream
+                while True:
+                    try:
+                        raw_operation = ws.recv()
+                        operation = json.loads(raw_operation)
+                        yield operation
+                    except socket.timeout:
+                        print("Timeout occurred, no data received.")
+                    except KeyboardInterrupt:
+                        print("Closing connection...")
+                        ws.close()
+                        return
+            except Exception as e:
+                print(f"Connection failed: {e}")
+            finally:
+                if ws:
+                    ws.close()
+                    print("Connection closed, retrying...")
 
-        try:
-            while True:
-                message = ws.recv()
-                print(f"Received Data: {message}")
-                stream.append(message)
-        except KeyboardInterrupt:
-            print("Closing connection...")
-        except Exception as e:
-            print(f"Error during data collection: {e}")
-        finally:
-            ws.close()
-            print("Connection closed.")
-
-        return stream
   
 __all__ = ['Cell']
