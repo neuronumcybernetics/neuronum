@@ -12,8 +12,8 @@ Interact with the `Neuronum Network` to build, connect & automate economic data 
 - **Streams (STX)**: Stream economic data to synchronize devices and databases in real time
 
 ## Community Cell Features
-- **Circuits (CTX)**: A simple Key-Value-Label database (perfect for testing and side projects)
-- **Streams (STX)**: Stream economic data to synchronize devices and databases in real time
+- **Circuits (CTX)**: A simple Key-Value-Label database (testing / side projects)
+- **Streams (STX)**: Stream data to synchronize devices and databases in real time
 
 ## Getting Started
 Create your Neuronum Business/Community Cell: [Create Cell](https://neuronum.net/createcell)
@@ -102,6 +102,17 @@ Delete data from a public Circuit (CTX):
 CTX = "id::ctx"
 label = "your_label"
 data = cell.delete(label, CTX)
+```
+
+Empty your private Circuit (CTX):
+```bash
+cell.clear()
+```
+
+Empty a public Circuit (CTX):
+```bash
+CTX = "id::ctx"
+cell.clear(CTX)
 ```
 
 ### Streams (STX)
