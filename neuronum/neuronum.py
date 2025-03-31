@@ -220,7 +220,7 @@ class Cell:
         while True:
             try:
                 ws = create_connection(f"wss://{self.network}/sync/{stx}")
-                ws.settimeout(1)
+                ws.settimeout(10)
                 ws.send(json.dumps(auth))
                 print("Connected to WebSocket.")
 
@@ -230,7 +230,7 @@ class Cell:
                         operation = json.loads(raw_operation)
                         yield operation
                     except socket.timeout:
-                        print("Timeout occurred, no data received.")
+                        print("Waiting for stream...")
                     except KeyboardInterrupt:
                         print("Closing connection...")
                         ws.close()
