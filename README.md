@@ -116,7 +116,7 @@ cell.clear(CTX)
 ```
 
 ### Streams (STX)
-Stream data:
+Stream data to your private Stream (STX):
 ```bash
 label = "your_label"
 data = {
@@ -127,9 +127,33 @@ data = {
 cell.stream(label, data)
 ```
 
-Sync stream:
+Stream data to a public Stream (STX):
+```bash
+STX = "id::stx"
+label = "your_label"
+data = {
+    "key1": "value1",
+    "key2": "value2",
+    "key3": "value3",
+}
+cell.stream(label, data, STX)
+```
+
+Sync data from your private Stream (STX):
 ```bash
 stream = cell.sync()
+for operation in stream:
+    label = operation.get("label")
+    value = operation.get("data").get("key1")
+    ts = operation.get("time")
+    stxID = operation.get("stxID")
+    operator = operation.get("operator")
+```
+
+Sync data from a public Stream (STX):
+```bash
+STX = "id::stx"
+stream = cell.sync(STX)
 for operation in stream:
     label = operation.get("label")
     value = operation.get("data").get("key1")

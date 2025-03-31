@@ -24,6 +24,16 @@ class Cell:
 
     def __repr__(self) -> str:
         return f"Cell(host={self.host}, password={self.password}, network={self.network}, synapse={self.synapse})"
+    
+    
+    def authenticate(self, stx: Optional[str] = None):
+        credentials = f"{self.host}\n{self.password}\n{self.synapse}\n{stx}\n"
+        self.sock.sendall(credentials.encode('utf-8'))
+
+        response = self.sock.recv(1024).decode('utf-8')
+        print(response)
+        return "Authentication successful" in response
+    
 
     def activate(self, txID: str, data: dict):
         url = f"https://{self.network}/activateTX/{txID}"
@@ -161,28 +171,30 @@ class Cell:
 
 
     def stream(self, label: str, data: dict, stx: Optional[str] = None):
+        """Stream data after authenticating once."""
         context = ssl.create_default_context()
         context.check_hostname = True
         context.verify_mode = ssl.CERT_REQUIRED
+
         raw_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock = context.wrap_socket(raw_sock, server_hostname=self.network)
 
         print("SSL socket set")
 
         try:
-
-            stream = {
-                "label": label,
-                "data": data,
-            }
-
             print(f"Connecting to {self.network}")
             self.sock.connect((self.network, 55555))
             print("SSL socket connected")
 
-            if not self.authenticate(self.sock, stx):
+            if not self.authenticate(stx):
                 print("Authentication failed. Cannot stream.")
                 return
+
+            # Stream data
+            stream = {
+                "label": label,
+                "data": data,
+            }
 
             self.sock.sendall(json.dumps(stream).encode('utf-8'))
             print(f"Sent: {stream}")
@@ -196,16 +208,6 @@ class Cell:
         finally:
             self.sock.close()
             print("SSL connection closed.")
-
-
-    def authenticate(self, sock, stx: Optional[str] = None):
-            credentials = f"{self.host}\n{self.password}\n{self.synapse}\n{stx}\n"
-            sock.sendall(credentials.encode('utf-8'))
-            
-            response = sock.recv(1024).decode('utf-8')
-            print(response)
-            return "Authentication successful" in response
-    
 
     def sync(self, stx: Optional[str] = None) -> Generator[str, None, None]:
         auth = {
