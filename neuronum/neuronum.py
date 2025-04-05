@@ -190,7 +190,6 @@ class Cell:
                 print("Authentication failed. Cannot stream.")
                 return
 
-            # Stream data
             stream = {
                 "label": label,
                 "data": data,
