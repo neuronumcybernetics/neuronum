@@ -1,22 +1,18 @@
 ![Neuronum Logo](https://neuronum.net/static/logo_pip.png "Neuronum")
 
 [![Website](https://img.shields.io/badge/Website-Neuronum-blue)](https://neuronum.net)
-[![Documentation](https://img.shields.io/badge/Docs-Read%20now-green)](https://neuronum.net/docs)
+[![Documentation](https://img.shields.io/badge/Docs-Read%20now-green)](https://github.com/neuronumcybernetics/neuronum)
 [![Tutorials](https://img.shields.io/badge/Tutorials-Watch%20now-red)](https://www.youtube.com/@neuronumnet)
 
 Interact with the `Neuronum Network` to build, connect & automate economic data streams.
 
-## Business Cell Features
+## Cell Features
 - **Transmitters (TX)**: Automate economic data transfer + Circuits Integration
 - **Circuits (CTX)**: A simple Key-Value-Label database to store economic data
-- **Streams (STX)**: Stream economic data to synchronize devices and databases in real time
-
-## Community Cell Features
-- **Circuits (CTX)**: A simple Key-Value-Label database (testing / side projects)
-- **Streams (STX)**: Stream data to synchronize devices and databases in real time
+- **Streams (STX)**: stream, synchronize and control data in real time
 
 ## Getting Started
-Create your Neuronum Business/Community Cell: [Create Cell](https://neuronum.net/createcell)
+Create your Neuronum Cell: [Create Cell](https://neuronum.net/createcell)
 
 Install the Neuronum library using pip:
 ```bash

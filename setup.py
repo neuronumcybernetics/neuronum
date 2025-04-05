@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='neuronum',
-    version='1.3.2',
+    version='1.3.3',
     author='Neuronum Cybernetics',
     author_email='welcome@neuronum.net',
     description='Interact with the Neuronum Network to build, connect & automate economic data streams',
