@@ -9,7 +9,7 @@ Interact with the `Neuronum Network` to build, connect & automate economic data 
 ## Cell Features
 - **Transmitters (TX)**: Automate economic data transfer + Circuits Integration
 - **Circuits (CTX)**: A simple Key-Value-Label database to store economic data
-- **Streams (STX)**: stream, synchronize and control data in real time
+- **Streams (STX)**: Stream, synchronize and control data in real time
 
 ## Getting Started
 Create your Neuronum Cell: [Create Cell](https://neuronum.net/createcell)

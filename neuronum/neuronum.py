@@ -3,7 +3,6 @@ import socket
 from typing import Optional, Generator
 import ssl
 from websocket import create_connection
-from typing import List
 import json
 
 
@@ -169,9 +168,7 @@ class Cell:
             print(f"Unexpected error: {e}")
 
 
-
     def stream(self, label: str, data: dict, stx: Optional[str] = None):
-        """Stream data after authenticating once."""
         context = ssl.create_default_context()
         context.check_hostname = True
         context.verify_mode = ssl.CERT_REQUIRED
@@ -179,12 +176,9 @@ class Cell:
         raw_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock = context.wrap_socket(raw_sock, server_hostname=self.network)
 
-        print("SSL socket set")
-
         try:
             print(f"Connecting to {self.network}")
             self.sock.connect((self.network, 55555))
-            print("SSL socket connected")
 
             if not self.authenticate(stx):
                 print("Authentication failed. Cannot stream.")
@@ -206,7 +200,7 @@ class Cell:
 
         finally:
             self.sock.close()
-            print("SSL connection closed.")
+
 
     def sync(self, stx: Optional[str] = None) -> Generator[str, None, None]:
         auth = {
@@ -214,32 +208,49 @@ class Cell:
             "password": self.password,
             "synapse": self.synapse,
         }
-        print(f"Auth Payload: {auth}")
+        ws = None
 
-        while True:
-            try:
-                ws = create_connection(f"wss://{self.network}/sync/{stx}")
-                ws.settimeout(10)
-                ws.send(json.dumps(auth))
-                print("Connected to WebSocket.")
+        try:
+            while True:
+                try:
+                    ws = create_connection(f"wss://{self.network}/sync/{stx}")
+                    ws.settimeout(1)
+                    ws.send(json.dumps(auth))
+                    print("Stream connection set...")
 
-                while True:
                     try:
                         raw_operation = ws.recv()
                         operation = json.loads(raw_operation)
+                        print("Listening to Stream...")
                         yield operation
-                    except socket.timeout:
-                        print("Waiting for stream...")
-                    except KeyboardInterrupt:
-                        print("Closing connection...")
-                        ws.close()
-                        return
-            except Exception as e:
-                print(f"Connection failed: {e}")
-            finally:
-                if ws:
-                    ws.close()
-                    print("Connection closed, retrying...")
 
-  
+                        ws.settimeout(None)
+
+                        while True:
+                            raw_operation = ws.recv()
+                            operation = json.loads(raw_operation)
+                            yield operation
+                    except socket.timeout:
+                        print("No initial data received. Retrying connection...")
+                        ws.close()
+
+                except KeyboardInterrupt:
+                    print("Stream-Synchronization ended!")
+                    if ws:
+                        ws.close()
+                    print("Connection closed. Exiting.")
+                    return
+                except Exception as e:
+                    print(f"{e}")
+                finally:
+                    if ws:
+                        ws.close()
+                        print("Connection closed.")
+        except KeyboardInterrupt:
+            print("Stream-Synchronization ended!")
+            if ws:
+                ws.close()
+            print("Connection closed. Goodbye!")
+
+
 __all__ = ['Cell']
