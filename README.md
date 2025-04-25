@@ -10,6 +10,7 @@ Interact with the `Neuronum Network` to build, connect & automate economic data 
 - **Transmitters (TX)**: Automate economic data transfer + Circuits Integration
 - **Circuits (CTX)**: A simple Key-Value-Label database to store economic data
 - **Streams (STX)**: Stream, synchronize and control data in real time
+- **Nodes**: Register Nodes actively running the Neuronum library
 
 ## Getting Started
 Create your Neuronum Cell: [Create Cell](https://neuronum.net/createcell)
@@ -156,5 +157,13 @@ for operation in stream:
     ts = operation.get("time")
     stxID = operation.get("stxID")
     operator = operation.get("operator")
+```
+
+### Nodes
+Register a Neuronum Node with its associated Stream:
+```bash
+node = "name_your_node"
+STX = "id::stx"
+cell.register(node, STX)
 ```
 

@@ -59,6 +59,32 @@ class Cell:
 
 
 
+    def register(self, node: str, stx: str):
+        url = f"https://{self.network}/register/node"
+
+        node = {
+            "description": node,
+            "stream": stx,
+            "cell": self.to_dict()
+        }
+
+        try:
+            response = requests.post(
+                url,
+                json=node,
+            )
+
+            response.raise_for_status()
+
+            print(f"Response from Neuronum: {response.json()}")
+
+        except requests.exceptions.RequestException as e:
+            print(f"Error sending request: {e}")
+        except Exception as e:
+            print(f"Unexpected error: {e}")
+
+
+
     def test_connection(self):
             url = f"https://{self.network}/testConnection"
 
