@@ -4,13 +4,13 @@
 [![Documentation](https://img.shields.io/badge/Docs-Read%20now-green)](https://github.com/neuronumcybernetics/neuronum)
 [![Tutorials](https://img.shields.io/badge/Tutorials-Watch%20now-red)](https://www.youtube.com/@neuronumnet)
 
-Interact with the `Neuronum Network` to build, connect & automate economic data streams.
+Interact with the `Neuronum Network` to build, connect & automate real-time data streams.
 
 ## Cell Features
 - **Transmitters (TX)**: Automate economic data transfer + Circuits Integration
 - **Circuits (CTX)**: A simple Key-Value-Label database to store economic data
 - **Streams (STX)**: Stream, synchronize and control data in real time
-- **Nodes**: Register Nodes actively running the Neuronum library
+- **Nodes**: Register hardware nodes actively streaming real-time data into the network
 
 ## Getting Started
 Create your Neuronum Cell: [Create Cell](https://neuronum.net/createcell)
@@ -160,10 +160,19 @@ for operation in stream:
 ```
 
 ### Nodes
-Register a Neuronum Node with its associated Stream:
+Register a public Node with its associated Stream (STX):
 ```bash
-node = "name_your_node"
+node = "node_name"  # Unique node name
+mode = "public"
 STX = "id::stx"
-cell.register(node, STX)
+cell.register(node, mode, STX)
+```
+
+Register a private Node with its associated Stream (STX):
+```bash
+node = "node_name"  # Unique node name
+mode = "private"    
+STX = "id::stx"
+cell.register(node, mode, STX)
 ```
 

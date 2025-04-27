@@ -59,11 +59,17 @@ class Cell:
 
 
 
-    def register(self, node: str, stx: str):
-        url = f"https://{self.network}/register/node"
+    def register(self, node: str, mode: str, stx: str):
+        if mode == "public":
+            url = f"https://{self.network}/register/node/public"
+        elif mode == "private":
+            url = f"https://{self.network}/register/node/private"
+        else:
+            return {"error": "Invalid mode", "message": "Mode has to be 'public' or 'private'"}
 
-        node = {
-            "description": node,
+        node_data = {
+            "name": node,
+            "mode": mode,
             "stream": stx,
             "cell": self.to_dict()
         }
@@ -71,7 +77,7 @@ class Cell:
         try:
             response = requests.post(
                 url,
-                json=node,
+                json=node_data,
             )
 
             response.raise_for_status()
