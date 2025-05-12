@@ -5,7 +5,6 @@ import ssl
 from websocket import create_connection
 import json
 
-
 class Cell:
     def __init__(self, host: str, password: str, network: str, synapse: str):
         self.host = host
@@ -30,12 +29,63 @@ class Cell:
         self.sock.sendall(credentials.encode('utf-8'))
 
         response = self.sock.recv(1024).decode('utf-8')
-        print(response)
         return "Authentication successful" in response
     
 
-    def activate(self, txID: str, data: dict):
-        url = f"https://{self.network}/activateTX/{txID}"
+    def create_tx(self, descr: str, key_values: dict, ctx: str, label: str, partners: list):
+        url = f"https://{self.network}/api/create_tx"
+
+        TX = {
+            "descr": descr,
+            "key_values": key_values,
+            "ctx": ctx,
+            "label": label,
+            "partners": partners,
+            "cell": self.to_dict()
+        }
+
+        try:
+            response = requests.post(
+                url,
+                json=TX,
+            )
+
+            response.raise_for_status()
+
+            return response.json()["txID"]
+
+        except requests.exceptions.RequestException as e:
+            print(f"Error sending request: {e}")
+        except Exception as e:
+            print(f"Unexpected error: {e}")
+
+
+    def delete_tx(self, txID: str):
+        url = f"https://{self.network}/api/delete_tx"
+
+        TX = {
+            "txID": txID,
+            "cell": self.to_dict()
+        }
+
+        try:
+            response = requests.post(
+                url,
+                json=TX,
+            )
+
+            response.raise_for_status()
+
+            print(f"Response from Neuronum: {response.json()}")
+
+        except requests.exceptions.RequestException as e:
+            print(f"Error sending request: {e}")
+        except Exception as e:
+            print(f"Unexpected error: {e}")
+    
+
+    def activate_tx(self, txID: str, data: dict):
+        url = f"https://{self.network}/api/activate_tx/{txID}"
 
         TX = {
             "data": data,
@@ -58,17 +108,114 @@ class Cell:
             print(f"Unexpected error: {e}")
 
 
+    def create_ctx(self, descr: str, partners: list):
+        url = f"https://{self.network}/api/create_ctx"
 
-    def register(self, node: str, mode: str, stx: str):
+        CTX = {
+            "descr": descr,
+            "partners": partners,
+            "cell": self.to_dict()
+        }
+
+        try:
+            response = requests.post(
+                url,
+                json=CTX,
+            )
+
+            response.raise_for_status()
+
+            return response.json()["ctxID"]
+
+        except requests.exceptions.RequestException as e:
+            print(f"Error sending request: {e}")
+        except Exception as e:
+            print(f"Unexpected error: {e}")
+
+
+    def delete_ctx(self, ctxID: str):
+        url = f"https://{self.network}/api/delete_ctx"
+
+        CTX = {
+            "ctxID": ctxID,
+            "cell": self.to_dict()
+        }
+
+        try:
+            response = requests.post(
+                url,
+                json=CTX,
+            )
+
+            response.raise_for_status()
+
+            print(f"Response from Neuronum: {response.json()}")
+
+        except requests.exceptions.RequestException as e:
+            print(f"Error sending request: {e}")
+        except Exception as e:
+            print(f"Unexpected error: {e}")
+
+
+    def create_stx(self, descr: str, partners: list):
+        url = f"https://{self.network}/api/create_stx"
+
+        STX = {
+            "descr": descr,
+            "partners": partners,
+            "cell": self.to_dict()
+        }
+
+        try:
+            response = requests.post(
+                url,
+                json=STX,
+            )
+
+            response.raise_for_status()["stxID"]
+
+            return response.json()
+
+        except requests.exceptions.RequestException as e:
+            print(f"Error sending request: {e}")
+        except Exception as e:
+            print(f"Unexpected error: {e}")
+
+
+    def delete_stx(self, stxID: str):
+        url = f"https://{self.network}/api/delete_stx"
+
+        STX = {
+            "stxID": stxID,
+            "cell": self.to_dict()
+        }
+
+        try:
+            response = requests.post(
+                url,
+                json=STX,
+            )
+
+            response.raise_for_status()
+
+            print(f"Response from Neuronum: {response.json()}")
+
+        except requests.exceptions.RequestException as e:
+            print(f"Error sending request: {e}")
+        except Exception as e:
+            print(f"Unexpected error: {e}")
+
+
+    def register_node(self, descr: str, mode: str, stx: str):
         if mode == "public":
-            url = f"https://{self.network}/register/node/public"
+            url = f"https://{self.network}/api/register_node/public"
         elif mode == "private":
-            url = f"https://{self.network}/register/node/private"
+            url = f"https://{self.network}/api/register_node/private"
         else:
             return {"error": "Invalid mode", "message": "Mode has to be 'public' or 'private'"}
 
         node_data = {
-            "name": node,
+            "descr": descr,
             "mode": mode,
             "stream": stx,
             "cell": self.to_dict()
@@ -82,7 +229,7 @@ class Cell:
 
             response.raise_for_status()
 
-            print(f"Response from Neuronum: {response.json()}")
+            return response.json()["nodeID"]
 
         except requests.exceptions.RequestException as e:
             print(f"Error sending request: {e}")
@@ -90,9 +237,217 @@ class Cell:
             print(f"Unexpected error: {e}")
 
 
+    def delete_node(self, nodeID: str):
+        url = f"https://{self.network}/api/delete_node"
 
-    def test_connection(self):
-            url = f"https://{self.network}/testConnection"
+        delete_node = {
+            "nodeID": nodeID,
+            "cell": self.to_dict()
+        }
+
+        try:
+            response = requests.post(
+                url,
+                json=delete_node,
+            )
+
+            response.raise_for_status()
+            print(response.json())
+
+        except requests.exceptions.RequestException as e:
+            print(f"Error sending request: {e}")
+        except Exception as e:
+            print(f"Unexpected error: {e}")
+
+
+    def sign_contract(self, contractID: str):
+        full_url = f"https://{self.network}/api/sign_contract"
+        
+        sign_contract = {
+            "contractID": contractID,
+            "cell": self.to_dict() 
+        }
+
+        try:
+            response = requests.post(full_url, json=sign_contract)
+            response.raise_for_status()
+            return response.json()["token"]
+        except requests.exceptions.RequestException as e:
+            print(f"Error sending request: {e}")
+        except Exception as e:
+            print(f"Unexpected error: {e}")
+
+
+    def validate_token(self, token: str, cp: str, contractID: str):
+        full_url = f"https://{self.network}/api/validate_token"
+        
+        validate = {
+            "token": token,
+            "cp": cp,
+            "contractID": contractID,
+            "cell": self.to_dict() 
+        }
+
+        try:
+            response = requests.post(full_url, json=validate)
+            response.raise_for_status()
+            return response.json()["validity"]
+        except requests.exceptions.RequestException as e:
+            print(f"Error sending request: {e}")
+        except Exception as e:
+            print(f"Unexpected error: {e}")
+
+
+    def request_token(self, cp: str, contractID: str):
+        full_url = f"https://{self.network}/api/request_token"
+        
+        request_token = {
+            "cp": cp,
+            "contractID": contractID,
+            "cell": self.to_dict() 
+        }
+
+        try:
+            response = requests.post(full_url, json=request_token)
+            response.raise_for_status()
+            print(response.json())
+        except requests.exceptions.RequestException as e:
+            print(f"Error sending request: {e}")
+        except Exception as e:
+            print(f"Unexpected error: {e}")
+
+    
+    def present_token(self, token: str, cp: str, contractID: str):
+        full_url = f"https://{self.network}/api/present_token"
+        
+        present_token = {
+            "token": token,
+            "cp": cp,
+            "contractID": contractID,
+            "cell": self.to_dict() 
+        }
+
+        try:
+            response = requests.post(full_url, json=present_token)
+            response.raise_for_status()
+            print(response.json()) 
+        except requests.exceptions.RequestException as e:
+            print(f"Error sending request: {e}")
+        except Exception as e:
+            print(f"Unexpected error: {e}")
+
+
+    def create_contract(self, descr: str, details: dict, partners: list):
+        full_url = f"https://{self.network}/api/create_contract"
+        
+        create_contract = {
+            "cell": self.to_dict(),  
+            "descr": descr,
+            "details": details,
+            "partners": partners
+        }
+        try:
+            response = requests.post(full_url, json=create_contract)
+            response.raise_for_status()
+            return response.json()["contractID"]
+        except requests.exceptions.RequestException as e:
+            print(f"Error sending request: {e}")
+        except Exception as e:
+            print(f"Unexpected error: {e}")
+
+
+    def delete_contract(self, contractID: str):
+        full_url = f"https://{self.network}/api/delete_contract"
+        
+        request = {
+            "cell": self.to_dict(),  
+            "contractID": contractID
+        }
+
+        try:
+            response = requests.post(full_url, json=request)
+            response.raise_for_status()
+            print(f"Response from Neuronum: {response.json()}")
+        except requests.exceptions.RequestException as e:
+            print(f"Error sending request: {e}")
+        except Exception as e:
+            print(f"Unexpected error: {e}")
+
+
+    def list_contracts(self, cp: str):
+        full_url = f"https://{self.network}/api/list_contracts"
+        
+        list_contracts = {
+            "cell": self.to_dict(),  
+            "cp": cp
+        }
+
+        try:
+            response = requests.post(full_url, json=list_contracts)
+            response.raise_for_status()
+            return response.json()
+        except requests.exceptions.RequestException as e:
+            print(f"Error sending request: {e}")
+        except Exception as e:
+            print(f"Unexpected error: {e}")
+
+
+    def list_tx(self, cp: str):
+        full_url = f"https://{self.network}/api/list_tx"
+        
+        list_tx = {
+            "cell": self.to_dict(),  
+            "cp": cp
+        }
+
+        try:
+            response = requests.post(full_url, json=list_tx)
+            response.raise_for_status()
+            return response.json()
+        except requests.exceptions.RequestException as e:
+            print(f"Error sending request: {e}")
+        except Exception as e:
+            print(f"Unexpected error: {e}")
+
+
+    def list_ctx(self, cp: str):
+        full_url = f"https://{self.network}/api/list_ctx"
+        
+        list_ctx = {
+            "cell": self.to_dict(),  
+            "cp": cp
+        }
+
+        try:
+            response = requests.post(full_url, json=list_ctx)
+            response.raise_for_status()
+            return response.json()
+        except requests.exceptions.RequestException as e:
+            print(f"Error sending request: {e}")
+        except Exception as e:
+            print(f"Unexpected error: {e}")
+
+
+    def list_stx(self, cp: str):
+        full_url = f"https://{self.network}/api/list_stx"
+        
+        list_stx = {
+            "cell": self.to_dict(),  
+            "cp": cp
+        }
+
+        try:
+            response = requests.post(full_url, json=list_stx)
+            response.raise_for_status()
+            return response.json()
+        except requests.exceptions.RequestException as e:
+            print(f"Error sending request: {e}")
+        except Exception as e:
+            print(f"Unexpected error: {e}")
+
+
+    def connect(self):
+            url = f"https://{self.network}/api/connect"
 
             test = {
                 "cell": self.to_dict() 
@@ -101,7 +456,7 @@ class Cell:
             try:
                 response = requests.post(url, json=test)
                 response.raise_for_status()
-                print(response.json())
+                print(response.json()["connection"]) 
             except requests.exceptions.RequestException as e:
                 print(f"Error sending request: {e}")
             except Exception as e:
@@ -110,9 +465,9 @@ class Cell:
         
     def store(self, label: str, data: dict, ctx: Optional[str] = None):
         if ctx:
-            full_url = f"https://{self.network}/store_ctx/{ctx}"
+            full_url = f"https://{self.network}/api/store_in_ctx/{ctx}"
         else:
-            full_url = f"https://{self.network}/store"
+            full_url = f"https://{self.network}/api/store"
         
         store = {
             "label": label,
@@ -133,11 +488,9 @@ class Cell:
 
     def load(self, label: str, ctx: Optional[str] = None):
         if ctx:
-            full_url = f"https://{self.network}/load_ctx/{ctx}"
+            full_url = f"https://{self.network}/api/load_from_ctx/{ctx}"
         else:
-            full_url = f"https://{self.network}/load"
-        
-        print(f"Full URL: {full_url}")
+            full_url = f"https://{self.network}/api/load"
 
         load = {
             "label": label,
@@ -157,11 +510,9 @@ class Cell:
 
     def delete(self, label: str, ctx: Optional[str] = None):
         if ctx:
-            full_url = f"https://{self.network}/delete_ctx/{ctx}"
+            full_url = f"https://{self.network}/api/delete_from_ctx/{ctx}"
         else:
-            full_url = f"https://{self.network}/delete"
-        
-        print(f"Full URL: {full_url}")
+            full_url = f"https://{self.network}/api/delete"
 
         delete = {
             "label": label,
@@ -180,11 +531,9 @@ class Cell:
 
     def clear(self, ctx: Optional[str] = None):
         if ctx:
-            full_url = f"https://{self.network}/clear_ctx/{ctx}"
+            full_url = f"https://{self.network}/api/clear_ctx/{ctx}"
         else:
-            full_url = f"https://{self.network}/clear"
-        
-        print(f"Full URL: {full_url}")
+            full_url = f"https://{self.network}/api/clear"
 
         clear = {
             "cell": self.to_dict() 
@@ -240,48 +589,35 @@ class Cell:
             "password": self.password,
             "synapse": self.synapse,
         }
-        ws = None
 
         try:
-            while True:
-                try:
-                    ws = create_connection(f"wss://{self.network}/sync/{stx}")
-                    ws.settimeout(1)
-                    ws.send(json.dumps(auth))
-                    print("Stream connection set...")
+            ws = create_connection(f"wss://{self.network}/sync/{stx}")
+            ws.send(json.dumps(auth))
+            print("Stream connection set...")
 
+            try:
+                while True:
                     try:
                         raw_operation = ws.recv()
                         operation = json.loads(raw_operation)
                         print("Listening to Stream...")
                         yield operation
 
-                        ws.settimeout(None)
-
-                        while True:
-                            raw_operation = ws.recv()
-                            operation = json.loads(raw_operation)
-                            yield operation
                     except socket.timeout:
-                        print("No initial data received. Retrying connection...")
-                        ws.close()
+                        print("No initial data received. Continuing to listen...") 
+                        continue 
 
-                except KeyboardInterrupt:
-                    print("Stream-Synchronization ended!")
-                    if ws:
-                        ws.close()
-                    print("Connection closed. Exiting.")
-                    return
-                except Exception as e:
-                    print(f"{e}")
-                finally:
-                    if ws:
-                        ws.close()
-                        print("Connection closed.")
+            except KeyboardInterrupt:
+                print("Stream-Synchronization ended!")
+            except Exception as e:
+                print(f"Error: {e}")
+            finally:
+                ws.close()
+                print("Connection closed.")
+
         except KeyboardInterrupt:
             print("Stream-Synchronization ended!")
-            if ws:
-                ws.close()
+            ws.close()
             print("Connection closed. Goodbye!")
 
 

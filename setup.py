@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='neuronum',
-    version='1.4.1',
+    version='1.4.2',
     author='Neuronum Cybernetics',
     author_email='welcome@neuronum.net',
     description='Interact with the Neuronum Network to build, connect & automate real-time data streams',
@@ -20,7 +20,8 @@ setup(
     ],
     install_requires=[
         'requests', 
-        'websocket-client', 
+        'websocket-client',
+        'iota-sdk',
     ],
     python_requires='>=3.6', 
 )
