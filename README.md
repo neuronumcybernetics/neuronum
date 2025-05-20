@@ -16,6 +16,8 @@
 To interact with the Network you will need to create a Neuronum Cell. 
 Create your Cell: [Create Cell](https://neuronum.net/createcell)
 
+
+### Installation & Connection
 Start with installing the Neuronum library using pip:
 ```python
 pip install neuronum
