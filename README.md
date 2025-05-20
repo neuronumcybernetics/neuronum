@@ -4,17 +4,15 @@
 [![Documentation](https://img.shields.io/badge/Docs-Read%20now-green)](https://github.com/neuronumcybernetics/neuronum)
 [![Tutorials](https://img.shields.io/badge/Tutorials-Watch%20now-red)](https://www.youtube.com/@neuronumnet)
 
-`Neuronum` is a cybernetic framework enabling businesses to build interconnected networks of Hardware and Software components
+`Neuronum` is a cybernetic framework enabling businesses to build & automate interconnected networks of soft- and hardware components
 
 ## Features
 - **Cell**: Identity to connect and interact with the Neuronum Network
 - **Transmitters (TX)**: Automate economic data transfer and storage
 - **Circuits (CTX)**: Store data in a Key-Value-Label database
 - **Streams (STX)**: Stream, synchronize and control data in real time
-- **Nodes**: Hard-/Software components participating in the Network ecosystem
-- **Contracts/Tokens**: Automate Contract-based authorization between Nodes
+- **Nodes**: Soft-/Hardware components participating in the Network ecosystem
 
-## Getting Started
 To interact with the Network you will need to create a Neuronum Cell. 
 Create your Cell: [Create Cell](https://neuronum.net/createcell)
 
@@ -28,180 +26,182 @@ Configure and test Cell connection:
 import neuronum
 
 cell = neuronum.Cell(
-host="host::cell",                              # specify your cell host 
-password="your_password",                       # enter your cell password 
-network="neuronum.net",                         # choose network 
-synapse="your_synapse"                          # provide the synapse (token)
-)
-cell.connect()
+host="host::cell",                                                      # cell host 
+password="your_password",                                               # cell password 
+network="neuronum.net",                                                 # cell network 
+synapse="your_synapse"                                                  # cell synapse
+)           
+cell.connect()                                                          # connect to network
 ```
 
 ### Transmitters (TX)
-Transmitters (TX) are used to create predefined templates to receive and send data in a standardized format. Data send with TX is always and automatically stored in a predefined Circuit (CTX)
+Transmitters (TX) are used to create predefined templates to receive and send data in a standardized format. Data sent with TX is always and automatically stored in a predefined Circuit (CTX)
 
 Create Transmitter (TX):
 ```python
-descr = "Test Transmitter"                      # short description (max 25 characters)
-key_values = {                                  # predefined keys with example values
+descr = "Test Transmitter"                                              # description (max 25 characters)
+key_values = {                                                          # defined keys and example values
     "key1": "value1",
     "key2": "value2",
     "key3": "value3",
 }
-ctx = "id::ctx"                                 # target Circuit (CTX)
-label = "key1:key2"                             # label data sent with the TX
-partners = ["id::cell", "id::cell"]             # authorized cells
-txID = cell.create_tx(decr, key_values, ctx, label, partners) 
+ctx = "id::ctx"                                                         # select Circuit (CTX)
+label = "key1:key2"                                                     # label TX data
+partners = ["id::cell", "id::cell"]                                     # authorized Cells
+txID = cell.create_tx(descr, key_values, ctx, label, partners) 
 ```
 
 Activate Transmitter (TX):
 ```python
-TX = "id::tx"                                   # specify the Transmitter (TX)
-data = {                                        # enter key values
+TX = "id::tx"                                                           # select Transmitter (TX)
+data = {                                                                # enter key-values
     "key1": "value1",
     "key2": "value2",
     "key3": "value3",
 }
-cell.activate_tx(TX, data)  
+cell.activate_tx(TX, data)                                              # activate TX
 ```
 
 Delete Transmitter (TX):
 ```python
-TX = "id::tx"                                   # specify the Transmitter (TX)
-cell.delete_tx(TX)  
+TX = "id::tx"                                                           # select Transmitter (TX)
+cell.delete_tx(TX)                                                      # delete TX
 ```
 
-List Transmitter (TX) from cell:
+List Transmitter (TX) from Cell:
 ```python
-cell = "id::cell"                               # specify cell
-txList = cell.list_tx(cell)  
+cellID = "id::cell"                                                       # select Cell
+txList = cell.list_tx(cellID)                                             # list Transmitters (TX)
 ```
 
 ### Circuits (CTX)
-Circuits (CTX) store and organize data sent via Transmitters (TX) using a Key-Value-Label system, ensuring efficient retrieval and management within the Neuronum network
+Circuits (CTX) store and organize data sent via Transmitters (TX) using a Key-Value-Label system
 
 Create Circuit (CTX):
 ```python
-descr = "Test Circuit"                          # short description of the circuit (max 25 characters) 
-partners = ["id::cell", "id::cell"]             # authorized cells
-ctxID = cell.create_ctx(decr, partners)   
+descr = "Test Circuit"                                                  # description (max 25 characters) 
+partners = ["id::cell", "id::cell"]                                     # authorized Cells
+ctxID = cell.create_ctx(descr, partners)                                # create Circuit (CTX)
 ```
 
 Store data on your private Circuit (CTX):
 ```python
-label = "your_label"                            # define a unique label (tag)
-data = {                                        # store data as key-value pairs
+label = "your_label"                                                    # data label (should be unique)
+data = {                                                                # data as key-value pairs
     "key1": "value1",
     "key2": "value2",
     "key3": "value3",
 }
-cell.store(label, data)
+cell.store(label, data)                                                 # store data
 ```
 
 Store data on a public Circuit (CTX):
 ```python
-CTX = "id::ctx"                                 # specify the Circuit (CTX
-label = "your_label"                            # define a unique label (tag)
-data = {                                        # store data as key-value pairs
+CTX = "id::ctx"                                                         # select Circuit (CTX
+label = "your_label"                                                    # data label (should be unique)
+data = {                                                                # data as key-value pairs
     "key1": "value1",
     "key2": "value2",
     "key3": "value3",
 }
-cell.store(label, data, CTX)
+cell.store(label, data, CTX)                                            # store data
 ```
 
 Load data from your private Circuit (CTX):
 ```python
-label = "your_label"                            # load data by label
-data = cell.load(label)  
-key1 = data["key1"]                             # get the data from the keys
+label = "your_label"                                                    # select label
+data = cell.load(label)                                                 # load data by label
+key1 = data["key1"]                                                     # get data from key
 key2 = data["key2"]
 key3 = data["key3"]
+print(key1, key2, key3)                                                 # print data
 ```
 
 Load data from a public Circuit (CTX):
 ```python
-CTX = "id::ctx"                                 # specify the CTX
-label = "your_label"                            # load data by label
-data = cell.load(label, CTX)    
-key1 = data["key1"]                             # get the data from the keys
+CTX = "id::ctx"                                                         # select Circuit (CTX)
+label = "your_label"                                                    # select label
+data = cell.load(label, CTX)                                            # load data by label
+key1 = data["key1"]                                                     # get data from key
 key2 = data["key2"]
 key3 = data["key3"]
+print(key1, key2, key3)                                                 # print data
 ```
 
 Delete data from your private Circuit (CTX):
 ```python
-label = "your_label"                            # delete data by label
-cell.delete(label)      
+label = "your_label"                                                    # select label
+cell.delete(label)                                                      # delete data by label
 ```
 
 Delete data from a public Circuit (CTX):
 ```python
-CTX = "id::ctx"                                 # specify the CTX
-label = "your_label"                            # delete data by label
-cell.delete(label, CTX)
+CTX = "id::ctx"                                                         # select Circuits (CTX)
+label = "your_label"                                                    # select label
+cell.delete(label, CTX)                                                 # delete data by label
 ```
 
-Empty your private Circuit (CTX):
+Clear your private Circuit (CTX):
 ```python
-cell.clear()
+cell.clear()                                                            # clear Circuit (CTX)
 ```
 
-Empty a Circuit (CTX):
+Clear Circuit (CTX):
 ```python
-CTX = "id::ctx"                                 # specify the CTX
-cell.clear(CTX)
+CTX = "id::ctx"                                                         # select Circuit (CTX)
+cell.clear(CTX)                                                         # clear CTX
 ```
 
 Delete Circuit (CTX):
 ```python
-CTX = "id::ctx"                                 # specify the Circuit (CTX)
-cell.delete_ctx(CTX)   
+CTX = "id::ctx"                                                         # select Circuit (CTX)
+cell.delete_ctx(CTX)                                                    # delete CTX
 ```
 
-List Circuits (CTX) from cell:
+List Circuits (CTX) from Cell:
 ```python
-cell = "id::cell"                               # specify cell
-ctxList = cell.list_ctx(cell)  
+cellID = "id::cell"                                                       # select Cell
+ctxList = cell.list_ctx(cellID)                                           # list Circuits (CTX)
 ```
 
 ### Streams (STX)
-Streams (STX) facilitate real-time data synchronization and interaction, ensuring seamless connectivity between all Nodes in the Neuronum network
+Streams (STX) facilitate real-time data synchronization and interaction, ensuring real-time connectivity between Nodes in the Neuronum network
 
-Create Stream (CTX):
+Create Stream (STX):
 ```python
-descr = "Test Stream"                           # short description (max 25 characters) 
-partners = ["id::cell", "id::cell"]             # authorized cells
-stxID = cell.create_stx(decr, partners)  
+descr = "Test Stream"                                                   # description (max 25 characters) 
+partners = ["id::cell", "id::cell"]                                     # authorized Cells
+stxID = cell.create_stx(descr, partners)                                # create Stream (STX)
 ```
 
 Stream data to your private Stream (STX):
 ```python
-label = "your_label"                            # label your data
-data = {                                        # define data package (key-values)
+label = "your_label"                                                    # data label
+data = {                                                                # data as key-value pairs
     "key1": "value1",
     "key2": "value2",
     "key3": "value3",
 }
-cell.stream(label, data)
+cell.stream(label, data)                                                # stream data
 ```
 
 Stream data to a public Stream (STX):
 ```python
-STX = "id::stx"                                 # specify the STX
-label = "your_label"                            # label your data
-data = {                                        # define data package (key-values)
+STX = "id::stx"                                                         # select Stream (STX)
+label = "your_label"                                                    # data label
+data = {                                                                # data as key-value pairs
     "key1": "value1",
     "key2": "value2",
     "key3": "value3",
 }
-cell.stream(label, data, STX)
+cell.stream(label, data, STX)                                           # stream data
 ```
 
 Sync data from your private Stream (STX):
 ```python
-stream = cell.sync()                            # retrieve stream data
-for operation in stream:                        # iterate through each operation
-    label = operation.get("label")              # get the operation details
+stream = cell.sync()                                                    # synchronize Stream (STX)
+for operation in stream:                                                # load stream operations
+    label = operation.get("label")                                      # get the operation details by key
     key1 = operation.get("data").get("key1")
     key2 = operation.get("data").get("key2")
     key3 = operation.get("data").get("key3")
@@ -212,10 +212,10 @@ for operation in stream:                        # iterate through each operation
 
 Sync data from a public Stream (STX):
 ```python
-STX = "id::stx"                                 # specify the STX  
-stream = cell.sync(STX)                         # retrieve stream data
-for operation in stream:                        # iterate through each operation
-    label = operation.get("label")              # get the operation details
+STX = "id::stx"                                                         # select Stream (STX)  
+stream = cell.sync(STX)                                                 # synchronize Stream (STX)
+for operation in stream:                                                # load stream operations
+    label = operation.get("label")                                      # get the operation details by key
     key1 = operation.get("data").get("key1")
     key2 = operation.get("data").get("key2")
     key3 = operation.get("data").get("key3")
@@ -224,10 +224,10 @@ for operation in stream:                        # iterate through each operation
     operator = operation.get("operator")
 ```
 
-List Streams (STX) from cell:
+List Streams (STX) from Cell:
 ```python
-cell = "id::cell"                               # specify cell
-stxList = cell.list_stx(cell)  
+cellID = "id::cell"                                                       # select Cell
+stxList = cell.list_stx(cellID)                                           # list Streams (STX)
 ```
 
 ### Nodes
@@ -235,65 +235,14 @@ Neuronum Nodes are computing hardware running the Neuronum Client Library, enabl
 
 Register a Node with its associated Stream (STX):
 ```python
-descr = "node_name"                             # short description (max 25 characters) 
-mode = "public"                                 # set to "public or "private
-STX = "id::stx"                                 # specify the STX
-nodeID = cell.register_node(descr, mode, STX)  
+descr = "node_name"                                                     # description (max 25 characters) 
+mode = "public"                                                         # "public" or "private" Node
+STX = "id::stx"                                                         # select Stream (STX)
+nodeID = cell.register_node(descr, mode, STX)                           # register Node
 ```
 
-Remove a Node:
+Delete Node:
 ```python
-nodeID = "id::node"                             # get Node by ID
-cell.delete_node(nodeID)  
-```
-
-
-### Contracts/Tokens
-Contracts define rules for authorization, allowing users to sign and generate unique tokens for secure access
-
-Create a Contract:
-```python
-descr = "Test Contract"                         # short description (max 25 characters)
-details = {                                     # define token details
-    "price_in_eur": 10,                         # token price in EUR
-    "max_usage": 10,                            # max number of uses
-    "validity_in_min": 10                       # token expiration time (minutes)
-    }          
-partners = ["id::cell", "id::cell"]           
-contractID = cell.create_contract(descr, details, partners)
-```
-
-Sign a Contract:
-```python         
-contractID = "id::contract"                     # specify the contract        
-token = cell.sign_contract(contractID)
-```
-
-Request a Token from another Cell to authorize a service:
-```python         
-cp = "id::cell"                                 # specify the counterparty cell
-contractID = "id::contract"                     # specify the contract  
-cell.request_token(cp, contractID)
-```
-
-Present a Token to another Cell to authorize a service:
-```python   
-token = "token"                                 # specify the token
-cp = "id::cell"                                 # specify the counterparty cell
-contractID = "id::contract"                     # specify the contract  
-cell.present_token(token, cp, contractID)
-```
-
-Validate a Token to authorize a service:
-```python   
-token = "token"                                 # specify the token
-cp = "id::cell"                                 # specify the counterparty cell
-contractID = "id::contract"                     # specify the contract  
-cell.validate_token(token, cp, contractID)
-```
-
-List Contracts from cell:
-```python
-cell = "id::cell"                               # specify cell
-contractList = cell.list_contracts(cell)  
+nodeID = "id::node"                                                     # select Node
+cell.delete_node(nodeID)                                                # delete Node
 ```

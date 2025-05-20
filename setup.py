@@ -2,10 +2,10 @@ from setuptools import setup, find_packages
 
 setup(
     name='neuronum',
-    version='1.4.2',
+    version='1.5.0',
     author='Neuronum Cybernetics',
     author_email='welcome@neuronum.net',
-    description='Interact with the Neuronum Network to build, connect & automate real-time data streams',
+    description='Interact with the Neuronum Network to build & automate interconnected networks of soft- and hardware components',
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
     url="https://neuronum.net",
