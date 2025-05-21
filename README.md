@@ -8,8 +8,8 @@
 
 ## Features
 - **Cell**: Identity to connect and interact with the Neuronum Network
-- **Transmitters (TX)**: Automate economic data transfer and storage
-- **Circuits (CTX)**: Store data in a Key-Value-Label database
+- **Transmitters (TX)**: Automate economic data transfer
+- **Circuits (CTX)**: Store data in Key-Value-Label databases
 - **Streams (STX)**: Stream, synchronize and control data in real time
 - **Nodes**: Soft-/Hardware components participating in the Network ecosystem
 
@@ -37,7 +37,7 @@ cell.connect()                                                    # connect to n
 ```
 
 ### Transmitters (TX)
-Transmitters (TX) are used to create predefined templates to receive and send data in a standardized format. Data sent with TX is always and automatically stored in a predefined Circuit (CTX)
+Transmitters (TX) are used to create predefined templates to receive and send data in a standardized format.
 
 Create Transmitter (TX):
 ```python
@@ -47,10 +47,10 @@ key_values = {                                                    # defined keys
     "key2": "value2",
     "key3": "value3",
 }
-ctx = "id::ctx"                                                   # select Circuit (CTX)
+stx = "id::stx"                                                   # select Stream (STX)
 label = "key1:key2"                                               # label TX data
 partners = ["id::cell", "id::cell"]                               # authorized Cells
-txID = cell.create_tx(descr, key_values, ctx, label, partners)    # create TX
+txID = cell.create_tx(descr, key_values, stx, label, partners)    # create TX
 ```
 
 Activate Transmitter (TX):
@@ -77,7 +77,7 @@ txList = cell.list_tx(cellID)                                     # list Transmi
 ```
 
 ### Circuits (CTX)
-Circuits (CTX) store and organize data sent via Transmitters (TX) using a Key-Value-Label system
+Circuits (CTX) store and organize data using a Key-Value-Label system
 
 Create Circuit (CTX):
 ```python

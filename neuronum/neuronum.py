@@ -32,13 +32,13 @@ class Cell:
         return "Authentication successful" in response
     
 
-    def create_tx(self, descr: str, key_values: dict, ctx: str, label: str, partners: list):
+    def create_tx(self, descr: str, key_values: dict, stx: str, label: str, partners: list):
         url = f"https://{self.network}/api/create_tx"
 
         TX = {
             "descr": descr,
             "key_values": key_values,
-            "ctx": ctx,
+            "stx": stx,
             "label": label,
             "partners": partners,
             "cell": self.to_dict()
