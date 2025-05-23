@@ -1,29 +1,29 @@
 ![Neuronum Logo](https://neuronum.net/static/logo_pip.png "Neuronum")
 
-[![Website](https://img.shields.io/badge/Website-Neuronum-blue)](https://neuronum.net)
-[![Documentation](https://img.shields.io/badge/Docs-Read%20now-green)](https://github.com/neuronumcybernetics/neuronum)
-[![Tutorials](https://img.shields.io/badge/Tutorials-Watch%20now-red)](https://www.youtube.com/@neuronumnet)
+[![Website](https://img.shields.io/badge/Website-Neuronum-blue)](https://neuronum.net) [![Documentation](https://img.shields.io/badge/Docs-Read%20now-green)](https://github.com/neuronumcybernetics/neuronum)
 
 `Neuronum` is a cybernetic framework enabling businesses to build & automate interconnected networks of soft- and hardware components
 
 ## Features
 - **Cell**: Identity to connect and interact with the Neuronum Network
+- **Nodes/Node-CLI**: Setup and manage Neuronum Nodes from the command line.
 - **Transmitters (TX)**: Automate economic data transfer
 - **Circuits (CTX)**: Store data in Key-Value-Label databases
 - **Streams (STX)**: Stream, synchronize and control data in real time
-- **Nodes**: Soft-/Hardware components participating in the Network ecosystem
-
-To interact with the Network you will need to create a Neuronum Cell. 
-Create your Cell: [Create Cell](https://neuronum.net/createcell)
+- **Contracts/Tokens**: Automate contract-based authorization between Nodes and Cells
 
 
-### Installation & Connection
-Start with installing the Neuronum library using pip:
+### Installation
+Install the Neuronum library using pip:
 ```python
 pip install neuronum
 ```
 
-Configure and test Cell connection:
+### Cell
+To interact with the Network you will need to create a Neuronum Cell. 
+Create your Cell: [Create Cell](https://neuronum.net/createcell)
+
+Set and test Cell connection:
 ```python
 import neuronum
 
@@ -34,6 +34,39 @@ network="neuronum.net",                                           # cell network
 synapse="your_synapse"                                            # cell synapse
 )           
 cell.connect()                                                    # connect to network
+```
+
+### Nodes/Node-CLI
+Neuronum Nodes are computing hardware powered by the Neuronum library, enabling seamless communication between Nodes and Cells.
+
+Initialize your Node:
+```bash
+>>> neuronum init-node   
+```
+
+Start your Node:
+```bash
+>>> neuronum start-node   
+```
+
+Stop your Node:
+```bash
+>>> neuronum stop-node   
+```
+
+Register your Node on the Neuronum Network:
+```bash
+>>> neuronum register-node   
+```
+
+Update your Node:
+```bash
+>>> neuronum update-node   
+```
+
+Delete your Node:
+```bash
+>>> neuronum delete-node   
 ```
 
 ### Transmitters (TX)
@@ -70,10 +103,9 @@ TX = "id::tx"                                                     # select Trans
 cell.delete_tx(TX)                                                # delete TX
 ```
 
-List Transmitter (TX) from Cell:
-```python
-cellID = "id::cell"                                               # select Cell
-txList = cell.list_tx(cellID)                                     # list Transmitters (TX)
+List Transmitter (TX) your Cell can activate:
+```python                                            
+txList = cell.list_tx()                                           # list Transmitters (TX)
 ```
 
 ### Circuits (CTX)
@@ -160,10 +192,9 @@ CTX = "id::ctx"                                                   # select Circu
 cell.delete_ctx(CTX)                                              # delete CTX
 ```
 
-List Circuits (CTX) from Cell:
-```python
-cellID = "id::cell"                                               # select Cell
-ctxList = cell.list_ctx(cellID)                                   # list Circuits (CTX)
+List Circuits (CTX) your Cell can interact with:
+```python                                            
+ctxList = cell.list_ctx()                                         # list Circuits (CTX)
 ```
 
 ### Streams (STX)
@@ -226,25 +257,56 @@ for operation in stream:                                          # load stream 
     operator = operation.get("operator")
 ```
 
-List Streams (STX) from Cell:
-```python
-cellID = "id::cell"                                               # select Cell
-stxList = cell.list_stx(cellID)                                   # list Streams (STX)
+List Streams (STX) your Cell can interact with:
+```python                                            
+stxList = cell.list_stx()                                         # list Streams (STX)
 ```
 
-### Nodes
-Neuronum Nodes are computing hardware running the Neuronum Client Library, enabling seamless data transmission, synchronization, and facilitating public Stream (STX) access
+### Contracts/Tokens
+Contracts define rules for authorization, allowing users to sign and generate unique tokens for secure access
 
-Register a Node with its associated Stream (STX):
+Create a Contract:
 ```python
-descr = "node_name"                                               # description (max 25 characters) 
-mode = "public"                                                   # "public" or "private" Node
-STX = "id::stx"                                                   # select Stream (STX)
-nodeID = cell.register_node(descr, mode, STX)                     # register Node
+descr = "Test Contract"                                           # short description (max 25 characters)
+details = {                                                       # define token details
+    "price_in_eur": 10,                                           # token price in EUR
+    "max_usage": 10,                                              # max number of uses
+    "validity_in_min": 10                                         # token expiration time (minutes)
+    }          
+partners = ["id::cell", "id::cell"]           
+contractID = cell.create_contract(descr, details, partners)
 ```
 
-Delete Node:
-```python
-nodeID = "id::node"                                               # select Node
-cell.delete_node(nodeID)                                          # delete Node
+Sign a Contract:
+```python         
+contractID = "id::contract"                                       # select contract        
+token = cell.sign_contract(contractID)
+```
+
+Request a Token from another Cell to authorize a service:
+```python         
+cp = "id::cell"                                                   # select counterparty cell
+contractID = "id::contract"                                       # select contract  
+cell.request_token(cp, contractID)
+```
+
+Present a Token to another Cell to authorize a service:
+```python   
+token = "token"                                                   # select token
+cp = "id::cell"                                                   # select counterparty cell
+contractID = "id::contract"                                       # select the contract  
+cell.present_token(token, cp, contractID)
+```
+
+Validate a Token to authorize a service:
+```python   
+token = "token"                                                   # select token
+cp = "id::cell"                                                   # select counterparty cell
+contractID = "id::contract"                                       # select contract  
+cell.validate_token(token, cp, contractID)
+```
+
+List Contracts your Cell can interact with:
+```python                                                     
+contractList = cell.list_contracts()  
 ```
