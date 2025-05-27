@@ -397,8 +397,6 @@ def stop_node():
         click.echo("Node stopped successfully!")
     except FileNotFoundError:
         click.echo("Error: No active node process found.")
-    except Exception as e:
-        click.echo(f"Error stopping node: {e}")
 
 
 @click.command()

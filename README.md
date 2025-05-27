@@ -283,10 +283,11 @@ Contracts are predefined token-based rules to automate service exchange and auth
 Create a Contract:
 ```python
 descr = "Test Contract"                                           # short description (max 25 characters)
-details = {                                                       # define token details
+details = {                                                       # token details
     "price_in_eur": False,                                        # token price in EUR (int, float or False)
     "max_usage": False,                                           # max number of uses (int or False)
-    "validity_in_min": False                                      # token expiration time in min (int, float or False)
+    "validity_in_min": False,                                     # token expiration time in min (int, float or False)
+    "expiration_date": False                                      # expiration date  (DD-MM-YYYY or False)
     }          
 partners = ["id::cell", "id::cell"]           
 contractID = cell.create_contract(descr, details, partners)
