@@ -6,7 +6,7 @@ A Getting Started into the Neuronum Network
 
 ## Getting Started Goals
 - **Neuronum Cell**: Create a "Cell" to start interacting with the Network
-- **Node**: Setup a Neuronum Node that synchronizes real-time date of the Node: https://neuronum.net/node/lPW178VeY0WV::node
+- **Node**: Setup a Neuronum Node that synchronizes real-time data of the Node: https://neuronum.net/node/lPW178VeY0WV::node
 
 
 ### Requirements
