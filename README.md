@@ -2,75 +2,85 @@
 
 [![Website](https://img.shields.io/badge/Website-Neuronum-blue)](https://neuronum.net) [![Documentation](https://img.shields.io/badge/Docs-Read%20now-green)](https://github.com/neuronumcybernetics/neuronum)
 
-`Neuronum` is a cybernetic framework enabling businesses to build & automate interconnected networks of soft- and hardware components
+Build, deploy and automate IoT connectivity with `Neuronum`
 
 ## Features
-- **Cell**: Identity to connect and interact with the Neuronum Network
-- **Nodes/Node-CLI**: Setup and manage Neuronum Nodes from the command line.
+- **Cells/Cell-CLI**: Create and manage Neuronum Cells from the command line
+- **Nodes/Node-CLI**: Setup and manage Neuronum Nodes from the command line
 - **Transmitters (TX)**: Automate economic data transfer
 - **Circuits (CTX)**: Store data in Key-Value-Label databases
 - **Streams (STX)**: Stream, synchronize and control data in real time
-- **Contracts/Tokens**: Automate contract-based authorization between Nodes and Cells
-
+- **Contracts/Tokens**: Automate services exchange and authorization between Cells and Nodes
 
 ### Installation
 Install the Neuronum library using pip:
-```python
-pip install neuronum
+```sh
+$ pip install neuronum
 ```
 
-### Cell
-To interact with the Network you will need to create a Neuronum Cell. 
-Create your Cell: [Create Cell](https://neuronum.net/createcell)
+### Cells/Cell-CLI
+To interact with the Neuronum Network, you must first create a Neuronum Cell
 
-Set and test Cell connection:
-```python
-import neuronum
+Create Cell:
+```sh
+$ neuronum create-cell  
+```
 
-cell = neuronum.Cell(
-host="host::cell",                                                # cell host 
-password="your_password",                                         # cell password 
-network="neuronum.net",                                           # cell network 
-synapse="your_synapse"                                            # cell synapse
-)           
-cell.connect()                                                    # connect to network
+Connect Cell:
+```sh
+$ neuronum connect-cell  
+```
+
+View connected Cell:
+```sh
+$ neuronum view-cell   
+```
+
+Disconnect Cell:
+```sh
+$ neuronum disconnect-cell  
+```
+
+Delete Cell:
+```sh
+$ neuronum delete-cell  
 ```
 
 ### Nodes/Node-CLI
-Neuronum Nodes are computing hardware powered by the Neuronum library, enabling seamless communication between Nodes and Cells.
+Neuronum Nodes are soft- and hardware components that power the Neuronum Network, enabling seamless communication between Nodes and Cells
 
-Initialize your Node:
-```bash
->>> neuronum init-node   
+Initialize a Node:
+```sh
+$ neuronum init-node                                              # neuronum init-node --sync id::stx (optional)  
 ```
 
-Start your Node:
-```bash
->>> neuronum start-node   
+Start a Node:
+```sh
+$ neuronum start-node   
 ```
 
-Stop your Node:
-```bash
->>> neuronum stop-node   
+Stop a Node:
+```sh
+$ neuronum stop-node   
 ```
 
-Register your Node on the Neuronum Network:
-```bash
->>> neuronum register-node   
+Register a Node on the Neuronum Network:
+```sh
+$ neuronum register-node   
 ```
 
-Update your Node:
-```bash
->>> neuronum update-node   
+Update a Node:
+```sh
+$ neuronum update-node   
 ```
 
-Delete your Node:
-```bash
->>> neuronum delete-node   
+Delete a Node:
+```sh
+$ neuronum delete-node   
 ```
 
 ### Transmitters (TX)
-Transmitters (TX) are used to create predefined templates to receive and send data in a standardized format.
+Transmitters (TX) are used to create predefined templates to receive and send data in a standardized format
 
 Create Transmitter (TX):
 ```python
@@ -263,15 +273,15 @@ stxList = cell.list_stx()                                         # list Streams
 ```
 
 ### Contracts/Tokens
-Contracts define rules for authorization, allowing users to sign and generate unique tokens for secure access
+Contracts are predefined token-based rules to automate service exchange and authorization between Cells and Nodes
 
 Create a Contract:
 ```python
 descr = "Test Contract"                                           # short description (max 25 characters)
 details = {                                                       # define token details
-    "price_in_eur": 10,                                           # token price in EUR
-    "max_usage": 10,                                              # max number of uses
-    "validity_in_min": 10                                         # token expiration time (minutes)
+    "price_in_eur": False,                                        # token price in EUR (int, float or False)
+    "max_usage": False,                                           # max number of uses (int or False)
+    "validity_in_min": False                                      # token expiration time in min (int, float or False)
     }          
 partners = ["id::cell", "id::cell"]           
 contractID = cell.create_contract(descr, details, partners)

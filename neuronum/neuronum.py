@@ -256,23 +256,6 @@ class Cell:
         except Exception as e:
             print(f"Unexpected error: {e}")
 
-
-    def connect(self):
-            url = f"https://{self.network}/api/connect"
-
-            test = {
-                "cell": self.to_dict() 
-            }
-
-            try:
-                response = requests.post(url, json=test)
-                response.raise_for_status()
-                print(response.json()["connection"]) 
-            except requests.exceptions.RequestException as e:
-                print(f"Error sending request: {e}")
-            except Exception as e:
-                print(f"Unexpected error: {e}")
-
         
     def store(self, label: str, data: dict, ctx: Optional[str] = None):
         if ctx:
@@ -429,21 +412,21 @@ class Cell:
 
 
     def sign_contract(self, contractID: str):
-        full_url = f"https://{self.network}/api/sign_contract"
-        
-        sign_contract = {
-            "contractID": contractID,
-            "cell": self.to_dict() 
-        }
+            full_url = f"https://{self.network}/api/sign_contract"
+            
+            sign_contract = {
+                "contractID": contractID,
+                "cell": self.to_dict() 
+            }
 
-        try:
-            response = requests.post(full_url, json=sign_contract)
-            response.raise_for_status()
-            return response.json()["token"]
-        except requests.exceptions.RequestException as e:
-            print(f"Error sending request: {e}")
-        except Exception as e:
-            print(f"Unexpected error: {e}")
+            try:
+                response = requests.post(full_url, json=sign_contract)
+                response.raise_for_status()
+                return response.json()["token"]
+            except requests.exceptions.RequestException as e:
+                print(f"Error sending request: {e}")
+            except Exception as e:
+                print(f"Unexpected error: {e}")
 
 
     def validate_token(self, token: str, cp: str, contractID: str):
@@ -557,9 +540,6 @@ class Cell:
             print(f"Error sending request: {e}")
         except Exception as e:
             print(f"Unexpected error: {e}")
-
-
-
 
 
 __all__ = ['Cell']

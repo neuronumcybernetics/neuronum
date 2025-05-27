@@ -2,10 +2,10 @@ from setuptools import setup, find_packages
 
 setup(
     name='neuronum',
-    version='1.6.0',
+    version='1.7.0',
     author='Neuronum Cybernetics',
     author_email='welcome@neuronum.net',
-    description='Interact with the Neuronum Network to build & automate interconnected networks of soft- and hardware components',
+    description='Official client library to interact with the Neuronum Network',
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
     url="https://neuronum.net",
@@ -30,5 +30,5 @@ setup(
             "neuronum=cli.main:cli"
         ]
     },
-    python_requires='>=3.6', 
+    python_requires='>=3.8', 
 )
