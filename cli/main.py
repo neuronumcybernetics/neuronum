@@ -289,6 +289,7 @@ def init_node(sync):
     ctx = cell.list_ctx()
     stx = cell.list_stx()
     contracts = cell.list_contracts()
+    nodes = cell.list_nodes()
 
     url = f"https://{network}/api/init_node/{node_type}"
 
@@ -323,6 +324,9 @@ def init_node(sync):
 
     contracts_path = project_path / "contracts.json"
     contracts_path.write_text(json.dumps(contracts, indent=4))
+
+    nodes_path = project_path / "nodes.json"
+    nodes_path.write_text(json.dumps(nodes, indent=4))
 
     nodemd_path = project_path / "NODE.md"
     nodemd_path.write_text("""\
@@ -516,16 +520,19 @@ def update_node():
     ctx = cell.list_ctx()
     stx = cell.list_stx()
     contracts = cell.list_contracts()
+    nodes = cell.list_nodes()
 
     tx_path = Path("transmitters.json")
     ctx_path = Path("circuits.json")
     stx_path = Path("streams.json")
     contracts_path = Path("contracts.json")
+    nodes_path = Path("nodes.json")
 
     tx_path.write_text(json.dumps(tx, indent=4))
     ctx_path.write_text(json.dumps(ctx, indent=4))
     stx_path.write_text(json.dumps(stx, indent=4))
     contracts_path.write_text(json.dumps(contracts, indent=4))
+    nodes_path.write_text(json.dumps(nodes, indent=4))
 
     click.echo(f"Neuronum Node '{nodeID}' updated! Visit: {node_url}")
 

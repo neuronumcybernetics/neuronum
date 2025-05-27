@@ -79,6 +79,11 @@ Delete a Node:
 $ neuronum delete-node   
 ```
 
+List Nodes your Cell can interact with:
+```python                                            
+nodesList = cell.list_nodes()                                     # list Nodes
+```
+
 ### Transmitters (TX)
 Transmitters (TX) are used to create predefined templates to receive and send data in a standardized format
 

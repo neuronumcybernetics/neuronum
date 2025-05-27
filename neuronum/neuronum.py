@@ -214,7 +214,7 @@ class Cell:
         }
 
         try:
-            response = requests.post(full_url, json=list_tx)
+            response = requests.get(full_url, json=list_tx)
             response.raise_for_status()
             return response.json()["Transmitters"]
         except requests.exceptions.RequestException as e:
@@ -231,7 +231,7 @@ class Cell:
         }
 
         try:
-            response = requests.post(full_url, json=list_ctx)
+            response = requests.get(full_url, json=list_ctx)
             response.raise_for_status()
             return response.json()["Circuits"]
         except requests.exceptions.RequestException as e:
@@ -248,9 +248,26 @@ class Cell:
         }
 
         try:
-            response = requests.post(full_url, json=list_stx)
+            response = requests.get(full_url, json=list_stx)
             response.raise_for_status()
             return response.json()["Streams"]
+        except requests.exceptions.RequestException as e:
+            print(f"Error sending request: {e}")
+        except Exception as e:
+            print(f"Unexpected error: {e}")
+
+
+    def list_nodes(self):
+        full_url = f"https://{self.network}/api/list_nodes"
+        
+        list_nodes = {
+            "cell": self.to_dict()
+        }
+
+        try:
+            response = requests.get(full_url, json=list_nodes)
+            response.raise_for_status()
+            return response.json()["Nodes"]
         except requests.exceptions.RequestException as e:
             print(f"Error sending request: {e}")
         except Exception as e:
@@ -533,7 +550,7 @@ class Cell:
         }
 
         try:
-            response = requests.post(full_url, json=list_contracts)
+            response = requests.get(full_url, json=list_contracts)
             response.raise_for_status()
             return response.json()["Contracts"]
         except requests.exceptions.RequestException as e:
