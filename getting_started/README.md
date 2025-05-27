@@ -10,8 +10,8 @@ A Getting Started into the Neuronum Network
 
 
 ### Requirements
-Python >= 3.8 -> https://www.python.org/downloads/
-Neuronum Lib >= 1.7.2 -> https://pypi.org/project/neuronum/
+- Python >= 3.8 -> https://www.python.org/downloads/
+- Neuronum Lib >= 1.7.2 -> https://pypi.org/project/neuronum/
 
 
 ### Installation
