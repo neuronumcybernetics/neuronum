@@ -2,7 +2,7 @@
 
 [![Website](https://img.shields.io/badge/Website-Neuronum-blue)](https://neuronum.net) [![Documentation](https://img.shields.io/badge/Docs-Read%20now-green)](https://github.com/neuronumcybernetics/neuronum)
 
-Build, deploy and automate IoT connectivity with `Neuronum`
+Build, deploy and automate serverless IoT connectivity with `Neuronum`
 
 ## Features
 - **Cells/Cell-CLI**: Create and manage Neuronum Cells from the command line
