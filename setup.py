@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='neuronum',
-    version='1.7.2',
+    version='2.0.2',
     author='Neuronum Cybernetics',
     author_email='welcome@neuronum.net',
     description='Official client library to interact with the Neuronum Network',
@@ -12,12 +12,13 @@ setup(
     project_urls={
         "GitHub": "https://github.com/neuronumcybernetics/neuronum",
     },
-    packages=find_packages(),
+    packages=find_packages(include=["neuronum", "cellai", "cli"]),
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
+    
     install_requires=[
         'requests', 
         'websocket-client',

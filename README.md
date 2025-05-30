@@ -4,13 +4,17 @@
 
 Build, deploy and automate serverless data infrastructures for an interconnected world with `Neuronum`
 
-## Features
+### **What's New in neuronum==2.0.2?**
+- **Cellai**: A local running task assistant in development (version 0.0.1)
+
+### New Feature Set
 - **Cells/Cell-CLI**: Create and manage Neuronum Cells from the command line
 - **Nodes/Node-CLI**: Setup and manage Neuronum Nodes from the command line
 - **Transmitters (TX)**: Automate economic data transfer
 - **Circuits (CTX)**: Store data in Key-Value-Label databases
 - **Streams (STX)**: Stream, synchronize and control data in real time
 - **Contracts/Tokens**: Automate services exchange and authorization between Cells and Nodes
+- **Cellai**: A local running task assistant in development (version 0.0.1) 
 
 ### Installation
 Install the Neuronum library using pip:
@@ -44,6 +48,11 @@ $ neuronum disconnect-cell
 Delete Cell:
 ```sh
 $ neuronum delete-cell  
+```
+
+List Cells:
+```python                                            
+cellsList = cell.list_cells()                                     # list Nodes
 ```
 
 ### Nodes/Node-CLI
@@ -284,7 +293,6 @@ Create a Contract:
 ```python
 descr = "Test Contract"                                           # short description (max 25 characters)
 details = {                                                       # token details
-    "price_in_eur": False,                                        # token price in EUR (int, float or False)
     "max_usage": False,                                           # max number of uses (int or False)
     "validity_in_min": False,                                     # token expiration time in min (int, float or False)
     "expiration_date": False                                      # expiration date  (DD-MM-YYYY or False)
@@ -325,4 +333,12 @@ cell.validate_token(token, cp, contractID)
 List Contracts your Cell can interact with:
 ```python                                                     
 contractList = cell.list_contracts()  
+```
+
+### Cellai
+A local running task assistant in development (version 0.0.1)
+
+Call Cellai:
+```sh
+$ neuronum call-cellai  
 ```

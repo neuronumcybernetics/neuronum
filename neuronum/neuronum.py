@@ -206,6 +206,23 @@ class Cell:
             print(f"Unexpected error: {e}")
 
 
+    def list_cells(self):
+        full_url = f"https://{self.network}/api/list_cells"
+        
+        list_cells = {
+            "cell": self.to_dict()
+        }
+
+        try:
+            response = requests.get(full_url, json=list_cells)
+            response.raise_for_status()
+            return response.json()["Cells"]
+        except requests.exceptions.RequestException as e:
+            print(f"Error sending request: {e}")
+        except Exception as e:
+            print(f"Unexpected error: {e}")
+
+
     def list_tx(self):
         full_url = f"https://{self.network}/api/list_tx"
         

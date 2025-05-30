@@ -6,6 +6,8 @@ import subprocess
 import os
 import neuronum
 import json
+import sys
+import cellai
 
 @click.group()
 def cli():
@@ -285,6 +287,7 @@ def init_node(sync):
     synapse=synapse
     )
 
+    cells = cell.list_cells()
     tx = cell.list_tx()
     ctx = cell.list_ctx()
     stx = cell.list_stx()
@@ -312,6 +315,9 @@ def init_node(sync):
 
     gitignore_path = project_path / ".gitignore"
     gitignore_path.write_text(f".env\n")
+
+    cells_path = Path("cells.json")
+    cells_path.write_text(json.dumps(cells, indent=4))
 
     tx_path = project_path / "transmitters.json"
     tx_path.write_text(json.dumps(tx, indent=4))
@@ -514,18 +520,21 @@ def update_node():
     synapse=synapse
     )
 
+    cells = cell.list_cells()
     tx = cell.list_tx()
     ctx = cell.list_ctx()
     stx = cell.list_stx()
     contracts = cell.list_contracts()
     nodes = cell.list_nodes()
 
+    cells_path = Path("cells.json")
     tx_path = Path("transmitters.json")
     ctx_path = Path("circuits.json")
     stx_path = Path("streams.json")
     contracts_path = Path("contracts.json")
     nodes_path = Path("nodes.json")
 
+    cells_path.write_text(json.dumps(cells, indent=4))
     tx_path.write_text(json.dumps(tx, indent=4))
     ctx_path.write_text(json.dumps(ctx, indent=4))
     stx_path.write_text(json.dumps(stx, indent=4))
@@ -577,6 +586,14 @@ def delete_node():
     click.echo(f"Neuronum Node '{nodeID}' deleted!")
 
 
+@click.command()
+def call_cellai():
+    try:
+        from cellai import cellai
+        cellai.main()
+    except ImportError:
+        click.echo("Cellai not found. Please check the necessary dependencies.")
+
 cli.add_command(create_cell)
 cli.add_command(connect_cell)
 cli.add_command(view_cell)
@@ -588,6 +605,7 @@ cli.add_command(stop_node)
 cli.add_command(register_node)
 cli.add_command(update_node)
 cli.add_command(delete_node)
+cli.add_command(call_cellai)
 
 
 if __name__ == "__main__":
