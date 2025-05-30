@@ -244,8 +244,8 @@ def delete_cell():
  
 
 @click.command()
-@click.option('--sync', required=True, nargs=1, help="Stream ID required for sync.")
-@click.option('--stream', required=True, nargs=1, help="Stream ID required for stream.")
+@click.option('--sync', nargs=1, default=None, help="Optional stream ID for sync.")
+@click.option('--stream', nargs=1, default=None, help="Optional stream ID for stream.")
 def init_node(sync, stream):
 
     node_type = questionary.select(
