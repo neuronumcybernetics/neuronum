@@ -52,7 +52,7 @@ $ neuronum delete-cell
 
 List Cells:
 ```python                                            
-cellsList = cell.list_cells()                                     # list Nodes
+cellsList = cell.list_cells()                                     # list Cells
 ```
 
 ### Nodes/Node-CLI
