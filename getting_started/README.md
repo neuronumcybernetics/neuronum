@@ -34,7 +34,7 @@ $ neuronum view-cell                                # output = Connected Cell: '
 ### Node
 Initialize your Node:
 ```sh
-$ neuronum init-node --sync n9gW3LxQcecI::stx       # initializes a new node and generates a Node ID + template
+$ neuronum init-node                                # initializes a node
 ```
 
 Start your Node:

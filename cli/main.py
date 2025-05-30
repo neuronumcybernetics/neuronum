@@ -330,7 +330,7 @@ def init_node(sync, stream):
     nodemd_path = project_path / "NODE.md"
     nodemd_path.write_text("## Use this NODE.md file to add instructions on how to interact with your node\n")
 
-    stx = sync or stream or host.replace("::cell", "::stx")
+    stx = sync or stream or "n9gW3LxQcecI::stx"
 
     if sync:
         sync_path = project_path / "sync.py"
@@ -356,11 +356,11 @@ STX = "{stx}"
 stream = cell.sync(STX)
 for operation in stream:
     label = operation.get("label")
-    value = operation.get("data").get("message")
+    data = operation.get("data")
     ts = operation.get("time")
     stxID = operation.get("stxID")
     operator = operation.get("operator")
-    print(label, value, ts, stxID, operator)
+    print(label, data, ts, stxID, operator)
 """)
 
 
@@ -419,11 +419,11 @@ STX = "{stx}"
 stream = cell.sync(STX)
 for operation in stream:
     label = operation.get("label")
-    value = operation.get("data").get("message")
+    message = operation.get("data").get("message")
     ts = operation.get("time")
     stxID = operation.get("stxID")
     operator = operation.get("operator")
-    print(label, value, ts, stxID, operator)
+    print(label, message, ts, stxID, operator)
 """)
 
     click.echo(f"Neuronum Node '{nodeID}' initialized!")
