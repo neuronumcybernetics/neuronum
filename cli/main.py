@@ -6,8 +6,7 @@ import subprocess
 import os
 import neuronum
 import json
-import sys
-import cellai
+import platform
 
 @click.group()
 def cli():
@@ -245,8 +244,9 @@ def delete_cell():
  
 
 @click.command()
-@click.option('--sync', default=None, help="Optional stream ID to generate the sync template.")
-def init_node(sync):
+@click.option('--sync', required=True, nargs=1, help="Stream ID required for sync.")
+@click.option('--stream', required=True, nargs=1, help="Stream ID required for stream.")
+def init_node(sync, stream):
 
     node_type = questionary.select(
         "Choose Node type:",
@@ -255,12 +255,10 @@ def init_node(sync):
 
     descr = click.prompt("Node description (max. 25 characters)")
 
-    stream = sync if sync else "n9gW3LxQcecI::stx"
-
     credentials_folder_path = Path.home() / ".neuronum"
     env_path = credentials_folder_path / ".env"
 
-    env_data = {}
+    env_data = {}  
 
     try:
         with open(env_path, "r") as f:
@@ -280,22 +278,7 @@ def init_node(sync):
         click.echo(f"Error reading .env file: {e}")
         return
 
-    cell = neuronum.Cell(
-    host=host,         
-    password=password,                         
-    network=network,                        
-    synapse=synapse
-    )
-
-    cells = cell.list_cells()
-    tx = cell.list_tx()
-    ctx = cell.list_ctx()
-    stx = cell.list_stx()
-    contracts = cell.list_contracts()
-    nodes = cell.list_nodes()
-
     url = f"https://{network}/api/init_node/{node_type}"
-
     node = {"descr": descr, "host": host, "password": password, "synapse": synapse}
 
     try:
@@ -310,37 +293,48 @@ def init_node(sync):
     project_path = Path(node_filename)
     project_path.mkdir(exist_ok=True)
 
+    cell = neuronum.Cell(
+        host=host,         
+        password=password,                         
+        network=network,                        
+        synapse=synapse
+    )
+
+    cells = cell.list_cells()
+    tx = cell.list_tx()
+    ctx = cell.list_ctx()
+    stx = cell.list_stx()
+    contracts = cell.list_contracts()
+    nodes = cell.list_nodes()
+
+    cells_path = project_path / "cells.json"
+    tx_path = project_path / "transmitters.json"
+    ctx_path = project_path / "circuits.json"
+    stx_path = project_path / "streams.json"
+    contracts_path = project_path / "contracts.json"
+    nodes_path = project_path / "nodes.json"
+
+    cells_path.write_text(json.dumps(cells, indent=4))
+    tx_path.write_text(json.dumps(tx, indent=4))
+    ctx_path.write_text(json.dumps(ctx, indent=4))
+    stx_path.write_text(json.dumps(stx, indent=4))
+    contracts_path.write_text(json.dumps(contracts, indent=4))
+    nodes_path.write_text(json.dumps(nodes, indent=4))
+
     env_path = project_path / ".env"
     env_path.write_text(f"NODE={nodeID}\nHOST={host}\nPASSWORD={password}\nNETWORK={network}\nSYNAPSE={synapse}\n")
 
     gitignore_path = project_path / ".gitignore"
-    gitignore_path.write_text(f".env\n")
-
-    cells_path = Path("cells.json")
-    cells_path.write_text(json.dumps(cells, indent=4))
-
-    tx_path = project_path / "transmitters.json"
-    tx_path.write_text(json.dumps(tx, indent=4))
-
-    ctx_path = project_path / "circuits.json"
-    ctx_path.write_text(json.dumps(ctx, indent=4))
-
-    stx_path = project_path / "streams.json"
-    stx_path.write_text(json.dumps(stx, indent=4))
-
-    contracts_path = project_path / "contracts.json"
-    contracts_path.write_text(json.dumps(contracts, indent=4))
-
-    nodes_path = project_path / "nodes.json"
-    nodes_path.write_text(json.dumps(nodes, indent=4))
+    gitignore_path.write_text(".env\n")
 
     nodemd_path = project_path / "NODE.md"
-    nodemd_path.write_text("""\
-## Use this NODE.md file to add instructions on how to interact with your node                        
-""")
-        
-    main_path = project_path / "main.py"
-    main_path.write_text(f"""\
+    nodemd_path.write_text("## Use this NODE.md file to add instructions on how to interact with your node\n")
+
+    stx = sync or stream or host.replace("::cell", "::stx")
+
+    if sync:
+        sync_path = project_path / "sync.py"
+        sync_path.write_text(f"""\
 import neuronum
 import os
 from dotenv import load_dotenv
@@ -358,7 +352,7 @@ cell = neuronum.Cell(
     synapse=synapse
 )
 
-STX = "{stream}"
+STX = "{stx}"
 stream = cell.sync(STX)
 for operation in stream:
     label = operation.get("label")
@@ -366,10 +360,74 @@ for operation in stream:
     ts = operation.get("time")
     stxID = operation.get("stxID")
     operator = operation.get("operator")
-    print(label, value, ts, stxID, operator)                              
+    print(label, value, ts, stxID, operator)
+""")
+
+
+    if stream:
+        stream_path = project_path / "stream.py"
+        stream_path.write_text(f"""\
+import neuronum
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+host = os.getenv("HOST")
+password = os.getenv("PASSWORD")
+network = os.getenv("NETWORK")
+synapse = os.getenv("SYNAPSE")
+
+cell = neuronum.Cell(
+    host=host,
+    password=password,
+    network=network,
+    synapse=synapse
+)
+
+STX = "{stx}"
+label = "your_label"
+while True:
+    data = {{
+        "key1": "value1",
+        "key2": "value2",
+        "key3": "value3",
+    }}
+    cell.stream(label, data, STX)
+""")
+    
+    if not sync and not stream:
+        main_path = project_path / "main.py" 
+        main_path.write_text(f"""\
+import neuronum
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+host = os.getenv("HOST")
+password = os.getenv("PASSWORD")
+network = os.getenv("NETWORK")
+synapse = os.getenv("SYNAPSE")
+
+cell = neuronum.Cell(
+    host=host,
+    password=password,
+    network=network,
+    synapse=synapse
+)
+                             
+STX = "{stx}"
+stream = cell.sync(STX)
+for operation in stream:
+    label = operation.get("label")
+    value = operation.get("data").get("message")
+    ts = operation.get("time")
+    stxID = operation.get("stxID")
+    operator = operation.get("operator")
+    print(label, value, ts, stxID, operator)
 """)
 
     click.echo(f"Neuronum Node '{nodeID}' initialized!")
+
 
 
 @click.command()
@@ -377,18 +435,25 @@ def start_node():
     click.echo("Starting Node...")
 
     project_path = Path.cwd()
-    main_file = project_path / "main.py"
+    script_files = ["main.py", "sync.py", "stream.py"]
 
-    if not main_file.exists():
-        click.echo("Error: main.py not found. Make sure the node is set up.")
+    processes = []
+
+    for script in script_files:
+        script_path = project_path / script
+        if script_path.exists():
+            process = subprocess.Popen(["python", str(script_path)], start_new_session=True)
+            processes.append(process.pid)
+
+    if not processes:
+        click.echo("Error: No valid node script found. Ensure the node is set up correctly.")
         return
 
-    process = subprocess.Popen(["python", str(main_file)], start_new_session=True)
-
     with open("node_pid.txt", "w") as f:
-        f.write(str(process.pid))
+        f.write("\n".join(map(str, processes)))
 
-    click.echo("Node started successfully!")
+    click.echo(f"Node started successfully! Running {len(processes)} scripts: {', '.join(script_files)}")
+
 
 
 @click.command()
@@ -397,12 +462,27 @@ def stop_node():
 
     try:
         with open("node_pid.txt", "r") as f:
-            pid = int(f.read().strip())
-        os.kill(pid, 9) 
+            pids = [int(pid.strip()) for pid in f.readlines()]
+
+        system_name = platform.system()
+
+        for pid in pids:
+            if system_name == "Windows":
+                subprocess.run(
+                    ["taskkill", "/F", "/PID", str(pid)],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL
+                )
+            else:
+                os.kill(pid, 9)
+
         os.remove("node_pid.txt")
         click.echo("Node stopped successfully!")
+
     except FileNotFoundError:
         click.echo("Error: No active node process found.")
+    except subprocess.CalledProcessError:
+        click.echo("Error: Unable to stop some node processes.")
 
 
 @click.command()
