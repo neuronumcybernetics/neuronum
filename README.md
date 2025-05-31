@@ -4,8 +4,8 @@
 
 Build, deploy and automate serverless data infrastructures for an interconnected world with `Neuronum`
 
-### **What's New in neuronum==2.0.5?**
-- **Nodes/Node-CLI**: Logic update: `neuronum init-node --sync` and `neuronum init-node --stream` are not longer required flags
+### **What's New in neuronum==2.0.6?**
+- **Nodes/Node-CLI**: Improved logic: `neuronum init-node` now supports multiple --stream and --sync flags for better flexibility
 
 ### New Feature Set
 - **Cells/Cell-CLI**: Create and manage Neuronum Cells from the command line

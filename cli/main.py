@@ -7,6 +7,7 @@ import os
 import neuronum
 import json
 import platform
+import glob
 
 @click.group()
 def cli():
@@ -244,8 +245,8 @@ def delete_cell():
  
 
 @click.command()
-@click.option('--sync', nargs=1, default=None, help="Optional stream ID for sync.")
-@click.option('--stream', nargs=1, default=None, help="Optional stream ID for stream.")
+@click.option('--sync', multiple=True, default=None, help="Optional stream IDs for sync.")
+@click.option('--stream', multiple=True, default=None, help="Optional stream ID for stream.")
 def init_node(sync, stream):
 
     node_type = questionary.select(
@@ -330,11 +331,12 @@ def init_node(sync, stream):
     nodemd_path = project_path / "NODE.md"
     nodemd_path.write_text("## Use this NODE.md file to add instructions on how to interact with your node\n")
 
-    stx = sync or stream or "n9gW3LxQcecI::stx"
+    stx = sync[0] if sync else (stream[0] if stream else "n9gW3LxQcecI::stx")
 
     if sync:
-        sync_path = project_path / "sync.py"
-        sync_path.write_text(f"""\
+        for stx in sync:
+            sync_path = project_path / f"sync_{stx.replace('::stx', '')}.py"
+            sync_path.write_text(f"""\
 import neuronum
 import os
 from dotenv import load_dotenv
@@ -365,8 +367,9 @@ for operation in stream:
 
 
     if stream:
-        stream_path = project_path / "stream.py"
-        stream_path.write_text(f"""\
+        for stx in stream:
+            stream_path = project_path / f"stream_{stx.replace('::stx', '')}.py"
+            stream_path.write_text(f"""\
 import neuronum
 import os
 from dotenv import load_dotenv
@@ -435,7 +438,8 @@ def start_node():
     click.echo("Starting Node...")
 
     project_path = Path.cwd()
-    script_files = ["main.py", "sync.py", "stream.py"]
+
+    script_files = ["main.py"] + glob.glob("sync_*.py") + glob.glob("stream_*.py")
 
     processes = []
 
@@ -467,17 +471,20 @@ def stop_node():
         system_name = platform.system()
 
         for pid in pids:
-            if system_name == "Windows":
-                subprocess.run(
-                    ["taskkill", "/F", "/PID", str(pid)],
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL
-                )
-            else:
-                os.kill(pid, 9)
+            try:
+                if system_name == "Windows":
+                    subprocess.run(
+                        ["taskkill", "/F", "/PID", str(pid)],
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL
+                    )
+                else:
+                    os.kill(pid, 9)
+            except ProcessLookupError:
+                click.echo(f"Warning: Process {pid} already stopped or does not exist.")
 
         os.remove("node_pid.txt")
-        click.echo("Node stopped successfully!")
+        click.echo(f"Node stopped successfully! {len(pids)} processes terminated.")
 
     except FileNotFoundError:
         click.echo("Error: No active node process found.")
