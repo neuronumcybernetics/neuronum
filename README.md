@@ -4,8 +4,8 @@
 
 Build, deploy and automate serverless data infrastructures for an interconnected world with `Neuronum`
 
-### **What's New in neuronum==2.0.6?**
-- **Nodes/Node-CLI**: Improved logic: `neuronum init-node` now supports multiple --stream and --sync flags for better flexibility
+### **What's New in neuronum==2.0.7?**
+- **Nodes/Node-CLI**: Updated logic: Node Type and Description are now declared during `neuronum register-node` instead of `neuronum init-node`
 
 ### New Feature Set
 - **Cells/Cell-CLI**: Create and manage Neuronum Cells from the command line
@@ -13,7 +13,7 @@ Build, deploy and automate serverless data infrastructures for an interconnected
 - **Transmitters (TX)**: Automate economic data transfer
 - **Circuits (CTX)**: Store data in Key-Value-Label databases
 - **Streams (STX)**: Stream, synchronize and control data in real time
-- **Contracts/Tokens**: Automate services exchange and authorization between Cells and Nodes
+- **Contracts/Tokens**: Automate service exchange and authorization between Cells and Nodes
 - **Cellai**: A local running task assistant in development (version 0.0.1) 
 
 ### Installation

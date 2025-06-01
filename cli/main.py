@@ -249,13 +249,6 @@ def delete_cell():
 @click.option('--stream', multiple=True, default=None, help="Optional stream ID for stream.")
 def init_node(sync, stream):
 
-    node_type = questionary.select(
-        "Choose Node type:",
-        choices=["public", "private"]
-    ).ask()
-
-    descr = click.prompt("Node description (max. 25 characters)")
-
     credentials_folder_path = Path.home() / ".neuronum"
     env_path = credentials_folder_path / ".env"
 
@@ -279,8 +272,8 @@ def init_node(sync, stream):
         click.echo(f"Error reading .env file: {e}")
         return
 
-    url = f"https://{network}/api/init_node/{node_type}"
-    node = {"descr": descr, "host": host, "password": password, "synapse": synapse}
+    url = f"https://{network}/api/init_node"
+    node = {"host": host, "password": password, "synapse": synapse}
 
     try:
         response = requests.post(url, json=node)
@@ -513,6 +506,13 @@ def register_node():
     except Exception as e:
         print(f"Error reading .env file: {e}")
         return
+    
+    node_type = questionary.select(
+        "Choose Node type:",
+        choices=["public", "private"]
+    ).ask()
+
+    descr = click.prompt("Node description (max. 25 characters)")
 
     try:
         with open("NODE.md", "r") as f: 
@@ -525,10 +525,11 @@ def register_node():
         print(f"Error reading NODE.md file: {e}")
         return
 
-    url = f"https://{network}/api/register_node"
+    url = f"https://{network}/api/register_node/{node_type}"
 
     node = {
         "nodeID": nodeID,
+        "descr": descr,
         "host": host,
         "password": password,
         "synapse": synapse,
