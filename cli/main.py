@@ -324,7 +324,7 @@ def init_node(sync, stream):
     nodemd_path = project_path / "NODE.md"
     nodemd_path.write_text("## Use this NODE.md file to add instructions on how to interact with your node\n")
 
-    stx = sync[0] if sync else (stream[0] if stream else "n9gW3LxQcecI::stx")
+    stx = sync[0] if sync else (stream[0] if stream else host.replace("::cell", "::stx"))
 
     if sync:
         for stx in sync:
@@ -392,8 +392,8 @@ while True:
 """)
     
     if not sync and not stream:
-        main_path = project_path / "main.py" 
-        main_path.write_text(f"""\
+        sync_path = project_path / f"sync_{stx.replace('::stx', '')}.py"
+        sync_path.write_text(f"""\
 import neuronum
 import os
 from dotenv import load_dotenv
@@ -414,12 +414,36 @@ cell = neuronum.Cell(
 STX = "{stx}"
 stream = cell.sync(STX)
 for operation in stream:
-    label = operation.get("label")
     message = operation.get("data").get("message")
-    ts = operation.get("time")
-    stxID = operation.get("stxID")
-    operator = operation.get("operator")
-    print(label, message, ts, stxID, operator)
+    print(message)
+""")
+        
+        stream_path = project_path / f"stream_{stx.replace('::stx', '')}.py"
+        stream_path.write_text(f"""\
+import neuronum
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+host = os.getenv("HOST")
+password = os.getenv("PASSWORD")
+network = os.getenv("NETWORK")
+synapse = os.getenv("SYNAPSE")
+
+cell = neuronum.Cell(
+    host=host,
+    password=password,
+    network=network,
+    synapse=synapse
+)
+                             
+STX = "{stx}"
+label = "Welcome to Neuronum"
+while True:
+    data = {{
+        "message": "Hello, Neuronum!"
+    }}
+    cell.stream(label, data, STX)
 """)
 
     click.echo(f"Neuronum Node '{nodeID}' initialized!")
@@ -432,7 +456,7 @@ def start_node():
 
     project_path = Path.cwd()
 
-    script_files = ["main.py"] + glob.glob("sync_*.py") + glob.glob("stream_*.py")
+    script_files = glob.glob("sync_*.py") + glob.glob("stream_*.py")
 
     processes = []
 
@@ -449,8 +473,7 @@ def start_node():
     with open("node_pid.txt", "w") as f:
         f.write("\n".join(map(str, processes)))
 
-    click.echo(f"Node started successfully! Running {len(processes)} scripts: {', '.join(script_files)}")
-
+    click.echo(f"Node started successfully!")
 
 
 @click.command()
@@ -477,7 +500,7 @@ def stop_node():
                 click.echo(f"Warning: Process {pid} already stopped or does not exist.")
 
         os.remove("node_pid.txt")
-        click.echo(f"Node stopped successfully! {len(pids)} processes terminated.")
+        click.echo(f"Node stopped successfully!")
 
     except FileNotFoundError:
         click.echo("Error: No active node process found.")

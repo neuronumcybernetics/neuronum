@@ -384,7 +384,6 @@ class Cell:
         self.sock = context.wrap_socket(raw_sock, server_hostname=self.network)
 
         try:
-            print(f"Connecting to {self.network}")
             self.sock.connect((self.network, 55555))
 
             if not self.authenticate(stx):

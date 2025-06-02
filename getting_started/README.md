@@ -5,8 +5,8 @@
 A Getting Started into the Neuronum Network
 
 ## Getting Started Goals
-- **Neuronum Cell**: Create a "Cell" to start interacting with the Network
-- **Node**: Setup a Neuronum Node that synchronizes real-time data of the Node: https://neuronum.net/node/lPW178VeY0WV::node
+- **Neuronum Cell**: Create a Cell to start interacting with the Network
+- **Neuronum Node**: Setup a Node that streams and syncs the message: Hello, Neuronum! in real-time
 
 
 ### Requirements
@@ -17,32 +17,37 @@ A Getting Started into the Neuronum Network
 ### Installation
 Install the Neuronum library:
 ```sh
-$ pip install neuronum
+$ pip install neuronum         # install the neuronum dependencies using pip
 ```
 
 ### Neuronum Cell
 Create your Cell:
 ```sh
-$ neuronum create-cell                              # select community cell / select neuronum.net
+$ neuronum create-cell         # create Cell / select network and type
 ```
 
 View connected Cell:
 ```sh
-$ neuronum view-cell                                # output = Connected Cell: '<your_cell_id>'"
+$ neuronum view-cell           # view Cell ID / output = Connected Cell: 'your_cell_id'"
 ```
 
-### Node
+### Neuronum Node
 Initialize your Node:
 ```sh
-$ neuronum init-node                                # initializes a node
+$ neuronum init-node           # initialize a Node with default template
+```
+
+cd into Node Folder:
+```sh
+$ cd node_your_node_id         # change directory
 ```
 
 Start your Node:
 ```sh
-$ neuronum start-node                               # real-time data stream output = "Hello, Neuronum!"
+$ neuronum start-node          # start Node / output = "Hello, Neuronum!"
 ```
 
 Stop your Node:
 ```sh
-$ neuronum stop-node                                # stops Node
+$ neuronum stop-node           # stop Node
 ```

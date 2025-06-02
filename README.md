@@ -4,8 +4,8 @@
 
 Build, deploy and automate serverless data infrastructures for an interconnected world with `Neuronum`
 
-### **What's New in neuronum==2.0.7?**
-- **Nodes/Node-CLI**: Updated logic: Node Type and Description are now declared during `neuronum register-node` instead of `neuronum init-node`
+### **What's New in neuronum==2.0.8?**
+- **Nodes/Node-CLI**: Improved default template for `neuronum init-node`
 
 ### New Feature Set
 - **Cells/Cell-CLI**: Create and manage Neuronum Cells from the command line
