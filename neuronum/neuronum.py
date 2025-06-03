@@ -1,9 +1,10 @@
-import requests
-import socket
-from typing import Optional, Generator
+import aiohttp
+from typing import Optional, AsyncGenerator
 import ssl
-from websocket import create_connection
+import websockets
 import json
+import asyncio
+from bleak import BleakScanner
 
 class Cell:
     def __init__(self, host: str, password: str, network: str, synapse: str):
@@ -11,7 +12,7 @@ class Cell:
         self.password = password
         self.network = network
         self.synapse = synapse
-        self.sock = None
+        self.queue = asyncio.Queue()
 
     def to_dict(self) -> dict:
         return {
@@ -22,17 +23,9 @@ class Cell:
 
     def __repr__(self) -> str:
         return f"Cell(host={self.host}, password={self.password}, network={self.network}, synapse={self.synapse})"
-    
-    
-    def authenticate(self, stx: Optional[str] = None):
-        credentials = f"{self.host}\n{self.password}\n{self.synapse}\n{stx}\n"
-        self.sock.sendall(credentials.encode('utf-8'))
+           
 
-        response = self.sock.recv(1024).decode('utf-8')
-        return "Authentication successful" in response
-    
-
-    def create_tx(self, descr: str, key_values: dict, stx: str, label: str, partners: list):
+    async def create_tx(self, descr: str, key_values: dict, stx: str, label: str, partners: list):
         url = f"https://{self.network}/api/create_tx"
 
         TX = {
@@ -44,23 +37,20 @@ class Cell:
             "cell": self.to_dict()
         }
 
-        try:
-            response = requests.post(
-                url,
-                json=TX,
-            )
+        async with aiohttp.ClientSession() as session:
+            try:
+                async with session.post(url, json=TX) as response:
+                    response.raise_for_status()
+                    data = await response.json()
+                    return data["txID"]
 
-            response.raise_for_status()
-
-            return response.json()["txID"]
-
-        except requests.exceptions.RequestException as e:
-            print(f"Error sending request: {e}")
-        except Exception as e:
-            print(f"Unexpected error: {e}")
+            except aiohttp.ClientError as e:
+                print(f"Error sending request: {e}")
+            except Exception as e:
+                print(f"Unexpected error: {e}")
 
 
-    def delete_tx(self, txID: str):
+    async def delete_tx(self, txID: str):
         url = f"https://{self.network}/api/delete_tx"
 
         TX = {
@@ -68,23 +58,22 @@ class Cell:
             "cell": self.to_dict()
         }
 
-        try:
-            response = requests.post(
-                url,
-                json=TX,
-            )
+        async with aiohttp.ClientSession() as session:
+            try:
+                async with session.post(url, json=TX) as response:
+                    response.raise_for_status()
+                    data = await response.json()
+                    print(f"Response from Neuronum: {data}")
+                    return data
 
-            response.raise_for_status()
-
-            print(f"Response from Neuronum: {response.json()}")
-
-        except requests.exceptions.RequestException as e:
-            print(f"Error sending request: {e}")
-        except Exception as e:
-            print(f"Unexpected error: {e}")
+            except aiohttp.ClientError as e:
+                print(f"Error sending request: {e}")
+            except Exception as e:
+                print(f"Unexpected error: {e}")
     
 
-    def activate_tx(self, txID: str, data: dict):
+    async def activate_tx(self, txID: str, data: dict):
+        """Asynchronously sends TX activation request to the API."""
         url = f"https://{self.network}/api/activate_tx/{txID}"
 
         TX = {
@@ -92,23 +81,21 @@ class Cell:
             "cell": self.to_dict()
         }
 
-        try:
-            response = requests.post(
-                url,
-                json=TX,
-            )
+        async with aiohttp.ClientSession() as session:
+            try:
+                async with session.post(url, json=TX) as response:
+                    response.raise_for_status()
+                    data = await response.json()
+                    print(f"Response from Neuronum: {data}")
+                    return data
 
-            response.raise_for_status()
-
-            print(f"Response from Neuronum: {response.json()}")
-
-        except requests.exceptions.RequestException as e:
-            print(f"Error sending request: {e}")
-        except Exception as e:
-            print(f"Unexpected error: {e}")
+            except aiohttp.ClientError as e:
+                print(f"Error sending request: {e}")
+            except Exception as e:
+                print(f"Unexpected error: {e}")
 
 
-    def create_ctx(self, descr: str, partners: list):
+    async def create_ctx(self, descr: str, partners: list):
         url = f"https://{self.network}/api/create_ctx"
 
         CTX = {
@@ -117,23 +104,20 @@ class Cell:
             "cell": self.to_dict()
         }
 
-        try:
-            response = requests.post(
-                url,
-                json=CTX,
-            )
+        async with aiohttp.ClientSession() as session:
+            try:
+                async with session.post(url, json=CTX) as response:
+                    response.raise_for_status()
+                    data = await response.json()
+                    return data["ctxID"]
 
-            response.raise_for_status()
-
-            return response.json()["ctxID"]
-
-        except requests.exceptions.RequestException as e:
-            print(f"Error sending request: {e}")
-        except Exception as e:
-            print(f"Unexpected error: {e}")
+            except aiohttp.ClientError as e:
+                print(f"Error sending request: {e}")
+            except Exception as e:
+                print(f"Unexpected error: {e}")
 
 
-    def delete_ctx(self, ctxID: str):
+    async def delete_ctx(self, ctxID: str):
         url = f"https://{self.network}/api/delete_ctx"
 
         CTX = {
@@ -141,23 +125,21 @@ class Cell:
             "cell": self.to_dict()
         }
 
-        try:
-            response = requests.post(
-                url,
-                json=CTX,
-            )
+        async with aiohttp.ClientSession() as session:
+            try:
+                async with session.post(url, json=CTX) as response:
+                    response.raise_for_status()
+                    data = await response.json()
+                    print(f"Response from Neuronum: {data}")
+                    return data
 
-            response.raise_for_status()
-
-            print(f"Response from Neuronum: {response.json()}")
-
-        except requests.exceptions.RequestException as e:
-            print(f"Error sending request: {e}")
-        except Exception as e:
-            print(f"Unexpected error: {e}")
+            except aiohttp.ClientError as e:
+                print(f"Error sending request: {e}")
+            except Exception as e:
+                print(f"Unexpected error: {e}")
 
 
-    def create_stx(self, descr: str, partners: list):
+    async def create_stx(self, descr: str, partners: list):
         url = f"https://{self.network}/api/create_stx"
 
         STX = {
@@ -166,23 +148,20 @@ class Cell:
             "cell": self.to_dict()
         }
 
-        try:
-            response = requests.post(
-                url,
-                json=STX,
-            )
+        async with aiohttp.ClientSession() as session:
+            try:
+                async with session.post(url, json=STX) as response:
+                    response.raise_for_status()
+                    data = await response.json()
+                    return data["stxID"]
 
-            response.raise_for_status()["stxID"]
-
-            return response.json()
-
-        except requests.exceptions.RequestException as e:
-            print(f"Error sending request: {e}")
-        except Exception as e:
-            print(f"Unexpected error: {e}")
+            except aiohttp.ClientError as e:
+                print(f"Error sending request: {e}")
+            except Exception as e:
+                print(f"Unexpected error: {e}")
 
 
-    def delete_stx(self, stxID: str):
+    async def delete_stx(self, stxID: str):
         url = f"https://{self.network}/api/delete_stx"
 
         STX = {
@@ -190,213 +169,236 @@ class Cell:
             "cell": self.to_dict()
         }
 
-        try:
-            response = requests.post(
-                url,
-                json=STX,
-            )
+        async with aiohttp.ClientSession() as session:
+            try:
+                async with session.post(url, json=STX) as response:
+                    response.raise_for_status()
+                    data = await response.json()
+                    print(f"Response from Neuronum: {data}")
+                    return data
 
-            response.raise_for_status()
-
-            print(f"Response from Neuronum: {response.json()}")
-
-        except requests.exceptions.RequestException as e:
-            print(f"Error sending request: {e}")
-        except Exception as e:
-            print(f"Unexpected error: {e}")
+            except aiohttp.ClientError as e:
+                print(f"Error sending request: {e}")
+            except Exception as e:
+                print(f"Unexpected error: {e}")
 
 
-    def list_cells(self):
+    async def list_cells(self):
         full_url = f"https://{self.network}/api/list_cells"
-        
-        list_cells = {
+
+        list_cells_payload = {
             "cell": self.to_dict()
         }
 
-        try:
-            response = requests.get(full_url, json=list_cells)
-            response.raise_for_status()
-            return response.json()["Cells"]
-        except requests.exceptions.RequestException as e:
-            print(f"Error sending request: {e}")
-        except Exception as e:
-            print(f"Unexpected error: {e}")
+        async with aiohttp.ClientSession() as session:
+            try:
+                async with session.get(full_url, json=list_cells_payload) as response:
+                    response.raise_for_status()
+                    data = await response.json()
+                    return data.get("Cells", [])
+
+            except aiohttp.ClientError as e:
+                print(f"Error sending request: {e}")
+            except Exception as e:
+                print(f"Unexpected error: {e}")
 
 
-    def list_tx(self):
+    async def list_tx(self):
         full_url = f"https://{self.network}/api/list_tx"
-        
-        list_tx = {
+
+        list_tx_payload = {
             "cell": self.to_dict()
         }
 
-        try:
-            response = requests.get(full_url, json=list_tx)
-            response.raise_for_status()
-            return response.json()["Transmitters"]
-        except requests.exceptions.RequestException as e:
-            print(f"Error sending request: {e}")
-        except Exception as e:
-            print(f"Unexpected error: {e}")
+        async with aiohttp.ClientSession() as session:
+            try:
+                async with session.get(full_url, json=list_tx_payload) as response:
+                    response.raise_for_status()
+                    data = await response.json()
+                    return data.get("Transmitters", [])
+
+            except aiohttp.ClientError as e:
+                print(f"Error sending request: {e}")
+            except Exception as e:
+                print(f"Unexpected error: {e}")
 
 
-    def list_ctx(self):
+    async def list_ctx(self):
         full_url = f"https://{self.network}/api/list_ctx"
-        
-        list_ctx = {
+
+        list_ctx_payload = {
             "cell": self.to_dict()
         }
 
-        try:
-            response = requests.get(full_url, json=list_ctx)
-            response.raise_for_status()
-            return response.json()["Circuits"]
-        except requests.exceptions.RequestException as e:
-            print(f"Error sending request: {e}")
-        except Exception as e:
-            print(f"Unexpected error: {e}")
+        async with aiohttp.ClientSession() as session:
+            try:
+                async with session.get(full_url, json=list_ctx_payload) as response:
+                    response.raise_for_status()
+                    data = await response.json()
+                    return data.get("Circuits", [])
+
+            except aiohttp.ClientError as e:
+                print(f"Error sending request: {e}")
+            except Exception as e:
+                print(f"Unexpected error: {e}")
 
 
-    def list_stx(self):
+    async def list_stx(self):
         full_url = f"https://{self.network}/api/list_stx"
-        
-        list_stx = {
+
+        list_stx_payload = {
             "cell": self.to_dict()
         }
 
-        try:
-            response = requests.get(full_url, json=list_stx)
-            response.raise_for_status()
-            return response.json()["Streams"]
-        except requests.exceptions.RequestException as e:
-            print(f"Error sending request: {e}")
-        except Exception as e:
-            print(f"Unexpected error: {e}")
+        async with aiohttp.ClientSession() as session:
+            try:
+                async with session.get(full_url, json=list_stx_payload) as response:
+                    response.raise_for_status()
+                    data = await response.json()
+                    return data.get("Streams", [])
+
+            except aiohttp.ClientError as e:
+                print(f"Error sending request: {e}")
+            except Exception as e:
+                print(f"Unexpected error: {e}")
 
 
-    def list_nodes(self):
+    async def list_nodes(self):
         full_url = f"https://{self.network}/api/list_nodes"
-        
-        list_nodes = {
+
+        list_nodes_payload = {
             "cell": self.to_dict()
         }
 
-        try:
-            response = requests.get(full_url, json=list_nodes)
-            response.raise_for_status()
-            return response.json()["Nodes"]
-        except requests.exceptions.RequestException as e:
-            print(f"Error sending request: {e}")
-        except Exception as e:
-            print(f"Unexpected error: {e}")
+        async with aiohttp.ClientSession() as session:
+            try:
+                async with session.get(full_url, json=list_nodes_payload) as response:
+                    response.raise_for_status()
+                    data = await response.json()
+                    return data.get("Nodes", [])
+
+            except aiohttp.ClientError as e:
+                print(f"Error sending request: {e}")
+            except Exception as e:
+                print(f"Unexpected error: {e}")
 
         
-    def store(self, label: str, data: dict, ctx: Optional[str] = None):
-        if ctx:
-            full_url = f"https://{self.network}/api/store_in_ctx/{ctx}"
-        else:
-            full_url = f"https://{self.network}/api/store"
-        
-        store = {
+    async def store(self, label: str, data: dict, ctx: Optional[str] = None):
+        full_url = f"https://{self.network}/api/store_in_ctx/{ctx}" if ctx else f"https://{self.network}/api/store"
+
+        store_payload = {
             "label": label,
             "data": data,
-            "cell": self.to_dict()  
+            "cell": self.to_dict()
         }
 
-        try:
-            response = requests.post(full_url, json=store)
-            response.raise_for_status()
-            print(f"Response from Neuronum: {response.json()}")
-        except requests.exceptions.RequestException as e:
-            print(f"Error sending request: {e}")
-        except Exception as e:
-            print(f"Unexpected error: {e}")
+        async with aiohttp.ClientSession() as session:
+            try:
+                async with session.post(full_url, json=store_payload) as response:
+                    response.raise_for_status()
+                    data = await response.json()
+                    print(f"Response from Neuronum: {data}")
+                    return data
+
+            except aiohttp.ClientError as e:
+                print(f"Error sending request: {e}")
+            except Exception as e:
+                print(f"Unexpected error: {e}")
 
 
-    def load(self, label: str, ctx: Optional[str] = None):
-        if ctx:
-            full_url = f"https://{self.network}/api/load_from_ctx/{ctx}"
-        else:
-            full_url = f"https://{self.network}/api/load"
+    async def load(self, label: str, ctx: Optional[str] = None):
+        full_url = f"https://{self.network}/api/load_from_ctx/{ctx}" if ctx else f"https://{self.network}/api/load"
 
-        load = {
+        load_payload = {
             "label": label,
-            "cell": self.to_dict() 
+            "cell": self.to_dict()
         }
 
-        try:
-            response = requests.post(full_url, json=load)
-            response.raise_for_status()
-            return response.json()
-        except requests.exceptions.RequestException as e:
-            print(f"Error sending request: {e}")
-        except Exception as e:
-            print(f"Unexpected error: {e}")
+        async with aiohttp.ClientSession() as session:
+            try:
+                async with session.post(full_url, json=load_payload) as response:
+                    response.raise_for_status()
+                    data = await response.json()
+                    return data
+
+            except aiohttp.ClientError as e:
+                print(f"Error sending request: {e}")
+            except Exception as e:
+                print(f"Unexpected error: {e}")
 
 
-    def delete(self, label: str, ctx: Optional[str] = None):
-        if ctx:
-            full_url = f"https://{self.network}/api/delete_from_ctx/{ctx}"
-        else:
-            full_url = f"https://{self.network}/api/delete"
+    async def delete(self, label: str, ctx: Optional[str] = None):
+        full_url = f"https://{self.network}/api/delete_from_ctx/{ctx}" if ctx else f"https://{self.network}/api/delete"
 
-        delete = {
+        delete_payload = {
             "label": label,
-            "cell": self.to_dict() 
+            "cell": self.to_dict()
         }
 
-        try:
-            response = requests.post(full_url, json=delete)
-            response.raise_for_status()
-            print(response.json())
-        except requests.exceptions.RequestException as e:
-            print(f"Error sending request: {e}")
-        except Exception as e:
-            print(f"Unexpected error: {e}")
+        async with aiohttp.ClientSession() as session:
+            try:
+                async with session.post(full_url, json=delete_payload) as response:
+                    response.raise_for_status()
+                    data = await response.json()
+                    print(f"Response from Neuronum: {data}")
+                    return data
+
+            except aiohttp.ClientError as e:
+                print(f"Error sending request: {e}")
+            except Exception as e:
+                print(f"Unexpected error: {e}")
 
 
-    def clear(self, ctx: Optional[str] = None):
-        if ctx:
-            full_url = f"https://{self.network}/api/clear_ctx/{ctx}"
-        else:
-            full_url = f"https://{self.network}/api/clear"
+    async def clear(self, ctx: Optional[str] = None):
+        full_url = f"https://{self.network}/api/clear_ctx/{ctx}" if ctx else f"https://{self.network}/api/clear"
 
-        clear = {
-            "cell": self.to_dict() 
+        clear_payload = {
+            "cell": self.to_dict()
         }
 
-        try:
-            response = requests.post(full_url, json=clear)
-            response.raise_for_status()
-            print(response.json())
-        except requests.exceptions.RequestException as e:
-            print(f"Error sending request: {e}")
-        except Exception as e:
-            print(f"Unexpected error: {e}")
+        async with aiohttp.ClientSession() as session:
+            try:
+                async with session.post(full_url, json=clear_payload) as response:
+                    response.raise_for_status()
+                    data = await response.json()
+                    print(f"Response from Neuronum: {data}")
+                    return data
+
+            except aiohttp.ClientError as e:
+                print(f"Error sending request: {e}")
+            except Exception as e:
+                print(f"Unexpected error: {e}")
 
 
-    def stream(self, label: str, data: dict, stx: Optional[str] = None):
+    async def stream(self, label: str, data: dict, stx: Optional[str] = None):
         context = ssl.create_default_context()
         context.check_hostname = True
         context.verify_mode = ssl.CERT_REQUIRED
 
-        raw_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.sock = context.wrap_socket(raw_sock, server_hostname=self.network)
-
         try:
-            self.sock.connect((self.network, 55555))
+            reader, writer = await asyncio.open_connection(self.network, 55555, ssl=context, server_hostname=self.network)
 
-            if not self.authenticate(stx):
-                print("Authentication failed. Cannot stream.")
+            credentials = f"{self.host}\n{self.password}\n{self.synapse}\n{stx}\n"
+            writer.write(credentials.encode("utf-8"))
+            await writer.drain()
+
+            response = await reader.read(1024)
+            response_text = response.decode("utf-8")
+
+            if "Authentication successful" not in response_text:
+                print("Authentication failed")
+                writer.close()
+                await writer.wait_closed()
                 return
 
-            stream = {
+            stream_payload = {
                 "label": label,
                 "data": data,
             }
 
-            self.sock.sendall(json.dumps(stream).encode('utf-8'))
-            print(f"Sent: {stream}")
+            writer.write(json.dumps(stream_payload).encode("utf-8"))
+            await writer.drain()
+            print(f"Sent: {stream_payload}")
 
         except ssl.SSLError as e:
             print(f"SSL error occurred: {e}")
@@ -405,174 +407,217 @@ class Cell:
             print(f"An unexpected error occurred: {e}")
 
         finally:
-            self.sock.close()
+            writer.close()
+            await writer.wait_closed()
 
 
-    def sync(self, stx: Optional[str] = None) -> Generator[str, None, None]:
-        auth = {
+
+    async def sync(self, stx: Optional[str] = None) -> AsyncGenerator[str, None]:
+        full_url = f"wss://{self.network}/sync/{stx}"
+        
+        auth_payload = {
             "host": self.host,
             "password": self.password,
             "synapse": self.synapse,
         }
 
         try:
-            ws = create_connection(f"wss://{self.network}/sync/{stx}")
-            ws.send(json.dumps(auth))
-            print("Listening to Stream...")
+            async with websockets.connect(full_url) as ws:
+                await ws.send(json.dumps(auth_payload))
+                print("Listening to Stream...")
 
+                try:
+                    while True:
+                        try:
+                            raw_operation = await ws.recv()
+                            operation = json.loads(raw_operation)
+                            yield operation
+
+                        except asyncio.TimeoutError:
+                            print("No initial data received. Continuing to listen...")
+                            continue
+
+                except asyncio.CancelledError:
+                    print("Connection closed.")
+
+        except websockets.exceptions.WebSocketException as e:
+            print(f"WebSocket error occurred: {e}")
+
+        except Exception as e:
+            print(f"An unexpected error occurred: {e}")
+
+
+    async def sign_contract(self, contractID: str):
+        full_url = f"https://{self.network}/api/sign_contract"
+
+        sign_contract_payload = {
+            "contractID": contractID,
+            "cell": self.to_dict()
+        }
+
+        async with aiohttp.ClientSession() as session:
             try:
-                while True:
-                    try:
-                        raw_operation = ws.recv()
-                        operation = json.loads(raw_operation)
-                        yield operation
+                async with session.post(full_url, json=sign_contract_payload) as response:
+                    response.raise_for_status()
+                    data = await response.json()
+                    return data.get("token")
 
-                    except socket.timeout:
-                        print("No initial data received. Continuing to listen...") 
-                        continue 
-
-            except KeyboardInterrupt:
-                ws.close()
-                print("Connection closed.")
-            except Exception as e:
-                print(f"Error: {e}")
- 
-                
-        except KeyboardInterrupt:
-            print("Stream-Synchronization ended!")
-            ws.close()
-            print("Connection closed. Goodbye!")
-
-
-    def sign_contract(self, contractID: str):
-            full_url = f"https://{self.network}/api/sign_contract"
-            
-            sign_contract = {
-                "contractID": contractID,
-                "cell": self.to_dict() 
-            }
-
-            try:
-                response = requests.post(full_url, json=sign_contract)
-                response.raise_for_status()
-                return response.json()["token"]
-            except requests.exceptions.RequestException as e:
+            except aiohttp.ClientError as e:
                 print(f"Error sending request: {e}")
             except Exception as e:
                 print(f"Unexpected error: {e}")
 
 
-    def validate_token(self, token: str, cp: str, contractID: str):
+    async def validate_token(self, token: str, cp: str, contractID: str):
         full_url = f"https://{self.network}/api/validate_token"
-        
-        validate = {
+
+        validate_payload = {
             "token": token,
             "cp": cp,
             "contractID": contractID,
-            "cell": self.to_dict() 
+            "cell": self.to_dict()
         }
 
-        try:
-            response = requests.post(full_url, json=validate)
-            response.raise_for_status()
-            return response.json()["validity"]
-        except requests.exceptions.RequestException as e:
-            print(f"Error sending request: {e}")
-        except Exception as e:
-            print(f"Unexpected error: {e}")
+        async with aiohttp.ClientSession() as session:
+            try:
+                async with session.post(full_url, json=validate_payload) as response:
+                    response.raise_for_status()
+                    data = await response.json()
+                    return data.get("validity")
+
+            except aiohttp.ClientError as e:
+                print(f"Error sending request: {e}")
+            except Exception as e:
+                print(f"Unexpected error: {e}")
 
 
-    def request_token(self, cp: str, contractID: str):
+    async def request_token(self, cp: str, contractID: str):
         full_url = f"https://{self.network}/api/request_token"
-        
-        request_token = {
+
+        request_token_payload = {
             "cp": cp,
             "contractID": contractID,
-            "cell": self.to_dict() 
+            "cell": self.to_dict()
         }
 
-        try:
-            response = requests.post(full_url, json=request_token)
-            response.raise_for_status()
-            print(response.json())
-        except requests.exceptions.RequestException as e:
-            print(f"Error sending request: {e}")
-        except Exception as e:
-            print(f"Unexpected error: {e}")
+        async with aiohttp.ClientSession() as session:
+            try:
+                async with session.post(full_url, json=request_token_payload) as response:
+                    response.raise_for_status()
+                    data = await response.json()
+                    print(f"Response from Neuronum: {data}")
+                    return data
+
+            except aiohttp.ClientError as e:
+                print(f"Error sending request: {e}")
+            except Exception as e:
+                print(f"Unexpected error: {e}")
 
     
-    def present_token(self, token: str, cp: str, contractID: str):
+    async def present_token(self, token: str, cp: str, contractID: str):
         full_url = f"https://{self.network}/api/present_token"
-        
-        present_token = {
+
+        present_token_payload = {
             "token": token,
             "cp": cp,
             "contractID": contractID,
-            "cell": self.to_dict() 
+            "cell": self.to_dict()
         }
 
-        try:
-            response = requests.post(full_url, json=present_token)
-            response.raise_for_status()
-            print(response.json()) 
-        except requests.exceptions.RequestException as e:
-            print(f"Error sending request: {e}")
-        except Exception as e:
-            print(f"Unexpected error: {e}")
+        async with aiohttp.ClientSession() as session:
+            try:
+                async with session.post(full_url, json=present_token_payload) as response:
+                    response.raise_for_status()
+                    data = await response.json()
+                    print(f"Response from Neuronum: {data}")
+                    return data
+
+            except aiohttp.ClientError as e:
+                print(f"Error sending request: {e}")
+            except Exception as e:
+                print(f"Unexpected error: {e}")
 
 
-    def create_contract(self, descr: str, details: dict, partners: list):
+    async def create_contract(self, descr: str, details: dict, partners: list):
         full_url = f"https://{self.network}/api/create_contract"
-        
-        create_contract = {
-            "cell": self.to_dict(),  
+
+        create_contract_payload = {
+            "cell": self.to_dict(),
             "descr": descr,
             "details": details,
             "partners": partners
         }
-        try:
-            response = requests.post(full_url, json=create_contract)
-            response.raise_for_status()
-            return response.json()["contractID"]
-        except requests.exceptions.RequestException as e:
-            print(f"Error sending request: {e}")
-        except Exception as e:
-            print(f"Unexpected error: {e}")
+
+        async with aiohttp.ClientSession() as session:
+            try:
+                async with session.post(full_url, json=create_contract_payload) as response:
+                    response.raise_for_status()
+                    data = await response.json()
+                    return data.get("contractID")
+
+            except aiohttp.ClientError as e:
+                print(f"Error sending request: {e}")
+            except Exception as e:
+                print(f"Unexpected error: {e}")
 
 
-    def delete_contract(self, contractID: str):
+    async def delete_contract(self, contractID: str):
         full_url = f"https://{self.network}/api/delete_contract"
-        
-        request = {
-            "cell": self.to_dict(),  
+
+        request_payload = {
+            "cell": self.to_dict(),
             "contractID": contractID
         }
 
-        try:
-            response = requests.post(full_url, json=request)
-            response.raise_for_status()
-            print(f"Response from Neuronum: {response.json()}")
-        except requests.exceptions.RequestException as e:
-            print(f"Error sending request: {e}")
-        except Exception as e:
-            print(f"Unexpected error: {e}")
+        async with aiohttp.ClientSession() as session:
+            try:
+                async with session.post(full_url, json=request_payload) as response:
+                    response.raise_for_status()
+                    data = await response.json()
+                    print(f"Response from Neuronum: {data}")
+                    return data
+
+            except aiohttp.ClientError as e:
+                print(f"Error sending request: {e}")
+            except Exception as e:
+                print(f"Unexpected error: {e}")
 
 
-    def list_contracts(self):
+    async def list_contracts(self):
         full_url = f"https://{self.network}/api/list_contracts"
-        
-        list_contracts = {
+
+        list_contracts_payload = {
             "cell": self.to_dict()
         }
 
+        async with aiohttp.ClientSession() as session:
+            try:
+                async with session.get(full_url, json=list_contracts_payload) as response:
+                    response.raise_for_status()
+                    data = await response.json()
+                    return data.get("Contracts", [])
+
+            except aiohttp.ClientError as e:
+                print(f"Error sending request: {e}")
+            except Exception as e:
+                print(f"Unexpected error: {e}")
+
+        
+    def device_found(self, device, advertisement_data):
+        if device.name and (device.name.endswith("::cell") or device.name.endswith("::node")):
+            asyncio.create_task(self.queue.put(f"{device.name} - {device.address}"))
+
+    async def scan(self):
+        print("Scanning for Neuronum Cells & Nodes")
+
+        scanner = BleakScanner(self.device_found)
+        await scanner.start()
+
         try:
-            response = requests.get(full_url, json=list_contracts)
-            response.raise_for_status()
-            return response.json()["Contracts"]
-        except requests.exceptions.RequestException as e:
-            print(f"Error sending request: {e}")
-        except Exception as e:
-            print(f"Unexpected error: {e}")
+            while True:
+                yield await self.queue.get()
+        except asyncio.CancelledError:
+            await scanner.stop()
 
 
 __all__ = ['Cell']

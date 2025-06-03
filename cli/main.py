@@ -1,13 +1,16 @@
-import click
-import questionary
-from pathlib import Path
-import requests
 import subprocess
 import os
 import neuronum
 import json
 import platform
 import glob
+import asyncio
+import aiohttp
+import click
+import questionary
+from pathlib import Path
+import requests
+
 
 @click.group()
 def cli():
@@ -81,7 +84,6 @@ def create_cell():
 
         if status == False:
             click.echo(f"Error:'{email}' already assigned!")
-
 
 
 @click.command()
@@ -242,13 +244,15 @@ def delete_cell():
         click.echo(f"Neuronum Cell '{host}' has been deleted!")
     else: 
         click.echo(f"Neuronum Cell '{host}' deletion failed!")
- 
+
 
 @click.command()
 @click.option('--sync', multiple=True, default=None, help="Optional stream IDs for sync.")
 @click.option('--stream', multiple=True, default=None, help="Optional stream ID for stream.")
 def init_node(sync, stream):
+    asyncio.run(async_init_node(sync, stream))
 
+async def async_init_node(sync, stream):
     credentials_folder_path = Path.home() / ".neuronum"
     env_path = credentials_folder_path / ".env"
 
@@ -273,15 +277,17 @@ def init_node(sync, stream):
         return
 
     url = f"https://{network}/api/init_node"
-    node = {"host": host, "password": password, "synapse": synapse}
+    node_payload = {"host": host, "password": password, "synapse": synapse}
 
-    try:
-        response = requests.post(url, json=node)
-        response.raise_for_status()
-        nodeID = response.json()["nodeID"]
-    except requests.exceptions.RequestException as e:
-        click.echo(f"Error sending request: {e}")
-        return
+    async with aiohttp.ClientSession() as session:
+        try:
+            async with session.post(url, json=node_payload) as response:
+                response.raise_for_status()
+                data = await response.json()
+                nodeID = data["nodeID"]
+        except aiohttp.ClientError as e:
+            click.echo(f"Error sending request: {e}")
+            return
 
     node_filename = "node_" + nodeID.replace("::node", "")
     project_path = Path(node_filename)
@@ -294,35 +300,29 @@ def init_node(sync, stream):
         synapse=synapse
     )
 
-    cells = cell.list_cells()
-    tx = cell.list_tx()
-    ctx = cell.list_ctx()
-    stx = cell.list_stx()
-    contracts = cell.list_contracts()
-    nodes = cell.list_nodes()
+    cells = await cell.list_cells()
+    tx = await cell.list_tx()
+    ctx = await cell.list_ctx()
+    stx = await cell.list_stx()
+    contracts = await cell.list_contracts()
+    nodes = await cell.list_nodes()
 
-    cells_path = project_path / "cells.json"
-    tx_path = project_path / "transmitters.json"
-    ctx_path = project_path / "circuits.json"
-    stx_path = project_path / "streams.json"
-    contracts_path = project_path / "contracts.json"
-    nodes_path = project_path / "nodes.json"
-
-    cells_path.write_text(json.dumps(cells, indent=4))
-    tx_path.write_text(json.dumps(tx, indent=4))
-    ctx_path.write_text(json.dumps(ctx, indent=4))
-    stx_path.write_text(json.dumps(stx, indent=4))
-    contracts_path.write_text(json.dumps(contracts, indent=4))
-    nodes_path.write_text(json.dumps(nodes, indent=4))
+    await asyncio.to_thread((project_path / "cells.json").write_text, json.dumps(cells, indent=4))
+    await asyncio.to_thread((project_path / "transmitters.json").write_text, json.dumps(tx, indent=4))
+    await asyncio.to_thread((project_path / "circuits.json").write_text, json.dumps(ctx, indent=4))
+    await asyncio.to_thread((project_path / "streams.json").write_text, json.dumps(stx, indent=4))
+    await asyncio.to_thread((project_path / "contracts.json").write_text, json.dumps(contracts, indent=4))
+    await asyncio.to_thread((project_path / "nodes.json").write_text, json.dumps(nodes, indent=4))
 
     env_path = project_path / ".env"
-    env_path.write_text(f"NODE={nodeID}\nHOST={host}\nPASSWORD={password}\nNETWORK={network}\nSYNAPSE={synapse}\n")
+    await asyncio.to_thread(env_path.write_text, f"NODE={nodeID}\nHOST={host}\nPASSWORD={password}\nNETWORK={network}\nSYNAPSE={synapse}\n")
 
     gitignore_path = project_path / ".gitignore"
-    gitignore_path.write_text(".env\n")
+    await asyncio.to_thread(gitignore_path.write_text, ".env\n")
 
     nodemd_path = project_path / "NODE.md"
-    nodemd_path.write_text("## Use this NODE.md file to add instructions on how to interact with your node\n")
+    await asyncio.to_thread(nodemd_path.write_text, "## Use this NODE.md file to add instructions on how to interact with your node\n")
+
 
     stx = sync[0] if sync else (stream[0] if stream else host.replace("::cell", "::stx"))
 
@@ -330,6 +330,7 @@ def init_node(sync, stream):
         for stx in sync:
             sync_path = project_path / f"sync_{stx.replace('::stx', '')}.py"
             sync_path.write_text(f"""\
+import asyncio
 import neuronum
 import os
 from dotenv import load_dotenv
@@ -347,15 +348,17 @@ cell = neuronum.Cell(
     synapse=synapse
 )
 
-STX = "{stx}"
-stream = cell.sync(STX)
-for operation in stream:
-    label = operation.get("label")
-    data = operation.get("data")
-    ts = operation.get("time")
-    stxID = operation.get("stxID")
-    operator = operation.get("operator")
-    print(label, data, ts, stxID, operator)
+async def main():
+    STX = "{stx}"
+    async for operation in cell.sync(STX):
+        label = operation.get("label")
+        data = operation.get("data")
+        ts = operation.get("time")
+        stxID = operation.get("stxID")
+        operator = operation.get("operator")
+        print(label, data, ts, stxID, operator)
+
+asyncio.run(main())
 """)
 
 
@@ -363,6 +366,7 @@ for operation in stream:
         for stx in stream:
             stream_path = project_path / f"stream_{stx.replace('::stx', '')}.py"
             stream_path.write_text(f"""\
+import asyncio
 import neuronum
 import os
 from dotenv import load_dotenv
@@ -380,20 +384,25 @@ cell = neuronum.Cell(
     synapse=synapse
 )
 
-STX = "{stx}"
-label = "your_label"
-while True:
-    data = {{
-        "key1": "value1",
-        "key2": "value2",
-        "key3": "value3",
-    }}
-    cell.stream(label, data, STX)
+async def main():
+    STX = "{stx}"
+    label = "your_label"
+    
+    while True:
+        data = {{
+            "key1": "value1",
+            "key2": "value2",
+            "key3": "value3",
+        }}
+        await cell.stream(label, data, STX)
+
+asyncio.run(main())
 """)
     
     if not sync and not stream:
         sync_path = project_path / f"sync_{stx.replace('::stx', '')}.py"
         sync_path.write_text(f"""\
+import asyncio
 import neuronum
 import os
 from dotenv import load_dotenv
@@ -410,16 +419,19 @@ cell = neuronum.Cell(
     network=network,
     synapse=synapse
 )
-                             
-STX = "{stx}"
-stream = cell.sync(STX)
-for operation in stream:
-    message = operation.get("data").get("message")
-    print(message)
+
+async def main():
+    STX = "{stx}"
+    async for operation in cell.sync(STX):
+        message = operation.get("data").get("message")
+        print(message)
+
+asyncio.run(main())
 """)
         
         stream_path = project_path / f"stream_{stx.replace('::stx', '')}.py"
         stream_path.write_text(f"""\
+import asyncio
 import neuronum
 import os
 from dotenv import load_dotenv
@@ -436,27 +448,64 @@ cell = neuronum.Cell(
     network=network,
     synapse=synapse
 )
-                             
-STX = "{stx}"
-label = "Welcome to Neuronum"
-while True:
-    data = {{
-        "message": "Hello, Neuronum!"
-    }}
-    cell.stream(label, data, STX)
+
+async def main():
+    STX = "{stx}"
+    label = "Welcome to Neuronum"
+    
+    while True:
+        data = {{
+            "message": "Hello, Neuronum!"
+        }}
+        await cell.stream(label, data, STX)
+
+asyncio.run(main())
+""")
+        
+    scan_path = project_path / f"scan.py"
+    scan_path.write_text(f"""\
+import asyncio
+import neuronum
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+host = os.getenv("HOST")
+password = os.getenv("PASSWORD")
+network = os.getenv("NETWORK")
+synapse = os.getenv("SYNAPSE")
+
+cell = neuronum.Cell(
+    host=host,
+    password=password,
+    network=network,
+    synapse=synapse
+)
+
+async def main():
+    async for cp in cell.scan():
+        print(cp)
+
+asyncio.run(main())
 """)
 
     click.echo(f"Neuronum Node '{nodeID}' initialized!")
 
 
-
 @click.command()
 def start_node():
+    scan_type = questionary.select(
+        "Scan for Neuronum Cells and Nodes (Ensure Bluetooth is enabled)",
+        choices=["On", "Off"]
+    ).ask()
+
     click.echo("Starting Node...")
 
     project_path = Path.cwd()
-
     script_files = glob.glob("sync_*.py") + glob.glob("stream_*.py")
+
+    if scan_type == "On":
+        script_files += glob.glob("scan.py")
 
     processes = []
 
@@ -473,12 +522,18 @@ def start_node():
     with open("node_pid.txt", "w") as f:
         f.write("\n".join(map(str, processes)))
 
-    click.echo(f"Node started successfully!")
+    click.echo("Node started successfully!")
+
 
 
 @click.command()
 def stop_node():
+    asyncio.run(async_stop_node())
+
+async def async_stop_node():
     click.echo("Stopping Node...")
+
+    node_pid_path = Path("node_pid.txt")
 
     try:
         with open("node_pid.txt", "r") as f:
@@ -489,18 +544,14 @@ def stop_node():
         for pid in pids:
             try:
                 if system_name == "Windows":
-                    subprocess.run(
-                        ["taskkill", "/F", "/PID", str(pid)],
-                        stdout=subprocess.DEVNULL,
-                        stderr=subprocess.DEVNULL
-                    )
+                    await asyncio.to_thread(subprocess.run, ["taskkill", "/F", "/PID", str(pid)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
                 else:
-                    os.kill(pid, 9)
+                    await asyncio.to_thread(os.kill, pid, 9)
             except ProcessLookupError:
                 click.echo(f"Warning: Process {pid} already stopped or does not exist.")
 
-        os.remove("node_pid.txt")
-        click.echo(f"Node stopped successfully!")
+        await asyncio.to_thread(os.remove, node_pid_path)
+        click.echo("Node stopped successfully!")
 
     except FileNotFoundError:
         click.echo("Error: No active node process found.")
@@ -510,6 +561,9 @@ def stop_node():
 
 @click.command()
 def register_node():
+    asyncio.run(async_register_node())
+
+async def async_register_node():
     env_data = {}
     try:
         with open(".env", "r") as f:
@@ -559,21 +613,27 @@ def register_node():
         "nodemd_file": nodemd_file
     }
 
-    try:
-        response = requests.post(url, json=node)
-        response.raise_for_status()
-        nodeID = response.json()["nodeID"]
-        node_url = response.json()["node_url"]
-    except requests.exceptions.RequestException as e:
-        click.echo(f"Error sending request: {e}")
-        return
+    async with aiohttp.ClientSession() as session:
+        try:
+            async with session.post(url, json=node) as response:
+                response.raise_for_status()
+                data = await response.json()
+                nodeID = data["nodeID"]
+                node_url = data["node_url"]
+        except aiohttp.ClientError as e:
+            click.echo(f"Error sending request: {e}")
+            return
 
     click.echo(f"Neuronum Node '{nodeID}' registered! Visit: {node_url}")
 
 
 @click.command()
 def update_node():
+    asyncio.run(async_update_node())
+
+async def async_update_node():
     env_data = {}
+
     try:
         with open(".env", "r") as f:
             for line in f:
@@ -587,26 +647,25 @@ def update_node():
         synapse = env_data.get("SYNAPSE", "")
 
     except FileNotFoundError:
-        print("Error: .env with credentials not found")
+        click.echo("Error: .env with credentials not found")
         return
     except Exception as e:
-        print(f"Error reading .env file: {e}")
+        click.echo(f"Error reading .env file: {e}")
         return
 
     try:
-        with open("NODE.md", "r") as f: 
-            nodemd_file = f.read() 
+        with open("NODE.md", "r") as f:
+            nodemd_file = f.read()
 
     except FileNotFoundError:
-        print("Error: NODE.md file not found")
+        click.echo("Error: NODE.md file not found")
         return
     except Exception as e:
-        print(f"Error reading NODE.md file: {e}")
+        click.echo(f"Error reading NODE.md file: {e}")
         return
 
     url = f"https://{network}/api/update_node"
-
-    node = {
+    node_payload = {
         "nodeID": nodeID,
         "host": host,
         "password": password,
@@ -614,50 +673,48 @@ def update_node():
         "nodemd_file": nodemd_file
     }
 
-    try:
-        response = requests.post(url, json=node)
-        response.raise_for_status()
-        nodeID = response.json()["nodeID"]
-        node_url = response.json()["node_url"]
-    except requests.exceptions.RequestException as e:
-        click.echo(f"Error sending request: {e}")
-        return
-    
+    async with aiohttp.ClientSession() as session:
+        try:
+            async with session.post(url, json=node_payload) as response:
+                response.raise_for_status()
+                data = await response.json()
+                nodeID = data["nodeID"]
+                node_url = data["node_url"]
+        except aiohttp.ClientError as e:
+            click.echo(f"Error sending request: {e}")
+            return
 
     cell = neuronum.Cell(
-    host=host,         
-    password=password,                         
-    network=network,                        
-    synapse=synapse
+        host=host,
+        password=password,
+        network=network,
+        synapse=synapse
     )
 
-    cells = cell.list_cells()
-    tx = cell.list_tx()
-    ctx = cell.list_ctx()
-    stx = cell.list_stx()
-    contracts = cell.list_contracts()
-    nodes = cell.list_nodes()
+    cells = await cell.list_cells()
+    tx = await cell.list_tx()
+    ctx = await cell.list_ctx()
+    stx = await cell.list_stx()
+    contracts = await cell.list_contracts()
+    nodes = await cell.list_nodes()
 
-    cells_path = Path("cells.json")
-    tx_path = Path("transmitters.json")
-    ctx_path = Path("circuits.json")
-    stx_path = Path("streams.json")
-    contracts_path = Path("contracts.json")
-    nodes_path = Path("nodes.json")
-
-    cells_path.write_text(json.dumps(cells, indent=4))
-    tx_path.write_text(json.dumps(tx, indent=4))
-    ctx_path.write_text(json.dumps(ctx, indent=4))
-    stx_path.write_text(json.dumps(stx, indent=4))
-    contracts_path.write_text(json.dumps(contracts, indent=4))
-    nodes_path.write_text(json.dumps(nodes, indent=4))
+    await asyncio.to_thread(Path("cells.json").write_text, json.dumps(cells, indent=4))
+    await asyncio.to_thread(Path("transmitters.json").write_text, json.dumps(tx, indent=4))
+    await asyncio.to_thread(Path("circuits.json").write_text, json.dumps(ctx, indent=4))
+    await asyncio.to_thread(Path("streams.json").write_text, json.dumps(stx, indent=4))
+    await asyncio.to_thread(Path("contracts.json").write_text, json.dumps(contracts, indent=4))
+    await asyncio.to_thread(Path("nodes.json").write_text, json.dumps(nodes, indent=4))
 
     click.echo(f"Neuronum Node '{nodeID}' updated! Visit: {node_url}")
 
 
 @click.command()
 def delete_node():
+    asyncio.run(async_delete_node())
+
+async def async_delete_node():
     env_data = {}
+
     try:
         with open(".env", "r") as f:
             for line in f:
@@ -671,39 +728,41 @@ def delete_node():
         synapse = env_data.get("SYNAPSE", "")
 
     except FileNotFoundError:
-        print("Error: .env with credentials not found")
+        click.echo("Error: .env with credentials not found")
         return
     except Exception as e:
-        print(f"Error reading .env file: {e}")
+        click.echo(f"Error reading .env file: {e}")
         return
 
     url = f"https://{network}/api/delete_node"
-
-    node = {
+    node_payload = {
         "nodeID": nodeID,
         "host": host,
         "password": password,
         "synapse": synapse
     }
 
-    try:
-        response = requests.post(url, json=node)
-        response.raise_for_status()
-        nodeID = response.json()["nodeID"]
-    except requests.exceptions.RequestException as e:
-        click.echo(f"Error sending request: {e}")
-        return
+    async with aiohttp.ClientSession() as session:
+        try:
+            async with session.post(url, json=node_payload) as response:
+                response.raise_for_status()
+                data = await response.json()
+                nodeID = data["nodeID"]
+        except aiohttp.ClientError as e:
+            click.echo(f"Error sending request: {e}")
+            return
 
     click.echo(f"Neuronum Node '{nodeID}' deleted!")
 
 
-@click.command()
-def call_cellai():
-    try:
-        from cellai import cellai
-        cellai.main()
-    except ImportError:
+@click.command() 
+def call_cellai(): 
+    try: 
+        from cellai import cellai 
+        cellai.main() 
+    except ImportError: 
         click.echo("Cellai not found. Please check the necessary dependencies.")
+
 
 cli.add_command(create_cell)
 cli.add_command(connect_cell)

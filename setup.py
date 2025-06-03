@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='neuronum',
-    version='2.0.8',
+    version='3.0.0',
     author='Neuronum Cybernetics',
     author_email='welcome@neuronum.net',
     description='Official client library to interact with the Neuronum Network',
@@ -20,11 +20,13 @@ setup(
     ],
     
     install_requires=[
-        'requests', 
-        'websocket-client',
+        'aiohttp',
+        'websockets',
         'click',
         'questionary',
         'python-dotenv',
+        'bleak',
+        'requests',
     ],
     entry_points={
         "console_scripts": [
