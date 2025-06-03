@@ -9,7 +9,7 @@ A Getting Started into the Neuronum Network: Build, deploy and automate serverle
 - New cell.scan() function, enabling discovery of Cells and Nodes via the Bleak BLE Client.
 
 ### **New Feature Set**
-- **Cells/Cell-CLI**: Create and manage your Neuronum Cell, your unique identity for interacting with the Network, directly from the command line.
+- **Cell/Cell-CLI**: Create and manage your Neuronum Cell, a unique identity for interacting with the Network, directly from the command line.
 - **Nodes/Node-CLI**: Setup and manage Neuronum Nodes, the software and hardware components that power the Network, via the command line.
 - **Transmitters (TX)**: Automate economic data transfer using predefined templates for standardized data exchange.
 - **Circuits (CTX)**: Store, manage, and retrieve structured data with Circuits, a cloud-based Key-Value-Label database.

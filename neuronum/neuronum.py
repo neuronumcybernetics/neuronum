@@ -73,7 +73,6 @@ class Cell:
     
 
     async def activate_tx(self, txID: str, data: dict):
-        """Asynchronously sends TX activation request to the API."""
         url = f"https://{self.network}/api/activate_tx/{txID}"
 
         TX = {
@@ -85,9 +84,9 @@ class Cell:
             try:
                 async with session.post(url, json=TX) as response:
                     response.raise_for_status()
+                    response.raise_for_status()
                     data = await response.json()
-                    print(f"Response from Neuronum: {data}")
-                    return data
+                    print(data["message"])
 
             except aiohttp.ClientError as e:
                 print(f"Error sending request: {e}")
