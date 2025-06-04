@@ -20,7 +20,7 @@ async def main():
     label = "labelroot:key1:key2"                                           # label the Transmitter TX data
                                                                             # Labels are dynamically created for each activated Transmitter TX
                                                                             # This Transmitter TX will have the Label: labelroot:valueX:valueY
-    partners = ["partner::cell, partner::cell, partner::cell"]              # a Transmitter TX all Cells defined in partners can execute
+    partners = ["partner::cell, partner::cell, partner::cell"]              # Cells defined in partners can execute the Transmitter TX
     txID = await cell.create_tx(descr, key_values, STX, label, partners)    # create the Transmitter TX -> get txID back
     print(f"Transmitter ID: {txID}")                                        # print the Transmitter TX ID
 
@@ -31,5 +31,6 @@ async def main():
         "key2": "valueY",
     }
     await cell.activate_tx(TX, data)                                        # activate TX - > get success message back
+    
 
 asyncio.run(main())
