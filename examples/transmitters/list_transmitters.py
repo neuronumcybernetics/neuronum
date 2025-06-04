@@ -10,7 +10,7 @@ cell = neuronum.Cell(                                                       # se
 
 async def main():
                                                             
-    txList = await cell.list_tx()                                           # request a list of all executable Transmitters TX - > get list back
+    txList = await cell.list_tx()                                           # list of all executable Transmitters TX - > get list back
     print(txList)                                                           # print Transmitters TX list
                                       
 asyncio.run(main())

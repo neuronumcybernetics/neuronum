@@ -9,8 +9,13 @@ cell = neuronum.Cell(                                                       # se
 )
 
 async def main():
-                                                            
-    ctxList = await cell.list_ctx()                                         # list of all accessable Circuits CTX - > get list back
-    print(ctxList)                                                          # print Circuits CTX list
-                                      
+
+    label = "label"                                                         # label your data
+    data = {                                                                # data as key-value pairs
+        "key1": "value1",
+        "key2": "value2",
+        "key3": "value3",
+    }
+    await cell.stream(label, data)                                          # stream data to your private Stream STX - > get success message back
+
 asyncio.run(main())

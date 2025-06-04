@@ -10,7 +10,7 @@ cell = neuronum.Cell(                                                       # se
 
 async def main():
     
-    CTX = "SMPsbPLZSMTo::ctx"                                               # select Circuit CTX
+    CTX = "id::ctx"                                                         # select Circuit CTX
     await cell.delete_ctx(CTX)                                              # delete CTX - > get success message back
                                       
 asyncio.run(main())

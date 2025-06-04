@@ -10,7 +10,7 @@ cell = neuronum.Cell(                                                       # se
 
 async def main():
                                                             
-    ctxList = await cell.list_ctx()                                         # list of all accessable Circuits CTX - > get list back
-    print(ctxList)                                                          # print Circuits CTX list
+    stxList = await cell.list_stx()                                          # list of all synchronizable Streams STX - > get list back
+    print(stxList)                                                           # print Streams STX list
                                       
 asyncio.run(main())

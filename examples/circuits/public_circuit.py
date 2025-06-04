@@ -11,7 +11,7 @@ cell = neuronum.Cell(                                                       # se
 async def main():
 
     descr = "Test Circuit"                                                  # describe your Circuit CTX (max 25 characters)
-    partners = ["public"]                                                   # a public Transmitter TX all Cells can execute
+    partners = ["public"]                                                   # a public Circuit CTX all Cells can store data in
     ctxID = await cell.create_ctx(descr, partners)                          # create the Circuit CTX -> get ctxID back
     print(f"Circuit ID: {ctxID}")                                           # print the Circuit CTX ID
 
