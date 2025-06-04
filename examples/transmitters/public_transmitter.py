@@ -15,7 +15,7 @@ async def main():
         "key1": "valueX",
         "key2": "valueY",
     }
-    STX = "CMTY_G2AjiEAgIF::stx"                                            # select the Stream (STX) you want the data to be sent to                            
+    STX = "id::stx"                                                         # select the Stream (STX) you want the data to be sent to                            
     label = "labelroot:key1:key2"                                           # label the Transmitter TX data
                                                                             # Labels are dynamically created for each activated Transmitter TX
                                                                             # This Transmitter TX will have the Label: labelroot:valueX:valueY
