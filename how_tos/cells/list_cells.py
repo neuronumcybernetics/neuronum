@@ -1,0 +1,16 @@
+import asyncio
+import neuronum
+
+cell = neuronum.Cell(                                                       # set Cell connection
+    host="host",                                                            # Cell host
+    password="password",                                                    # Cell password
+    network="neuronum.net",                                                 # Cell network -> neuronum.net
+    synapse="synapse"                                                       # Cell synapse
+)
+
+async def main():
+                                                            
+    cellList = await cell.list_cells()                                      # list of all Neuronum Cells - > get list back
+    print(cellList)                                                         # print Cell list
+                                      
+asyncio.run(main())
