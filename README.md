@@ -4,9 +4,8 @@
 
 A Getting Started into the Neuronum Network: Build, deploy and automate serverless data infrastructures for an interconnected world
 
-### **What's New in neuronum==3.0.0?**
-- Complete library shift to async, ensuring non-blocking execution.
-- New cell.scan() function, enabling discovery of Cells and Nodes via the Bleak BLE Client.
+### **What's New in neuronum 3.0.1**
+- Added CLI commands: `neuronum connect-node` and `neuronum disconnect-node` for improved Node management and seamless integration.
 
 ### **New Feature Set**
 - **Cell/Cell-CLI**: Create and manage your Neuronum Cell, a unique identity for interacting with the Network, directly from the command line.
@@ -54,7 +53,7 @@ $ neuronum init-node           # initialize a Node with default template
 
 cd into Node Folder:
 ```sh
-$ cd node_your_node_id         # change directory
+$ cd node_nodeID               # change directory
 ```
 
 Start your Node:
@@ -65,4 +64,24 @@ $ neuronum start-node          # start Node / scan = Off / output = "Hello, Neur
 Stop your Node:
 ```sh
 $ neuronum stop-node           # stop Node
+```
+
+Connect your Node:
+```sh
+$ neuronum connect-node        # connect your Node / Node description = Test Node
+```
+
+Update your Node:
+```sh
+$ neuronum update-node         # update your Node
+```
+
+Disconnect your Node:
+```sh
+$ neuronum disconnect-node     # disconnect your Node
+```
+
+Delete your Node:
+```sh
+$ neuronum delete-node         # delete your Node
 ```

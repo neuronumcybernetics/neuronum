@@ -321,8 +321,29 @@ async def async_init_node(sync, stream):
     await asyncio.to_thread(gitignore_path.write_text, ".env\n")
 
     nodemd_path = project_path / "NODE.md"
-    await asyncio.to_thread(nodemd_path.write_text, "## Use this NODE.md file to add instructions on how to interact with your node\n")
+    await asyncio.to_thread(nodemd_path.write_text, """### Getting started template: Neuronum NODE.md 
+### Use this .md file to add instructions on how to interact with your Node
 
+```json
+{
+    "Use Case": "Getting started Node streaming: Hello, Neuronum!",
+    "Requirements": [
+        {
+            "name": "Python",
+            "version": ">= 3.8",
+            "link": "https://www.python.org/downloads/"
+        },
+        {
+            "name": "Neuronum Lib",
+            "version": ">= 3.0.1",
+            "link": "https://pypi.org/project/neuronum/"
+        }
+    ],
+    "Installation": "pip install neuronum",
+    "Initialization": "neuronum init-node"
+}
+```"""
+)
 
     stx = sync[0] if sync else (stream[0] if stream else host.replace("::cell", "::stx"))
 
@@ -560,10 +581,11 @@ async def async_stop_node():
 
 
 @click.command()
-def register_node():
-    asyncio.run(async_register_node())
+def connect_node():
+    descr = click.prompt("Node description (max. 25 characters)")
+    asyncio.run(async_connect_node(descr))
 
-async def async_register_node():
+async def async_connect_node(descr):
     env_data = {}
     try:
         with open(".env", "r") as f:
@@ -583,13 +605,6 @@ async def async_register_node():
     except Exception as e:
         print(f"Error reading .env file: {e}")
         return
-    
-    node_type = questionary.select(
-        "Choose Node type:",
-        choices=["public", "private"]
-    ).ask()
-
-    descr = click.prompt("Node description (max. 25 characters)")
 
     try:
         with open("NODE.md", "r") as f: 
@@ -602,7 +617,7 @@ async def async_register_node():
         print(f"Error reading NODE.md file: {e}")
         return
 
-    url = f"https://{network}/api/register_node/{node_type}"
+    url = f"https://{network}/api/connect_node"
 
     node = {
         "nodeID": nodeID,
@@ -623,8 +638,11 @@ async def async_register_node():
         except aiohttp.ClientError as e:
             click.echo(f"Error sending request: {e}")
             return
-
-    click.echo(f"Neuronum Node '{nodeID}' registered! Visit: {node_url}")
+        
+    if nodeID == "Node does not exist":
+        click.echo(f"Neuronum Node not found! Make sure you initialized your Node correctly")
+    else:
+        click.echo(f"Neuronum Node '{nodeID}' connected! Visit: {node_url}")
 
 
 @click.command()
@@ -709,6 +727,53 @@ async def async_update_node():
 
 
 @click.command()
+def disconnect_node():
+    asyncio.run(async_disconnect_node())
+
+async def async_disconnect_node():
+    env_data = {}
+
+    try:
+        with open(".env", "r") as f:
+            for line in f:
+                key, value = line.strip().split("=")
+                env_data[key] = value
+
+        nodeID = env_data.get("NODE", "")
+        host = env_data.get("HOST", "")
+        password = env_data.get("PASSWORD", "")
+        network = env_data.get("NETWORK", "")
+        synapse = env_data.get("SYNAPSE", "")
+
+    except FileNotFoundError:
+        click.echo("Error: .env with credentials not found")
+        return
+    except Exception as e:
+        click.echo(f"Error reading .env file: {e}")
+        return
+
+    url = f"https://{network}/api/disconnect_node"
+    node_payload = {
+        "nodeID": nodeID,
+        "host": host,
+        "password": password,
+        "synapse": synapse
+    }
+
+    async with aiohttp.ClientSession() as session:
+        try:
+            async with session.post(url, json=node_payload) as response:
+                response.raise_for_status()
+                data = await response.json()
+                nodeID = data["nodeID"]
+        except aiohttp.ClientError as e:
+            click.echo(f"Error sending request: {e}")
+            return
+
+    click.echo(f"Neuronum Node '{nodeID}' disconnected!")
+
+
+@click.command()
 def delete_node():
     asyncio.run(async_delete_node())
 
@@ -755,6 +820,7 @@ async def async_delete_node():
     click.echo(f"Neuronum Node '{nodeID}' deleted!")
 
 
+
 @click.command() 
 def call_cellai(): 
     try: 
@@ -772,8 +838,9 @@ cli.add_command(delete_cell)
 cli.add_command(init_node)
 cli.add_command(start_node)
 cli.add_command(stop_node)
-cli.add_command(register_node)
+cli.add_command(connect_node)
 cli.add_command(update_node)
+cli.add_command(disconnect_node)
 cli.add_command(delete_node)
 cli.add_command(call_cellai)
 
