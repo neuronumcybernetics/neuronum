@@ -40,6 +40,11 @@ Create your Cell:
 $ neuronum create-cell         # create Cell / select network and type
 ```
 
+Connect your Cell:
+```sh
+$ neuronum connect-cell        # connect Cell
+```
+
 View connected Cell:
 ```sh
 $ neuronum view-cell           # view Cell ID / output = Connected Cell: 'your_cell_id'"
