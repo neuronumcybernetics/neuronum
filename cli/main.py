@@ -582,10 +582,14 @@ async def async_stop_node():
 
 @click.command()
 def connect_node():
+    node_type = questionary.select(
+        "Choose Node type:",
+        choices=["public", "private"]
+    ).ask()
     descr = click.prompt("Node description (max. 25 characters)")
-    asyncio.run(async_connect_node(descr))
+    asyncio.run(async_connect_node(descr, node_type))
 
-async def async_connect_node(descr):
+async def async_connect_node(descr, node_type):
     env_data = {}
     try:
         with open(".env", "r") as f:
@@ -617,7 +621,7 @@ async def async_connect_node(descr):
         print(f"Error reading NODE.md file: {e}")
         return
 
-    url = f"https://{network}/api/connect_node"
+    url = f"https://{network}/api/connect_node/{node_type}"
 
     node = {
         "nodeID": nodeID,
@@ -642,7 +646,10 @@ async def async_connect_node(descr):
     if nodeID == "Node does not exist":
         click.echo(f"Neuronum Node not found! Make sure you initialized your Node correctly")
     else:
-        click.echo(f"Neuronum Node '{nodeID}' connected! Visit: {node_url}")
+        if node_type == "public":
+            click.echo(f"Public Neuronum Node '{nodeID}' connected! Visit: {node_url}")
+        else:   
+            click.echo(f"Private Neuronum Node '{nodeID}' connected!")
 
 
 @click.command()

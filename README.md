@@ -4,8 +4,8 @@
 
 A Getting Started into the Neuronum Network: Build, deploy and automate serverless data infrastructures for an interconnected world
 
-### **What's New in neuronum 3.0.1**
-- Added CLI commands: `neuronum connect-node` and `neuronum disconnect-node` for improved Node management and seamless integration.
+### **What's New in neuronum 3.0.2**
+- Added CLI feature in `neuronum connect-node`: Select whether your Node will be publicly or privately listed
 
 ### **New Feature Set**
 - **Cell/Cell-CLI**: Create and manage your Neuronum Cell, a unique identity for interacting with the Network, directly from the command line.
