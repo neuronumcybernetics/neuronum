@@ -20,7 +20,7 @@ A Getting Started into the Neuronum Network: Build, deploy and automate serverle
 
 ## Getting Started Goals
 - Create a Cell to start interacting with the Network
-- Setup a private Node that streams and syncs the message: Hello, Neuronum!
+- Setup a Node that streams and syncs the message: Hello, Neuronum!
 - Connect your Node to the Neuronum Network
 
 
