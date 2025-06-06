@@ -513,8 +513,11 @@ asyncio.run(main())
     click.echo(f"Neuronum Node '{nodeID}' initialized!")
 
 
+import platform
+
 @click.command()
-def start_node():
+@click.option('--d', is_flag=True, help="Start node in detached mode")
+def start_node(d):
     scan_type = questionary.select(
         "Scan for Neuronum Cells and Nodes (Ensure Bluetooth is enabled)",
         choices=["On", "Off"]
@@ -529,11 +532,25 @@ def start_node():
         script_files += glob.glob("scan.py")
 
     processes = []
+    system_name = platform.system()  # Detect OS
 
     for script in script_files:
         script_path = project_path / script
         if script_path.exists():
-            process = subprocess.Popen(["python", str(script_path)], start_new_session=True)
+            # Use pythonw on Windows, python elsewhere
+            python_cmd = "pythonw" if system_name == "Windows" else "python"
+
+            if d:
+                process = subprocess.Popen(
+                    ["nohup", python_cmd, str(script_path), "&"] if system_name != "Windows"
+                    else [python_cmd, str(script_path)],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    start_new_session=True
+                )
+            else:
+                process = subprocess.Popen([python_cmd, str(script_path)], start_new_session=True)
+
             processes.append(process.pid)
 
     if not processes:
@@ -544,7 +561,6 @@ def start_node():
         f.write("\n".join(map(str, processes)))
 
     click.echo("Node started successfully!")
-
 
 
 @click.command()
