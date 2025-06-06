@@ -19,8 +19,9 @@ A Getting Started into the Neuronum Network: Build, deploy and automate serverle
 
 
 ## Getting Started Goals
-- **Neuronum Cell**: Create a Cell to start interacting with the Network
-- **Neuronum Node**: Setup a Node that streams and syncs the message: Hello, Neuronum! in real-time
+- Create a Cell to start interacting with the Network
+- Setup a private Node that streams and syncs the message: Hello, Neuronum!
+- Connect your Node to the Neuronum Network
 
 
 ### Requirements
@@ -73,7 +74,7 @@ $ neuronum stop-node           # stop Node
 
 Connect your Node:
 ```sh
-$ neuronum connect-node        # connect your Node / Node description = Test Node
+$ neuronum connect-node        # connect your Node / Choose Node Type = private / Node description = Test Node
 ```
 
 Update your Node:
