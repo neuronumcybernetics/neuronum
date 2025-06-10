@@ -91,3 +91,8 @@ Delete your Node:
 ```sh
 $ neuronum delete-node         # delete your Node
 ```
+
+Delete your Cell:
+```sh
+$ neuronum delete-cell         # delete your Cell
+```
