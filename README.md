@@ -14,7 +14,7 @@ Neuronum is a central serverless data gateway automating the processing and dist
 In practice, Neuronum forms an interconnected network of soft- and hardware components (Nodes) exchanging data in real time.
 
 
-#### **Network Attributes**
+### **Network Attributes**
 **Cell & Nodes**
 - Cell: Account to connect and interact with the Neuronum Network
 - Nodes: Software and Hardware components connected to Neuronum
