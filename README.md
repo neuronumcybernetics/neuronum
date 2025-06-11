@@ -14,19 +14,18 @@ Neuronum is a central serverless data gateway automating the processing and dist
 
 
 ### **Network Attributes**
-**Cell & Nodes**
-- Cell: Account to connect and interact with the Neuronum Network
-- Nodes: Software and Hardware components connected to Neuronum
+**Cell & Nodes**  
+Cell: Account to connect and interact with the Neuronum Network    
+Nodes: Software and Hardware components connected to Neuronum    
 
-**Data Gateways**
-- Transmitters (TX): Automate data transfer in standardized formats
-- Circuits (CTX): Store data in cloud-based key-value-label databases
-- Streams (STX): Stream, synchronize, and control data in real time
+**Data Gateways**  
+Transmitters (TX): Automate data transfer in standardized formats    
+Circuits (CTX): Store data in cloud-based key-value-label databases    
+Streams (STX): Stream, synchronize, and control data in real time    
 
-
-#### Requirements
-- Python >= 3.8 -> https://www.python.org/downloads/
-- neuronum >= 4.0.0 -> https://pypi.org/project/neuronum/
+#### Requirements  
+Python >= 3.8 → [Download](https://www.python.org/downloads/)    
+Neuronum >= 4.0.0 → [PyPI](https://pypi.org/project/neuronum/)  
 
 
 ------------------
