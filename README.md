@@ -3,7 +3,7 @@
 [![Website](https://img.shields.io/badge/Website-Neuronum-blue)](https://neuronum.net) [![Documentation](https://img.shields.io/badge/Docs-Read%20now-green)](https://github.com/neuronumcybernetics/neuronum)
 
 
-## **Getting Started Goals**
+### **Getting Started Goals**
 - Learn about Neuronum
 - Connect to Neuronum
 - Build on Neuronum
@@ -16,18 +16,18 @@ In practice, Neuronum forms an interconnected network of soft- and hardware comp
 
 #### **Network Attributes**
 **Cell & Nodes**
-Cell: Account to connect and interact with the Neuronum Network
-Nodes: Software and Hardware components connected to Neuronum
+- Cell: Account to connect and interact with the Neuronum Network
+- Nodes: Software and Hardware components connected to Neuronum
 
 **Data Gateways**
-Transmitters (TX): Automate data transfer in standardized formats
-Circuits (CTX): Store data in cloud-based key-value-label databases
-Streams (STX): Stream, synchronize, and control data in real time
+- Transmitters (TX): Automate data transfer in standardized formats
+- Circuits (CTX): Store data in cloud-based key-value-label databases
+- Streams (STX): Stream, synchronize, and control data in real time
 
 
 #### Requirements
-Python >= 3.8 -> https://www.python.org/downloads/
-neuronum >= 4.0.0 -> https://pypi.org/project/neuronum/
+- Python >= 3.8 -> https://www.python.org/downloads/
+- neuronum >= 4.0.0 -> https://pypi.org/project/neuronum/
 
 
 ### **Connect to Neuronum**
