@@ -4,7 +4,6 @@ import ssl
 import websockets
 import json
 import asyncio
-from bleak import BleakScanner
 
 class Cell:
     def __init__(self, host: str, password: str, network: str, synapse: str):
@@ -410,7 +409,6 @@ class Cell:
             await writer.wait_closed()
 
 
-
     async def sync(self, stx: Optional[str] = None) -> AsyncGenerator[str, None]:
         full_url = f"wss://{self.network}/sync/{stx}"
         
@@ -444,179 +442,6 @@ class Cell:
 
         except Exception as e:
             print(f"An unexpected error occurred: {e}")
-
-
-    async def sign_contract(self, contractID: str):
-        full_url = f"https://{self.network}/api/sign_contract"
-
-        sign_contract_payload = {
-            "contractID": contractID,
-            "cell": self.to_dict()
-        }
-
-        async with aiohttp.ClientSession() as session:
-            try:
-                async with session.post(full_url, json=sign_contract_payload) as response:
-                    response.raise_for_status()
-                    data = await response.json()
-                    return data.get("token")
-
-            except aiohttp.ClientError as e:
-                print(f"Error sending request: {e}")
-            except Exception as e:
-                print(f"Unexpected error: {e}")
-
-
-    async def validate_token(self, token: str, cp: str, contractID: str):
-        full_url = f"https://{self.network}/api/validate_token"
-
-        validate_payload = {
-            "token": token,
-            "cp": cp,
-            "contractID": contractID,
-            "cell": self.to_dict()
-        }
-
-        async with aiohttp.ClientSession() as session:
-            try:
-                async with session.post(full_url, json=validate_payload) as response:
-                    response.raise_for_status()
-                    data = await response.json()
-                    return data.get("validity")
-
-            except aiohttp.ClientError as e:
-                print(f"Error sending request: {e}")
-            except Exception as e:
-                print(f"Unexpected error: {e}")
-
-
-    async def request_token(self, cp: str, contractID: str):
-        full_url = f"https://{self.network}/api/request_token"
-
-        request_token_payload = {
-            "cp": cp,
-            "contractID": contractID,
-            "cell": self.to_dict()
-        }
-
-        async with aiohttp.ClientSession() as session:
-            try:
-                async with session.post(full_url, json=request_token_payload) as response:
-                    response.raise_for_status()
-                    data = await response.json()
-                    print(f"Response from Neuronum: {data}")
-                    return data
-
-            except aiohttp.ClientError as e:
-                print(f"Error sending request: {e}")
-            except Exception as e:
-                print(f"Unexpected error: {e}")
-
-    
-    async def present_token(self, token: str, cp: str, contractID: str):
-        full_url = f"https://{self.network}/api/present_token"
-
-        present_token_payload = {
-            "token": token,
-            "cp": cp,
-            "contractID": contractID,
-            "cell": self.to_dict()
-        }
-
-        async with aiohttp.ClientSession() as session:
-            try:
-                async with session.post(full_url, json=present_token_payload) as response:
-                    response.raise_for_status()
-                    data = await response.json()
-                    print(f"Response from Neuronum: {data}")
-                    return data
-
-            except aiohttp.ClientError as e:
-                print(f"Error sending request: {e}")
-            except Exception as e:
-                print(f"Unexpected error: {e}")
-
-
-    async def create_contract(self, descr: str, details: dict, partners: list):
-        full_url = f"https://{self.network}/api/create_contract"
-
-        create_contract_payload = {
-            "cell": self.to_dict(),
-            "descr": descr,
-            "details": details,
-            "partners": partners
-        }
-
-        async with aiohttp.ClientSession() as session:
-            try:
-                async with session.post(full_url, json=create_contract_payload) as response:
-                    response.raise_for_status()
-                    data = await response.json()
-                    return data.get("contractID")
-
-            except aiohttp.ClientError as e:
-                print(f"Error sending request: {e}")
-            except Exception as e:
-                print(f"Unexpected error: {e}")
-
-
-    async def delete_contract(self, contractID: str):
-        full_url = f"https://{self.network}/api/delete_contract"
-
-        request_payload = {
-            "cell": self.to_dict(),
-            "contractID": contractID
-        }
-
-        async with aiohttp.ClientSession() as session:
-            try:
-                async with session.post(full_url, json=request_payload) as response:
-                    response.raise_for_status()
-                    data = await response.json()
-                    print(f"Response from Neuronum: {data}")
-                    return data
-
-            except aiohttp.ClientError as e:
-                print(f"Error sending request: {e}")
-            except Exception as e:
-                print(f"Unexpected error: {e}")
-
-
-    async def list_contracts(self):
-        full_url = f"https://{self.network}/api/list_contracts"
-
-        list_contracts_payload = {
-            "cell": self.to_dict()
-        }
-
-        async with aiohttp.ClientSession() as session:
-            try:
-                async with session.get(full_url, json=list_contracts_payload) as response:
-                    response.raise_for_status()
-                    data = await response.json()
-                    return data.get("Contracts", [])
-
-            except aiohttp.ClientError as e:
-                print(f"Error sending request: {e}")
-            except Exception as e:
-                print(f"Unexpected error: {e}")
-
-        
-    def device_found(self, device, advertisement_data):
-        if device.name and (device.name.endswith("::cell") or device.name.endswith("::node")):
-            asyncio.create_task(self.queue.put(f"{device.name} - {device.address}"))
-
-    async def scan(self):
-        print("Scanning for Neuronum Cells & Nodes")
-
-        scanner = BleakScanner(self.device_found)
-        await scanner.start()
-
-        try:
-            while True:
-                yield await self.queue.get()
-        except asyncio.CancelledError:
-            await scanner.stop()
 
 
 __all__ = ['Cell']

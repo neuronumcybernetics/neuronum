@@ -304,14 +304,12 @@ async def async_init_node(sync, stream):
     tx = await cell.list_tx()
     ctx = await cell.list_ctx()
     stx = await cell.list_stx()
-    contracts = await cell.list_contracts()
     nodes = await cell.list_nodes()
 
     await asyncio.to_thread((project_path / "cells.json").write_text, json.dumps(cells, indent=4))
     await asyncio.to_thread((project_path / "transmitters.json").write_text, json.dumps(tx, indent=4))
     await asyncio.to_thread((project_path / "circuits.json").write_text, json.dumps(ctx, indent=4))
     await asyncio.to_thread((project_path / "streams.json").write_text, json.dumps(stx, indent=4))
-    await asyncio.to_thread((project_path / "contracts.json").write_text, json.dumps(contracts, indent=4))
     await asyncio.to_thread((project_path / "nodes.json").write_text, json.dumps(nodes, indent=4))
 
     env_path = project_path / ".env"
@@ -334,8 +332,8 @@ async def async_init_node(sync, stream):
             "link": "https://www.python.org/downloads/"
         },
         {
-            "name": "Neuronum Lib",
-            "version": ">= 3.0.1",
+            "name": "neuronum",
+            "version": ">= 4.0.0",
             "link": "https://pypi.org/project/neuronum/"
         }
     ],
@@ -483,61 +481,23 @@ async def main():
 asyncio.run(main())
 """)
         
-    scan_path = project_path / f"scan.py"
-    scan_path.write_text(f"""\
-import asyncio
-import neuronum
-import os
-from dotenv import load_dotenv
-
-load_dotenv()
-host = os.getenv("HOST")
-password = os.getenv("PASSWORD")
-network = os.getenv("NETWORK")
-synapse = os.getenv("SYNAPSE")
-
-cell = neuronum.Cell(
-    host=host,
-    password=password,
-    network=network,
-    synapse=synapse
-)
-
-async def main():
-    async for cp in cell.scan():
-        print(cp)
-
-asyncio.run(main())
-""")
-
     click.echo(f"Neuronum Node '{nodeID}' initialized!")
 
-
-import platform
 
 @click.command()
 @click.option('--d', is_flag=True, help="Start node in detached mode")
 def start_node(d):
-    scan_type = questionary.select(
-        "Scan for Neuronum Cells and Nodes (Ensure Bluetooth is enabled)",
-        choices=["On", "Off"]
-    ).ask()
-
     click.echo("Starting Node...")
 
     project_path = Path.cwd()
     script_files = glob.glob("sync_*.py") + glob.glob("stream_*.py")
 
-    if scan_type == "On":
-        script_files += glob.glob("scan.py")
-
     processes = []
-    system_name = platform.system()  # Detect OS
+    system_name = platform.system()
 
     for script in script_files:
         script_path = project_path / script
         if script_path.exists():
-            # Use pythonw on Windows, python elsewhere
             python_cmd = "pythonw" if system_name == "Windows" else "python"
 
             if d:
@@ -549,7 +509,7 @@ def start_node(d):
                     start_new_session=True
                 )
             else:
-                process = subprocess.Popen([python_cmd, str(script_path)], start_new_session=True)
+                process = subprocess.Popen(["python", str(script_path)], start_new_session=True)
 
             processes.append(process.pid)
 
@@ -736,14 +696,12 @@ async def async_update_node():
     tx = await cell.list_tx()
     ctx = await cell.list_ctx()
     stx = await cell.list_stx()
-    contracts = await cell.list_contracts()
     nodes = await cell.list_nodes()
 
     await asyncio.to_thread(Path("cells.json").write_text, json.dumps(cells, indent=4))
     await asyncio.to_thread(Path("transmitters.json").write_text, json.dumps(tx, indent=4))
     await asyncio.to_thread(Path("circuits.json").write_text, json.dumps(ctx, indent=4))
     await asyncio.to_thread(Path("streams.json").write_text, json.dumps(stx, indent=4))
-    await asyncio.to_thread(Path("contracts.json").write_text, json.dumps(contracts, indent=4))
     await asyncio.to_thread(Path("nodes.json").write_text, json.dumps(nodes, indent=4))
 
     click.echo(f"Neuronum Node '{nodeID}' updated! Visit: {node_url}")
@@ -843,16 +801,6 @@ async def async_delete_node():
     click.echo(f"Neuronum Node '{nodeID}' deleted!")
 
 
-
-@click.command() 
-def call_cellai(): 
-    try: 
-        from cellai import cellai 
-        cellai.main() 
-    except ImportError: 
-        click.echo("Cellai not found. Please check the necessary dependencies.")
-
-
 cli.add_command(create_cell)
 cli.add_command(connect_cell)
 cli.add_command(view_cell)
@@ -865,7 +813,6 @@ cli.add_command(connect_node)
 cli.add_command(update_node)
 cli.add_command(disconnect_node)
 cli.add_command(delete_node)
-cli.add_command(call_cellai)
 
 
 if __name__ == "__main__":

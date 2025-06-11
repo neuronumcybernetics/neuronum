@@ -36,22 +36,32 @@ In practice, Neuronum forms an interconnected network of soft- and hardware comp
 ### **Connect to Neuronum**
 Installation
 ```sh
-pip install neuronum         # install neuronum dependencies
+pip install neuronum                    # install neuronum dependencies
 ```
 
 Create Cell:
 ```sh
-neuronum create-cell         # create Cell / select network and type
+neuronum create-cell                    # create Cell / Cell type / Cell network 
 ```
 
 Connect Cell:
 ```sh
-neuronum connect-cell        # connect Cell
+neuronum connect-cell                   # connect Cell
 ```
 
 View connected Cell:
 ```sh
-neuronum view-cell           # view Cell ID / output = Connected Cell: 'your_cell_id'"
+neuronum view-cell                      # view Cell / output = Connected Cell: 'your_cell'"
+```
+
+Disconnect Cell:
+```sh
+neuronum disconnect-cell                # disconnect Cell
+```
+
+Delete Cell:
+```sh
+neuronum delete-cell                    # delete Cell
 ```
 
 
@@ -60,42 +70,57 @@ neuronum view-cell           # view Cell ID / output = Connected Cell: 'your_cel
 
 
 ### **Build on Neuronum**
-Initialize Node:
+Initialize Node (default template):
 ```sh
-neuronum init-node           # initialize a Node with default template
+neuronum init-node                      # initialize a Node with default template
+```
+
+Initialize Node (stream template):
+```sh
+neuronum init-node --stream id::stx     # initialize a Node with stream template
+```
+
+Initialize Node (sync template):
+```sh
+neuronum init-node --sync id::stx       # initialize a Node with sync template
 ```
 
 cd to Node folder:
 ```sh
-cd node_node_id              # change to Node folder
+cd node_node_id                         # change to Node folder
 ```
 
 Start Node:
 ```sh
-neuronum start-node          # start Node (--d flag for detached mode) / output = "Hello, Neuronum!"
+neuronum start-node                     # start Node
+```
+
+Start Node (detached mode):
+```sh
+neuronum start-node --d                 # start Node in "detached" mode
 ```
 
 Stop Node:
 ```sh
-neuronum stop-node           # stop Node
+neuronum stop-node                      # stop Node
 ```
 
 Connect Node:
 ```sh
-neuronum connect-node        # connect your Node / Node Type = private / Node description = Test Node
+neuronum connect-node                   # connect your Node / Node type / Node description
 ```
 
 Update Node:
 ```sh
-neuronum update-node         # update your Node
+neuronum update-node                    # update your Node
 ```
 
 Disconnect Node:
 ```sh
-neuronum disconnect-node     # disconnect your Node
+neuronum disconnect-node                # disconnect your Node
 ```
 
 Delete Node:
 ```sh
-neuronum delete-node         # delete your Node
+neuronum delete-node                    # delete your Node
 ```
