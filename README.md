@@ -30,6 +30,9 @@ In practice, Neuronum forms an interconnected network of soft- and hardware comp
 - neuronum >= 4.0.0 -> https://pypi.org/project/neuronum/
 
 
+------------------
+
+
 ### **Connect to Neuronum**
 Installation
 ```sh
@@ -50,6 +53,11 @@ View connected Cell:
 ```sh
 neuronum view-cell           # view Cell ID / output = Connected Cell: 'your_cell_id'"
 ```
+
+
+------------------
+
+
 
 ### **Build on Neuronum**
 Initialize Node:
