@@ -82,7 +82,7 @@ neuronum stop-node           # stop Node
 
 Connect Node:
 ```sh
-neuronum connect-node        # connect your Node / Choose Node Type = private / Node description = Test Node
+neuronum connect-node        # connect your Node / Node Type = private / Node description = Test Node
 ```
 
 Update Node:
