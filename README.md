@@ -72,7 +72,7 @@ cd node_node_id              # change to Node folder
 
 Start Node:
 ```sh
-neuronum start-node          # start Node (--d flag for detached mode) / scan = Off / output = "Hello, Neuronum!"
+neuronum start-node          # start Node (--d flag for detached mode) / output = "Hello, Neuronum!"
 ```
 
 Stop Node:
