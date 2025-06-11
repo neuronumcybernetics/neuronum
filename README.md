@@ -2,97 +2,92 @@
 
 [![Website](https://img.shields.io/badge/Website-Neuronum-blue)](https://neuronum.net) [![Documentation](https://img.shields.io/badge/Docs-Read%20now-green)](https://github.com/neuronumcybernetics/neuronum)
 
-A Getting Started into the Neuronum Network: Build, deploy and automate serverless data infrastructures for an interconnected world
 
-### **What's New in neuronum 3.0.3**
-- Added CLI feature in `neuronum start-node`: use --d flag to start your Node in "detached" mode
-
-### **New Feature Set**
-- **Cell/Cell-CLI**: Create and manage your Neuronum Cell, a unique identity for interacting with the Network, directly from the command line.
-- **Nodes/Node-CLI**: Setup and manage Neuronum Nodes, the software and hardware components that power the Network, via the command line.
-- **Transmitters (TX)**: Automate economic data transfer using predefined templates for standardized data exchange.
-- **Circuits (CTX)**: Store, manage, and retrieve structured data with Circuits, a cloud-based Key-Value-Label database.
-- **Streams (STX)**: Stream, synchronize, and control data in real time, enabling dynamic and responsive data flows.
-- **Contracts/Tokens**: Automate service exchange and authorization, ensuring secure interactions between Cells and Nodes.
-- **Scan**: Discover Cells and Nodes via BLE-based scanning, powered by Bleak, for seamless network integration.
-- **Cellai**: A local AI assistant currently in development (version 0.0.1). While still evolving, Cellai is designed to automate communication between Cells and Nodes, optimizing intelligent data flow and network interactions in future releases.
+## **Getting Started Goals**
+- Learn about Neuronum
+- Connect to Neuronum
+- Build on Neuronum
 
 
-## Getting Started Goals
-- Create a Cell to start interacting with the Network
-- Setup a Node that streams and syncs the message: Hello, Neuronum!
-- Connect your Node to the Neuronum Network
+### **About Neuronum**
+Neuronum is a central serverless data gateway automating the processing and distribution of data transmission, storage, and streaming.
+In practice, Neuronum forms an interconnected network of soft- and hardware components (Nodes) exchanging data in real time.
 
 
-### Requirements
-- Python >= 3.8 -> https://www.python.org/downloads/
-- neuronum >= 3.0.0 -> https://pypi.org/project/neuronum/
+#### **Network Attributes**
+**Cell & Nodes**
+Cell: Account to connect and interact with the Neuronum Network
+Nodes: Software and Hardware components connected to Neuronum
+
+**Data Gateways**
+Transmitters (TX): Automate data transfer in standardized formats
+Circuits (CTX): Store data in cloud-based key-value-label databases
+Streams (STX): Stream, synchronize, and control data in real time
 
 
-### Installation
-Install the Neuronum library:
+#### Requirements
+Python >= 3.8 -> https://www.python.org/downloads/
+neuronum >= 4.0.0 -> https://pypi.org/project/neuronum/
+
+
+### **Connect to Neuronum**
+Installation
 ```sh
-$ pip install neuronum         # install the neuronum dependencies
+pip install neuronum         # install neuronum dependencies
 ```
 
-### Neuronum Cell
-Create your Cell:
+Create Cell:
 ```sh
-$ neuronum create-cell         # create Cell / select network and type
+neuronum create-cell         # create Cell / select network and type
 ```
 
-Connect your Cell:
+Connect Cell:
 ```sh
-$ neuronum connect-cell        # connect Cell
+neuronum connect-cell        # connect Cell
 ```
 
 View connected Cell:
 ```sh
-$ neuronum view-cell           # view Cell ID / output = Connected Cell: 'your_cell_id'"
+neuronum view-cell           # view Cell ID / output = Connected Cell: 'your_cell_id'"
 ```
 
-### Neuronum Node
-Initialize your Node:
+### **Build on Neuronum**
+Initialize Node:
 ```sh
-$ neuronum init-node           # initialize a Node with default template
+neuronum init-node           # initialize a Node with default template
 ```
 
-cd into Node Folder:
+cd to Node folder:
 ```sh
-$ cd node_nodeID               # change directory
+cd node_node_id              # change to Node folder
 ```
 
-Start your Node:
+Start Node:
 ```sh
-$ neuronum start-node          # start Node (--d flag for detached mode) / scan = Off / output = "Hello, Neuronum!"
+neuronum start-node          # start Node (--d flag for detached mode) / scan = Off / output = "Hello, Neuronum!"
 ```
 
-Stop your Node:
+Stop Node:
 ```sh
-$ neuronum stop-node           # stop Node
+neuronum stop-node           # stop Node
 ```
 
-Connect your Node:
+Connect Node:
 ```sh
-$ neuronum connect-node        # connect your Node / Choose Node Type = private / Node description = Test Node
+neuronum connect-node        # connect your Node / Choose Node Type = private / Node description = Test Node
 ```
 
-Update your Node:
+Update Node:
 ```sh
-$ neuronum update-node         # update your Node
+neuronum update-node         # update your Node
 ```
 
-Disconnect your Node:
+Disconnect Node:
 ```sh
-$ neuronum disconnect-node     # disconnect your Node
+neuronum disconnect-node     # disconnect your Node
 ```
 
-Delete your Node:
+Delete Node:
 ```sh
-$ neuronum delete-node         # delete your Node
-```
-
-Delete your Cell:
-```sh
-$ neuronum delete-cell         # delete your Cell
+neuronum delete-node         # delete your Node
 ```
