@@ -43,12 +43,6 @@ Create Cell:
 neuronum create-cell                    # create Cell / Cell type / Cell network 
 ```
 
-or
-
-Connect Cell:
-```sh
-neuronum connect-cell                   # connect Cell
-```
 
 View connected Cell:
 ```sh
@@ -87,7 +81,7 @@ neuronum connect-node                   # connect your Node to Neuronum / Node t
 
 Update Node:
 ```sh
-neuronum update-node                    # update your Node
+neuronum update-node                    # update your Node 
 ```
 
 Disconnect Node:
