@@ -38,3 +38,11 @@ neuronum start-node --d                 # start Node in "detached" mode
 ```sh
 neuronum connect-node
 ```
+
+### **NODE.md File**
+The `NODE.md` file provides guidelines for interacting with your Node's data gateways.  
+Add markdown content to structure your instructions, then update your Node with:
+
+```sh
+neuronum update-node
+```
