@@ -1,6 +1,6 @@
 ![Neuronum Logo](https://neuronum.net/static/logo_pip.png "Neuronum")
 
-[![Website](https://img.shields.io/badge/Website-Neuronum-blue)](https://neuronum.net) [![Documentation](https://img.shields.io/badge/Docs-Read%20now-green)](https://github.com/neuronumcybernetics/neuronum) [![Neuronum Node Examples](https://img.shields.io/badge/Neuronum-Nodes-blue)](https://github.com/neuronumcybernetics/neuronum/tree/main/how_tos/nodes)
+[![Website](https://img.shields.io/badge/Website-Neuronum-blue)](https://neuronum.net) [![Documentation](https://img.shields.io/badge/Docs-Read%20now-green)](https://github.com/neuronumcybernetics/neuronum)
 
 
 ### **Getting Started Goals**
@@ -59,5 +59,6 @@ Initialize Node (default template):
 neuronum init-node                      # initialize a Node with default template
 ```
 
+
 **Neuronum Node Examples:**  
-Check out the guide [here](https://github.com/neuronumcybernetics/neuronum/tree/main/how_tos/nodes).
+Visit: https://github.com/neuronumcybernetics/neuronum/tree/main/how_tos/nodes
