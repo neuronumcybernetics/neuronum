@@ -59,37 +59,4 @@ Initialize Node (default template):
 neuronum init-node                      # initialize a Node with default template
 ```
 
-cd to Node folder:
-```sh
-cd node_node_id                         # change to Node folder
-```
-
-Start Node:
-```sh
-neuronum start-node                     # start Node
-```
-
-Stop Node:
-```sh
-neuronum stop-node                      # stop Node
-```
-
-Connect Node:
-```sh
-neuronum connect-node                   # connect your Node to Neuronum / Node type / Node description
-```
-
-Update Node:
-```sh
-neuronum update-node                    # update your Node 
-```
-
-Disconnect Node:
-```sh
-neuronum disconnect-node                # disconnect your Node
-```
-
-Delete Node:
-```sh
-neuronum delete-node                    # delete your Node
-```
+Visit: https://github.com/neuronumcybernetics/neuronum/tree/main/how_tos/nodes for Neuronum Node examples
