@@ -43,6 +43,8 @@ Create Cell:
 neuronum create-cell                    # create Cell / Cell type / Cell network 
 ```
 
+or
+
 Connect Cell:
 ```sh
 neuronum connect-cell                   # connect Cell
@@ -50,38 +52,17 @@ neuronum connect-cell                   # connect Cell
 
 View connected Cell:
 ```sh
-neuronum view-cell                      # view Cell / output = Connected Cell: 'your_cell'"
-```
-
-Disconnect Cell:
-```sh
-neuronum disconnect-cell                # disconnect Cell
-```
-
-Delete Cell:
-```sh
-neuronum delete-cell                    # delete Cell
+neuronum view-cell                      # view Cell / output = Connected Cell: 'cell_id'"
 ```
 
 
 ------------------
 
 
-
 ### **Build on Neuronum**
 Initialize Node (default template):
 ```sh
 neuronum init-node                      # initialize a Node with default template
-```
-
-Initialize Node (stream template):
-```sh
-neuronum init-node --stream id::stx     # initialize a Node with stream template
-```
-
-Initialize Node (sync template):
-```sh
-neuronum init-node --sync id::stx       # initialize a Node with sync template
 ```
 
 cd to Node folder:
@@ -94,11 +75,6 @@ Start Node:
 neuronum start-node                     # start Node
 ```
 
-Start Node (detached mode):
-```sh
-neuronum start-node --d                 # start Node in "detached" mode
-```
-
 Stop Node:
 ```sh
 neuronum stop-node                      # stop Node
@@ -106,7 +82,7 @@ neuronum stop-node                      # stop Node
 
 Connect Node:
 ```sh
-neuronum connect-node                   # connect your Node / Node type / Node description
+neuronum connect-node                   # connect your Node to Neuronum / Node type / Node description
 ```
 
 Update Node:
