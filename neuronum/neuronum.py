@@ -164,7 +164,6 @@ class Cell:
 
     async def activate_tx(self, txID: str, data: dict):
         url = f"https://{self.network}/api/activate_tx/{txID}"
-
         TX = {
             "data": data,
             "cell": self.to_dict()
@@ -174,17 +173,14 @@ class Cell:
             try:
                 async with session.post(url, json=TX) as response:
                     response.raise_for_status()
-                    response.raise_for_status()
                     data = await response.json()
                     if data["success"] == "activated":
                         async for operation in self.sync():
                             label = operation.get("label")
-                            if label == "tx_response":      
-                                operation_id = operation.get("operationID")
-                                if operation_id == data["operationID"]:                                
-                                    tx_response = operation.get("data")
-                                    return tx_response
-                                
+                            if label == "tx_response":
+                                operation_txID = operation.get("txID")
+                                if operation_txID == txID:
+                                    return operation.get("data")
                     else:
                         print(data["success"], data["message"])
 
@@ -194,29 +190,27 @@ class Cell:
                 print(f"Unexpected error: {e}")
 
 
-    async def tx_response(self, txID: str, cc: str, operationID: str, data: dict):
+    async def tx_response(self, txID: str, client: str, data: dict):
         url = f"https://{self.network}/api/tx_response/{txID}"
 
         tx_response = {
-            "cc": cc,
-            "operationID": operationID,
+            "client": client,
             "data": data,
             "cell": self.to_dict()
         }
 
         async with aiohttp.ClientSession() as session:
-            for attempt in range(5):
-                try:
+            try:
+                for _ in range(2):
                     async with session.post(url, json=tx_response) as response:
                         response.raise_for_status()
                         data = await response.json()
-                
-                except aiohttp.ClientError as e:
-                    print(f"Attempt {attempt + 1}: Error sending request: {e}")
-                except Exception as e:
-                    print(f"Attempt {attempt + 1}: Unexpected error: {e}")
-            
-            print(data["message"])
+                print(data["message"])
+
+            except aiohttp.ClientError as e:
+                print(f"Error sending request: {e}")
+            except Exception as e:
+                print(f"Unexpected error: {e}")
 
 
     async def create_ctx(self, descr: str, partners: list):

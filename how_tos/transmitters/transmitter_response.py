@@ -11,11 +11,10 @@ cell = neuronum.Cell(                                                       # se
 async def main():
 
     TX = "id::tx"                                                           # select the Transmitter TX
-    cc = "id::cell"                                                         # select the Client Cell
-    operationID = "operationID" 
+    client = "id::cell"                                                     # select the Client Cell 
     data = {                                                                # enter response key value data 
         "key": "value"
     }
-    await cell.tx_response(TX, cc, operationID, data)                       # respond TX - > get success message back
+    await cell.tx_response(TX, client, data)                                # respond TX - > get success message back
 
 asyncio.run(main())
