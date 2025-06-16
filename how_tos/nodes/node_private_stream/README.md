@@ -1,7 +1,7 @@
 ### **node_private_stream**
 Set up a Neuronum Node that privately streams data
 
-### **Create a public Stream Gateway**
+### **Create a private Stream Gateway**
 1. Visit: https://neuronum.net/createSTX
 2. Enter a short Stream Description (e.g. Test Stream)
 3. Write "private" into the Partner Cell list
