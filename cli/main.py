@@ -440,8 +440,7 @@ cell = neuronum.Cell(
 )
 
 async def main():
-    STX = "{stx}"
-    async for operation in cell.sync(STX):
+    async for operation in cell.sync():
         message = operation.get("data").get("message")
         print(message)
 
@@ -469,14 +468,13 @@ cell = neuronum.Cell(
 )
 
 async def main():
-    STX = "{stx}"
     label = "Welcome to Neuronum"
     
     while True:
         data = {{
             "message": "Hello, Neuronum!"
         }}
-        await cell.stream(label, data, STX)
+        await cell.stream(label, data)
 
 asyncio.run(main())
 """)
