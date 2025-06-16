@@ -54,6 +54,8 @@ neuronum view-cell                      # view Cell / output = Connected Cell: '
 
 
 ### **Build on Neuronum**
+**Node Examples:**  
+Visit: https://github.com/neuronumcybernetics/neuronum/tree/main/how_tos/nodes
 Initialize Node (default template):
 ```sh
 neuronum init-node                      # initialize a Node with default template
@@ -68,7 +70,3 @@ Stop Node:
 ```sh
 neuronum stop-node                      # stop Node
 ```
-
-
-**Node Examples:**  
-Visit: https://github.com/neuronumcybernetics/neuronum/tree/main/how_tos/nodes
