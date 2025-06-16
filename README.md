@@ -59,6 +59,16 @@ Initialize Node (default template):
 neuronum init-node                      # initialize a Node with default template
 ```
 
+Start Node:
+```sh
+neuronum start-node                     # start Node
+```
+
+Stop Node:
+```sh
+neuronum stop-node                      # stop Node
+```
+
 
 **Node Examples:**  
 Visit: https://github.com/neuronumcybernetics/neuronum/tree/main/how_tos/nodes
