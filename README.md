@@ -60,5 +60,5 @@ neuronum init-node                      # initialize a Node with default templat
 ```
 
 
-**Neuronum Node Examples:**  
+**Node Examples:**  
 Visit: https://github.com/neuronumcybernetics/neuronum/tree/main/how_tos/nodes

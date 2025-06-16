@@ -1,5 +1,5 @@
-### **Neuronum Node Examples**
-node_public_stream: Set up a Neuronum Node that publicly streams data
+### **node_public_stream**
+Set up a Neuronum Node that publicly streams data
 
 ### **Create a public Stream Gateway**
 1. Visit: https://neuronum.net/createSTX
