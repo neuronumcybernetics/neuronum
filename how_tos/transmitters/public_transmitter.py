@@ -29,6 +29,7 @@ async def main():
         "key1": "valueX",
         "key2": "valueY",
     }
-    await cell.activate_tx(TX, data)                                        # activate TX - > get success message back
+    tx_response = await cell.activate_tx(TX, data)                          # activate TX - > get response back
+    print(tx_response)
 
 asyncio.run(main())

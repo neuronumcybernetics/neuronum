@@ -13,6 +13,7 @@ class Cell:
         self.synapse = synapse
         self.queue = asyncio.Queue()
 
+
     def to_dict(self) -> dict:
         return {
             "host": self.host,
@@ -20,8 +21,98 @@ class Cell:
             "synapse": self.synapse
         }
 
+
     def __repr__(self) -> str:
         return f"Cell(host={self.host}, password={self.password}, network={self.network}, synapse={self.synapse})"
+    
+
+    async def stream(self, label: str, data: dict, stx: Optional[str] = None, retry_delay: int = 3):
+        context = ssl.create_default_context()
+        context.check_hostname = True
+        context.verify_mode = ssl.CERT_REQUIRED
+
+        while True:
+            try:
+                reader, writer = await asyncio.open_connection(self.network, 55555, ssl=context, server_hostname=self.network)
+
+                credentials = f"{self.host}\n{self.password}\n{self.synapse}\n{stx}\n"
+                writer.write(credentials.encode("utf-8"))
+                await writer.drain()
+
+                response = await reader.read(1024)
+                response_text = response.decode("utf-8").strip()
+
+                if "Authentication successful" not in response_text:
+                    print("Authentication failed, retrying...")
+                    writer.close()
+                    await writer.wait_closed()
+                    await asyncio.sleep(retry_delay)
+                    continue
+
+                stream_payload = {
+                    "label": label,
+                    "data": data,
+                }
+
+                writer.write(json.dumps(stream_payload).encode("utf-8"))
+                await writer.drain()
+
+                response = await reader.read(1024)
+                response_text = response.decode("utf-8").strip()
+
+                if response_text == "Sent":
+                    print(f"Success: {response_text} - {stream_payload}")
+                    break
+                else:
+                    print(f"Error sending: {stream_payload}")
+
+            except (ssl.SSLError, ConnectionError) as e:
+                print(f"Connection error: {e}, retrying...")
+                await asyncio.sleep(retry_delay)
+
+            except Exception as e:
+                print(f"Unexpected error: {e}, retrying...")
+                await asyncio.sleep(retry_delay)
+
+            finally:
+                if 'writer' in locals():
+                    writer.close()
+                    await writer.wait_closed()
+
+
+    async def sync(self, stx: Optional[str] = None) -> AsyncGenerator[str, None]:
+        full_url = f"wss://{self.network}/sync/{stx}"
+        
+        auth_payload = {
+            "host": self.host,
+            "password": self.password,
+            "synapse": self.synapse,
+        }
+
+        try:
+            async with websockets.connect(full_url) as ws:
+                await ws.send(json.dumps(auth_payload))
+                print("Listening to Stream...")
+
+                try:
+                    while True:
+                        try:
+                            raw_operation = await ws.recv()
+                            operation = json.loads(raw_operation)
+                            yield operation
+
+                        except asyncio.TimeoutError:
+                            print("No initial data received. Continuing to listen...")
+                            continue
+
+                except asyncio.CancelledError:
+                    print("Connection closed.")
+
+        except websockets.exceptions.WebSocketException as e:
+            print(f"WebSocket error occurred: {e}")
+
+        except Exception as e:
+            print(f"An unexpected error occurred: {e}")
            
 
     async def create_tx(self, descr: str, key_values: dict, stx: str, label: str, partners: list):
@@ -85,12 +176,47 @@ class Cell:
                     response.raise_for_status()
                     response.raise_for_status()
                     data = await response.json()
-                    print(data["message"])
+                    if data["success"] == "activated":
+                        async for operation in self.sync():
+                            label = operation.get("label")
+                            if label == "tx_response":      
+                                operation_id = operation.get("operationID")
+                                if operation_id == data["operationID"]:                                
+                                    tx_response = operation.get("data")
+                                    return tx_response
+                                
+                    else:
+                        print(data["success"], data["message"])
 
             except aiohttp.ClientError as e:
                 print(f"Error sending request: {e}")
             except Exception as e:
                 print(f"Unexpected error: {e}")
+
+
+    async def tx_response(self, txID: str, cc: str, operationID: str, data: dict):
+        url = f"https://{self.network}/api/tx_response/{txID}"
+
+        tx_response = {
+            "cc": cc,
+            "operationID": operationID,
+            "data": data,
+            "cell": self.to_dict()
+        }
+
+        async with aiohttp.ClientSession() as session:
+            for attempt in range(5):
+                try:
+                    async with session.post(url, json=tx_response) as response:
+                        response.raise_for_status()
+                        data = await response.json()
+                
+                except aiohttp.ClientError as e:
+                    print(f"Attempt {attempt + 1}: Error sending request: {e}")
+                except Exception as e:
+                    print(f"Attempt {attempt + 1}: Unexpected error: {e}")
+            
+            print(data["message"])
 
 
     async def create_ctx(self, descr: str, partners: list):
@@ -366,82 +492,6 @@ class Cell:
                 print(f"Error sending request: {e}")
             except Exception as e:
                 print(f"Unexpected error: {e}")
-
-
-    async def stream(self, label: str, data: dict, stx: Optional[str] = None):
-        context = ssl.create_default_context()
-        context.check_hostname = True
-        context.verify_mode = ssl.CERT_REQUIRED
-
-        try:
-            reader, writer = await asyncio.open_connection(self.network, 55555, ssl=context, server_hostname=self.network)
-
-            credentials = f"{self.host}\n{self.password}\n{self.synapse}\n{stx}\n"
-            writer.write(credentials.encode("utf-8"))
-            await writer.drain()
-
-            response = await reader.read(1024)
-            response_text = response.decode("utf-8")
-
-            if "Authentication successful" not in response_text:
-                print("Authentication failed")
-                writer.close()
-                await writer.wait_closed()
-                return
-
-            stream_payload = {
-                "label": label,
-                "data": data,
-            }
-
-            writer.write(json.dumps(stream_payload).encode("utf-8"))
-            await writer.drain()
-            print(f"Sent: {stream_payload}")
-
-        except ssl.SSLError as e:
-            print(f"SSL error occurred: {e}")
-
-        except Exception as e:
-            print(f"An unexpected error occurred: {e}")
-
-        finally:
-            writer.close()
-            await writer.wait_closed()
-
-
-    async def sync(self, stx: Optional[str] = None) -> AsyncGenerator[str, None]:
-        full_url = f"wss://{self.network}/sync/{stx}"
-        
-        auth_payload = {
-            "host": self.host,
-            "password": self.password,
-            "synapse": self.synapse,
-        }
-
-        try:
-            async with websockets.connect(full_url) as ws:
-                await ws.send(json.dumps(auth_payload))
-                print("Listening to Stream...")
-
-                try:
-                    while True:
-                        try:
-                            raw_operation = await ws.recv()
-                            operation = json.loads(raw_operation)
-                            yield operation
-
-                        except asyncio.TimeoutError:
-                            print("No initial data received. Continuing to listen...")
-                            continue
-
-                except asyncio.CancelledError:
-                    print("Connection closed.")
-
-        except websockets.exceptions.WebSocketException as e:
-            print(f"WebSocket error occurred: {e}")
-
-        except Exception as e:
-            print(f"An unexpected error occurred: {e}")
 
 
 __all__ = ['Cell']
