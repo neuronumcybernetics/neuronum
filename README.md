@@ -13,10 +13,6 @@
 Neuronum is a framework to build serverless connected data networks automating the processing and distribution of data transmission, storage, and streaming.
 
 
-### **Use Case**
-Build, deploy & automate data networks
-
-
 ### **Attributes**
 **Cell & Nodes**
 - Cell: Account to connect and interact with Neuronum
@@ -31,6 +27,10 @@ Build, deploy & automate data networks
 #### Requirements
 - Python >= 3.8 -> https://www.python.org/downloads/
 - neuronum >= 4.0.0 -> https://pypi.org/project/neuronum/
+
+
+#### Use Case
+Build, deploy & automate data networks
 
 
 ------------------
