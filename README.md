@@ -3,23 +3,27 @@
 [![Website](https://img.shields.io/badge/Website-Neuronum-blue)](https://neuronum.net) [![Documentation](https://img.shields.io/badge/Docs-Read%20now-green)](https://github.com/neuronumcybernetics/neuronum)
 
 
-### **Getting Started Goals**
+## **Getting Started Goals**
 - Learn about Neuronum
 - Connect to Neuronum
 - Build on Neuronum
 
 
 ### **About Neuronum**
-Neuronum is a framework to build serverless data gateways automating the processing and distribution of data transmission, storage, and streaming.
+Neuronum is a framework to build serverless connected data networks automating the processing and distribution of data transmission, storage, and streaming.
 
 
-### **Neuronum Attributes**
+### **Use Cases**
+- Build, deploy & automate data networks
+
+
+### **Attributes**
 **Cell & Nodes**
 - Cell: Account to connect and interact with Neuronum
 - Nodes: Soft- and Hardware components hosting data gateways
 
 **Data Gateways**
-- Transmitters (TX): Automate data transfer in standardized formats
+- Transmitters (TX): Securely transmit and receive data packages
 - Circuits (CTX): Store data in cloud-based key-value-label databases
 - Streams (STX): Stream, synchronize, and control data in real time
 
