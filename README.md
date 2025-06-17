@@ -13,8 +13,8 @@
 Neuronum is a framework to build serverless connected data networks automating the processing and distribution of data transmission, storage, and streaming.
 
 
-### **Use Cases**
-- Build, deploy & automate data networks
+### **Use Case**
+Build, deploy & automate data networks
 
 
 ### **Attributes**
