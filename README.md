@@ -47,7 +47,7 @@ or
 
 Connect Cell:
 ```sh
-neuronum connect-cell                   # conenct Cell
+neuronum connect-cell                   # connect Cell
 ```
 
 View connected Cell:
