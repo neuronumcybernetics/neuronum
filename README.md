@@ -43,6 +43,12 @@ Create Cell:
 neuronum create-cell                    # create Cell / Cell type / Cell network 
 ```
 
+or
+
+Connect Cell:
+```sh
+neuronum connect-cell                   # conenct Cell
+```
 
 View connected Cell:
 ```sh
