@@ -10,15 +10,15 @@
 
 
 ### **About Neuronum**
-Neuronum is a framework to build serverless connected data networks automating the processing and distribution of data transmission, storage, and streaming.
+Neuronum is a framework to build serverless connected app & data gateways automating the processing and distribution of data transmission, storage, and streaming.
 
 
-### **Attributes & Features**
+### **Features**
 **Cell & Nodes**
 - Cell: Account to connect and interact with Neuronum
-- Nodes (Apps): Soft- and Hardware components hosting data gateways
+- Nodes (Apps): Soft- and Hardware components hosting gateways
 
-**Data Gateways**
+**Gateways**
 - Transmitters (TX): Securely transmit and receive data packages
 - Circuits (CTX): Store data in cloud-based key-value-label databases
 - Streams (STX): Stream, synchronize, and control data in real time
@@ -27,10 +27,6 @@ Neuronum is a framework to build serverless connected data networks automating t
 #### Requirements
 - Python >= 3.8 -> https://www.python.org/downloads/
 - neuronum >= 4.0.0 -> https://pypi.org/project/neuronum/
-
-
-#### Use Case
-Build, deploy & automate data networks
 
 
 ------------------
@@ -74,4 +70,9 @@ neuronum start-node                     # start Node
 Stop Node:
 ```sh
 neuronum stop-node                      # stop Node
+```
+
+Connect Node to Neuronum:
+```sh
+neuronum connect-node                   # connect Node
 ```
