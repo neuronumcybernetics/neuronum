@@ -16,7 +16,7 @@ Neuronum is a framework to build serverless connected app & data gateways automa
 ### **Features**
 **Cell & Nodes**
 - Cell: Account to connect and interact with Neuronum
-- Nodes (Apps): Soft- and Hardware components hosting gateways
+- Nodes: Soft- and Hardware components hosting gateways
 
 **Gateways**
 - Transmitters (TX): Securely transmit and receive data packages

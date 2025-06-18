@@ -1,4 +1,4 @@
-### **sync_node**
+### **node_sync_stream**
 Set up a Neuronum Node that synchronizes stream data in real time
 
 ### **Explore Neuronum Stream Gateways**
