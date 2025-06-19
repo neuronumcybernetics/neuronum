@@ -56,21 +56,21 @@ async def main():
         client = operation.get("operator")
                             
         if txID == "id::tx":       
-            data = {{
+            data = {
                 "response": "TX activated!"
-            }}
+            }
             await cell.tx_response(txID, client, data)
 
         if txID == "id::tx":
-            data = {{
+            data = {
                 "response": "TX activated!"
-            }}
+            }
             await cell.tx_response(txID, client, data)
 
         if txID == "id::tx":
-            data = {{
+            data = {
                 "response": "TX activated!"
-            }}
+            }
             await cell.tx_response(txID, client, data)
 
 asyncio.run(main())
