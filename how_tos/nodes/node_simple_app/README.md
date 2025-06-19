@@ -26,7 +26,7 @@ neuronum connect-cell
 
 ### **Initialize your Node with Stream template**
 ```sh
-neuronum init-node --sync id::stx       # place your copied Stream ID here
+neuronum init-node --app
 ```
 
 This command generates a Node template looking like:
@@ -50,51 +50,35 @@ cell = neuronum.Cell(
 )
 
 async def main():
-    STX = "id::stx"
-    async for operation in cell.sync(STX):
-        label = operation.get("label")
-        data = operation.get("data")
-        ts = operation.get("time")
-        stxID = operation.get("stxID")
-        operator = operation.get("operator")
-        print(label, data, ts, stxID, operator)
-
-asyncio.run(main())
-```
-
-Add the Transmitter logic to your code:
-```python
-import asyncio
-import neuronum
-import os
-from dotenv import load_dotenv
-
-load_dotenv()
-host = os.getenv("HOST")
-password = os.getenv("PASSWORD")
-network = os.getenv("NETWORK")
-synapse = os.getenv("SYNAPSE")
-
-cell = neuronum.Cell(
-    host=host,
-    password=password,
-    network=network,
-    synapse=synapse
-)
-
-async def main():
-    STX = "id::stx"
-    async for operation in cell.sync(STX):
+    STX = "id::stx"                        
+    async for operation in cell.sync(STX):       
         txID = operation.get("txID")
+                            
+        if txID == "id::tx":
+            client = operation.get("operator")             
+            data = {{
+                "response": "TX activated!"
+            }}
+            await cell.tx_response(txID, client, data)
+
         if txID == "id::tx":
             client = operation.get("operator")
-            data = {"message": f"Hello {client} from Node id::node"}
+            data = {{
+                "response": "TX activated!"
+            }}
+            await cell.tx_response(txID, client, data)
+
+        if txID == "id::tx":
+            client = operation.get("operator")
+            data = {{
+                "response": "TX activated!"
+            }}
             await cell.tx_response(txID, client, data)
 
 asyncio.run(main())
 ```
 
-A client (Cell) that activates your Transmitter gets your response back
+Replace id::stx and id::tx with your actual Transmitter and Stream IDs. Add custom Transmitter logic to your code.
 
 ### **Change to Node folder**
 ```sh

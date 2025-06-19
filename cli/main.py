@@ -249,10 +249,11 @@ def delete_cell():
 @click.command()
 @click.option('--sync', multiple=True, default=None, help="Optional stream IDs for sync.")
 @click.option('--stream', multiple=True, default=None, help="Optional stream ID for stream.")
-def init_node(sync, stream):
-    asyncio.run(async_init_node(sync, stream))
+@click.option('--app', is_flag=True, help="Generate a Node with app template")
+def init_node(sync, stream, app):
+    asyncio.run(async_init_node(sync, stream, app))
 
-async def async_init_node(sync, stream):
+async def async_init_node(sync, stream, app):
     credentials_folder_path = Path.home() / ".neuronum"
     env_path = credentials_folder_path / ".env"
 
@@ -319,13 +320,35 @@ async def async_init_node(sync, stream):
     await asyncio.to_thread(gitignore_path.write_text, ".env\n")
 
     nodemd_path = project_path / "NODE.md"
-    await asyncio.to_thread(nodemd_path.write_text, """### Getting started template: Neuronum NODE.md 
-### Use this .md file to add instructions on how to interact with your Node
+    await asyncio.to_thread(nodemd_path.write_text, """### NODE.md: How to interact with this Node
 
 ```json
 {
-    "Use Case": "Getting started Node streaming: Hello, Neuronum!",
-    "Requirements": [
+    "info": {
+        "use_case": "This Node...",
+        "github": "https://github.com/user"
+    },
+    "gateways": [
+        {
+            "type": "stream",
+            "id": "id::stx",
+            "link": "https://neuronum.net/stream/id::stx"
+        },
+        {
+            "type": "transmitter",
+            "id": "id::tx",
+            "link": "https://neuronum.net/tx/id::tx", 
+        }
+        {
+            "type": "circuit",
+            "id": "id::ctx",
+            "link": "https://neuronum.net/circuit/id::ctx", 
+        }
+    ],
+    "initialization": {
+        "command": "neuronum init-node --sync id::stx"
+    },
+    "requirements": [
         {
             "name": "Python",
             "version": ">= 3.8",
@@ -333,12 +356,10 @@ async def async_init_node(sync, stream):
         },
         {
             "name": "neuronum",
-            "version": ">= 4.0.0",
+            "version": ">= 5.1.0",
             "link": "https://pypi.org/project/neuronum/"
         }
-    ],
-    "Installation": "pip install neuronum",
-    "Initialization": "neuronum init-node"
+    ]
 }
 ```"""
 )
@@ -418,7 +439,7 @@ async def main():
 asyncio.run(main())
 """)
     
-    if not sync and not stream:
+    if not sync and not stream and not app:
         sync_path = project_path / f"sync_{stx.replace('::stx', '')}.py"
         sync_path.write_text(f"""\
 import asyncio
@@ -479,6 +500,56 @@ async def main():
 asyncio.run(main())
 """)
         
+    if app:
+        app_path = project_path / "app.py"
+        app_path.write_text(f"""\
+import asyncio
+import neuronum
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+host = os.getenv("HOST")
+password = os.getenv("PASSWORD")
+network = os.getenv("NETWORK")
+synapse = os.getenv("SYNAPSE")
+
+cell = neuronum.Cell(
+    host=host,
+    password=password,
+    network=network,
+    synapse=synapse
+)
+
+async def main():
+    STX = "id::stx"                        
+    async for operation in cell.sync(STX):       
+        txID = operation.get("txID")
+                            
+        if txID == "id::tx":
+            client = operation.get("operator")             
+            data = {{
+                "response": "TX activated!"
+            }}
+            await cell.tx_response(txID, client, data)
+
+        if txID == "id::tx":
+            client = operation.get("operator")
+            data = {{
+                "response": "TX activated!"
+            }}
+            await cell.tx_response(txID, client, data)
+
+        if txID == "id::tx":
+            client = operation.get("operator")
+            data = {{
+                "response": "TX activated!"
+            }}
+            await cell.tx_response(txID, client, data)
+
+asyncio.run(main())
+""")
+        
     click.echo(f"Neuronum Node '{nodeID}' initialized!")
 
 
@@ -488,7 +559,7 @@ def start_node(d):
     click.echo("Starting Node...")
 
     project_path = Path.cwd()
-    script_files = glob.glob("sync_*.py") + glob.glob("stream_*.py")
+    script_files = glob.glob("sync_*.py") + glob.glob("stream_*.py") + glob.glob("app.py")
 
     processes = []
     system_name = platform.system()
