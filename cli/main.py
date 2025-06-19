@@ -525,23 +525,21 @@ async def main():
     STX = "id::stx"                        
     async for operation in cell.sync(STX):       
         txID = operation.get("txID")
+        client = operation.get("operator")                    
                             
-        if txID == "id::tx":
-            client = operation.get("operator")             
+        if txID == "id::tx":             
             data = {{
                 "response": "TX activated!"
             }}
             await cell.tx_response(txID, client, data)
 
         if txID == "id::tx":
-            client = operation.get("operator")
             data = {{
                 "response": "TX activated!"
             }}
             await cell.tx_response(txID, client, data)
 
         if txID == "id::tx":
-            client = operation.get("operator")
             data = {{
                 "response": "TX activated!"
             }}
