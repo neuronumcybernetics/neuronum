@@ -174,13 +174,16 @@ class Cell:
                 async with session.post(url, json=TX) as response:
                     response.raise_for_status()
                     data = await response.json()
-                    if data["success"] == "activated":
+                    if data.get("success") == "activated":
                         async for operation in self.sync():
-                            label = operation.get("label")
-                            if label == "tx_response":
-                                operation_txID = operation.get("txID")
-                                if operation_txID == txID:
-                                    return operation.get("data")
+                            if operation.get("label") == "tx_response" and operation.get("txID") == txID:
+                                data = operation.get("data", {})
+                                if "json" in data:
+                                    return data
+                                elif "html" in data:
+                                    return "Info: HTML response available. Please activate TX in browser."
+                                else:
+                                    return "Info: Response received but contains no usable content."
                     else:
                         print(data["success"], data["message"])
 
