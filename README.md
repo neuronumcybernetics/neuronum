@@ -7,6 +7,7 @@
 - Learn about Neuronum
 - Connect to Neuronum
 - Build on Neuronum
+- Interact with Neuronum
 
 
 ### **About Neuronum**
@@ -26,7 +27,7 @@ Neuronum is a framework to build serverless connected app & data gateways automa
 
 #### Requirements
 - Python >= 3.8 -> https://www.python.org/downloads/
-- neuronum >= 4.0.0 -> https://pypi.org/project/neuronum/
+- neuronum >= 5.3.0 -> https://pypi.org/project/neuronum/
 
 
 ------------------
@@ -43,29 +44,19 @@ Create Cell:
 neuronum create-cell                    # create Cell / Cell type / Cell network 
 ```
 
-or
-
-Connect Cell:
-```sh
-neuronum connect-cell                   # connect Cell
-```
-
-View connected Cell:
-```sh
-neuronum view-cell                      # view Cell / output = Connected Cell: 'cell_id'"
-```
-
 
 ------------------
 
 
 ### **Build on Neuronum**
-**Node Examples:**  
-Visit: https://github.com/neuronumcybernetics/neuronum/tree/main/how_tos/nodes
-
-Initialize Node (default template):
+Initialize Node (app template):
 ```sh
-neuronum init-node                      # initialize a Node with default template
+neuronum init-node --app                # initialize a Node with app template
+```
+
+Change into Node folder
+```sh
+cd node_node_id                         # change directory
 ```
 
 Start Node:
@@ -73,12 +64,15 @@ Start Node:
 neuronum start-node                     # start Node
 ```
 
-Stop Node:
-```sh
-neuronum stop-node                      # stop Node
-```
+**Node Examples**
+Visit: https://github.com/neuronumcybernetics/neuronum/tree/main/how_tos/nodes
 
-Connect Node to Neuronum:
-```sh
-neuronum connect-node                   # connect Node
-```
+
+------------------
+
+
+### **Interact with Neuronum**
+1. Visit: https://neuronum.net
+2. Connect your Cell
+3. Explore Transmitters
+4. Activate Transmitters

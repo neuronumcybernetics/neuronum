@@ -500,7 +500,23 @@ async def main():
 asyncio.run(main())
 """)
         
-    if app:
+    if app and nodeID:
+
+        descr = f"{nodeID} App"                                                  
+        partners = ["public"]                                      
+        stxID = await cell.create_stx(descr, partners)  
+
+
+        descr = f"Greet {nodeID}"                                           
+        key_values = {                                                          
+            "say": "hello",
+        }
+        STX = stxID                                                     
+        label = "say:hello"                                                                                                                                                         
+        partners = ["public"]                                                   
+        txID = await cell.create_tx(descr, key_values, STX, label, partners)
+
+
         app_path = project_path / "app.py"
         app_path.write_text(f"""\
 import asyncio
@@ -521,27 +537,31 @@ cell = neuronum.Cell(
     synapse=synapse
 )
 
-async def main():
-    STX = "id::stx"                        
+async def main():      
+    STX = "{stxID}"                                          
     async for operation in cell.sync(STX):       
         txID = operation.get("txID")
         client = operation.get("operator")                    
                             
-        if txID == "id::tx":             
+        if txID == "{txID}":             
             data = {{
-                "response": "TX activated!"
-            }}
-            await cell.tx_response(txID, client, data)
+                "json": f"Hello {{client}} from {nodeID}",
+                "html": f\"\"\"
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>Greeting Node</title>
+  </head>
+  <body>
+    <div class="card">
+      <h1>Hello, {{client}}</h1>
+      <p>Greetings from <span class="node">{nodeID}</span></p>
+    </div>
+  </body>
+</html>
+\"\"\"
 
-        if txID == "id::tx":
-            data = {{
-                "response": "TX activated!"
-            }}
-            await cell.tx_response(txID, client, data)
-
-        if txID == "id::tx":
-            data = {{
-                "response": "TX activated!"
             }}
             await cell.tx_response(txID, client, data)
 
