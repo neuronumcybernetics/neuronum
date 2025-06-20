@@ -24,12 +24,12 @@ Set up a Neuronum Node that can receive requests and send responses back
 neuronum connect-cell
 ```
 
-### **Initialize your Node with Stream template**
+### **Initialize your Node with App template**
 ```sh
 neuronum init-node --app
 ```
 
-This command generates a Node template looking like:
+This command generates a Node App template looking like:
 ```python
 import asyncio
 import neuronum
