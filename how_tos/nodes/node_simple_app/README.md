@@ -57,7 +57,54 @@ async def main():
                             
         if txID == "id::tx":       
             data = {
-                "response": "TX activated!"
+                "json": f"Hello {client} from Node",
+                "html": f"""
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Transmitter Greeting</title>
+  <style>
+    body {{
+      background: #f0f2f5;
+      font-family: 'Segoe UI', sans-serif;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0;
+    }}
+    .card {{
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 2rem 3rem;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+      text-align: center;
+      max-width: 400px;
+    }}
+    .card h1 {{
+      margin: 0 0 1rem;
+      color: #333;
+      font-size: 1.8rem;
+    }}
+    .card p {{
+      font-size: 1.1rem;
+      color: #666;
+    }}
+    .node {{
+      font-weight: bold;
+      color: #0066cc;
+    }}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Hello, {client} 👋</h1>
+    <p>Greetings from <span class="node">Node</span></p>
+  </div>
+</body>
+</html>
+"""
             }
             await cell.tx_response(txID, client, data)
 
@@ -76,7 +123,89 @@ async def main():
 asyncio.run(main())
 ```
 
-Replace id::stx and id::tx with your actual Transmitter and Stream IDs. Add custom Transmitter logic to your code.
+Update your Transitter logic:
+```python
+import asyncio
+import neuronum
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+host = os.getenv("HOST")
+password = os.getenv("PASSWORD")
+network = os.getenv("NETWORK")
+synapse = os.getenv("SYNAPSE")
+
+cell = neuronum.Cell(
+    host=host,
+    password=password,
+    network=network,
+    synapse=synapse
+)
+
+async def main():
+    STX = "id::stx"                        
+    async for operation in cell.sync(STX):       
+        txID = operation.get("txID")
+        client = operation.get("operator")
+                            
+        if txID == "id::tx":       
+            data = {
+                "json": f"Hello {client} from Node",
+                "html": f"""
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Transmitter Greeting</title>
+  <style>
+    body {{
+      background: #f0f2f5;
+      font-family: 'Segoe UI', sans-serif;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0;
+    }}
+    .card {{
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 2rem 3rem;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+      text-align: center;
+      max-width: 400px;
+    }}
+    .card h1 {{
+      margin: 0 0 1rem;
+      color: #333;
+      font-size: 1.8rem;
+    }}
+    .card p {{
+      font-size: 1.1rem;
+      color: #666;
+    }}
+    .node {{
+      font-weight: bold;
+      color: #0066cc;
+    }}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Hello, {client} 👋</h1>
+    <p>Greetings from <span class="node">Node</span></p>
+  </div>
+</body>
+</html>
+"""
+            }
+            await cell.tx_response(txID, client, data)
+
+asyncio.run(main())
+```
+
+Replace id::stx and id::tx with your actual Transmitter and Stream IDs. When a client activates your Transmitter from their Node, they’ll receive the JSON response. If executed through a browser, the HTML version will be rendered instead.
 
 ### **Change to Node folder**
 ```sh
