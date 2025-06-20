@@ -44,6 +44,12 @@ Create Cell:
 neuronum create-cell                    # create Cell / Cell type / Cell network 
 ```
 
+or
+
+Connect Cell:
+```sh
+neuronum connect-cell                   # connect Cell
+```
 
 ------------------
 
