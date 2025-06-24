@@ -25,7 +25,7 @@ Neuronum is a framework to build serverless connected app & data gateways automa
 - Streams (STX): Stream, synchronize, and control data in real time
 
 **Cellai**
-Cellai is a CLI-based assistant that helps you interact with Neuronum
+- Cellai is a CLI-based assistant that helps you interact with Neuronum
 
 
 #### Requirements
