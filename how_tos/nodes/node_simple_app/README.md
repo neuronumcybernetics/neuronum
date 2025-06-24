@@ -70,9 +70,9 @@ NODE.md Example:
     ]
 }
 ```
-```
 
-Update your Node to publish your NODE.md
+
+### **Update your Node to publish your NODE.md**
 ```sh
 neuronum update-node
 ```
