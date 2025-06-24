@@ -42,8 +42,35 @@ neuronum connect-node
 
 ### **NODE.md File**
 The `NODE.md` file provides guidelines for interacting with your Node's data gateways.  
-Add markdown content (follow best practice and format key details in ```json) to structure your instructions, then update your Node with:
+Add markdown content (follow best practice and format key details in ```json) to structure your instructions:
 
+```markdown
+[![Website](https://img.shields.io/badge/Stream-gy3w11qAEibN::stx-blue)](https://neuronum.net/stream/gy3w11qAEibN::stx)  [![Website](https://img.shields.io/badge/Transmitter-ICfyWjdExPBh::tx-green)](https://neuronum.net/tx/ICfyWjdExPBh::tx)  [![Website](https://img.shields.io/badge/Circuit-bPjx22Hr4Qf7::ctx-red)](https://neuronum.net/circuit/bPjx22Hr4Qf7::ctx)
+
+```json
+{
+    "gateways": [
+        {
+            "type": "stream",
+            "id": "gy3w11qAEibN::stx",
+            "info": "synchronize this Node streaming: Hello, Neuronum!"
+        },
+        {
+            "type": "transmitter",
+            "id": "ICfyWjdExPBh::tx",
+            "info": "greet this Node"
+        },
+        {
+            "type": "circuit",
+            "id": "bPjx22Hr4Qf7::ctx",
+            "info": "view request log of this Node"
+        }
+    ]
+}
+```
+```
+
+Update your Node to publish your NODE.md
 ```sh
 neuronum update-node
 ```
