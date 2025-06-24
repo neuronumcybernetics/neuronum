@@ -92,8 +92,6 @@ class Cell:
         try:
             async with websockets.connect(full_url) as ws:
                 await ws.send(json.dumps(auth_payload))
-                print("Listening to Stream...")
-
                 try:
                     while True:
                         try:

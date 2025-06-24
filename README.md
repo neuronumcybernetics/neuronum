@@ -24,10 +24,13 @@ Neuronum is a framework to build serverless connected app & data gateways automa
 - Circuits (CTX): Store data in cloud-based key-value-label databases
 - Streams (STX): Stream, synchronize, and control data in real time
 
+**Cellai**
+Cellai is a CLI-based assistant that helps you interact with Neuronum
+
 
 #### Requirements
 - Python >= 3.8 -> https://www.python.org/downloads/
-- neuronum >= 5.3.0 -> https://pypi.org/project/neuronum/
+- neuronum >= 5.4.0 -> https://pypi.org/project/neuronum/
 
 
 ------------------
