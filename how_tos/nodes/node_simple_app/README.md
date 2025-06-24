@@ -44,6 +44,8 @@ neuronum connect-node
 The `NODE.md` file provides guidelines for interacting with your Node's data gateways.  
 Add markdown content (follow best practice and format key details in ```json) to structure your instructions:
 
+
+NODE.md Example:
 ```markdown
 [![Website](https://img.shields.io/badge/Stream-gy3w11qAEibN::stx-blue)](https://neuronum.net/stream/gy3w11qAEibN::stx)  [![Website](https://img.shields.io/badge/Transmitter-ICfyWjdExPBh::tx-green)](https://neuronum.net/tx/ICfyWjdExPBh::tx)  [![Website](https://img.shields.io/badge/Circuit-bPjx22Hr4Qf7::ctx-red)](https://neuronum.net/circuit/bPjx22Hr4Qf7::ctx)
 
