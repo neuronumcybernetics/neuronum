@@ -1,5 +1,5 @@
 <h1 align="center">
-  <img src="neuronum.svg" alt="Neuronum" width="100">
+  <img src="https://neuronum.net/static/neuronum.svg" alt="Neuronum" width="100">
 </h1>
 <h4 align="center">Build, connect, and automate serverless data infrastructures with Neuronum</h4>
 
@@ -94,7 +94,18 @@ Visit: https://github.com/neuronumcybernetics/neuronum/tree/main/how_tos/nodes
 
 
 ### **Interact with Neuronum**
+Web-based:
 1. Visit: https://neuronum.net
 2. Connect your Cell
 3. Explore Transmitters
 4. Activate Transmitters
+
+Code-based:
+```python
+TX = txID                                          # select the Transmitter TX
+data = {
+    "say": "hello",
+}
+tx_response = await cell.activate_tx(TX, data)     # activate TX - > get response back
+print(tx_response)
+```
