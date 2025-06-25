@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="neuronum.svg" alt="Neuronum Logo" width="150">
+  <img src="https://neuronum.net/static/logo_pip.png" alt="Neuronum" width="120">
 </p>
 <h4 align="center">Build, connect, and automate serverless data infrastructures with Neuronum</h4>
 
