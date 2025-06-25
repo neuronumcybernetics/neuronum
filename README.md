@@ -10,55 +10,51 @@
   <a href="https://github.com/neuronumcybernetics/neuronum">
     <img src="https://img.shields.io/badge/Docs-Read%20now-green" alt="Documentation">
   </a>
-  <img src="https://img.shields.io/badge/Version-5.4.0-blueviolet" alt="Lib Version">
-  <img src="https://img.shields.io/badge/Python-3.9%2B-yellow" alt="Python Version">
+  <a href="https://pypi.org/project/neuronum/">
+    <img src="https://img.shields.io/pypi/v/neuronum.svg" alt="PyPI Version">
+  </a>
+  <img src="https://img.shields.io/badge/Python-3.8%2B-yellow" alt="Python Version">
+  <a href="https://github.com/neuronumcybernetics/neuronum/blob/main/LICENSE">
+    <img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License">
+  </a>
 </p>
 
 ---
 
-## **Getting Started Goals**
-- Learn about Neuronum
-- Connect to Neuronum
-- Build on Neuronum
-- Interact with Neuronum
-
-
 ### **About Neuronum**
-Neuronum is a framework to build serverless connected app & data gateways automating the processing and distribution of data transmission, storage, and streaming.
+Neuronum is a python framework to build serverless connected app & data gateways automating the processing and distribution of real-time data transmission, storage, and streaming.
 
 
 ### **Features**
 **Cell & Nodes**
-- Cell: Account to connect and interact with Neuronum
-- Nodes: Soft- and Hardware components hosting gateways
+- Cell: Account to connect and interact with Neuronum. [Learn More](https://github.com/neuronumcybernetics/neuronum/tree/main/features/cell)
+- Nodes: Soft- and Hardware components hosting gateways. [Learn More](https://github.com/neuronumcybernetics/neuronum/tree/main/features/nodes)
 
 **Gateways**
-- Transmitters (TX): Securely transmit and receive data packages
-- Circuits (CTX): Store data in cloud-based key-value-label databases
-- Streams (STX): Stream, synchronize, and control data in real time
+- Transmitters (TX): Securely transmit and receive data packages. [Learn More](https://github.com/neuronumcybernetics/neuronum/tree/main/features/transmitters)
+- Circuits (CTX): Store data in cloud-based key-value-label databases. [Learn More](https://github.com/neuronumcybernetics/neuronum/tree/main/features/circuits)
+- Streams (STX): Stream, synchronize, and control data in real time. [Learn More](https://github.com/neuronumcybernetics/neuronum/tree/main/features/streams)
 
-#### Requirements
-- Python >= 3.8 -> https://www.python.org/downloads/
-- neuronum >= 5.4.0 -> https://pypi.org/project/neuronum/
-
+### Requirements
+- Python >= 3.8
+- neuronum >= 5.4.0
 
 ------------------
 
-
-### **Connect to Neuronum**
-Installation
+### **Connect To Neuronum**
+Installation (optional but recommended: create a virtual environment)
 ```sh
-pip install neuronum                    # install neuronum dependencies
+pip install neuronum                    # install Neuronum dependencies
 ```
 
-Create Cell:
+Create your Cell:
 ```sh
 neuronum create-cell                    # create Cell / Cell type / Cell network 
 ```
 
 or
 
-Connect Cell:
+Connect your Cell:
 ```sh
 neuronum connect-cell                   # connect Cell
 ```
@@ -66,8 +62,8 @@ neuronum connect-cell                   # connect Cell
 ------------------
 
 
-### **Build on Neuronum**
-Initialize Node (app template):
+### **Build On Neuronum** **[(Build with Node Examples)](https://github.com/neuronumcybernetics/neuronum/tree/main/how_tos/nodes)**
+Initialize a Node (app template):
 ```sh
 neuronum init-node --app                # initialize a Node with app template
 ```
@@ -77,26 +73,22 @@ Change into Node folder
 cd node_node_id                         # change directory
 ```
 
-Start Node:
+Start your Node:
 ```sh
 neuronum start-node                     # start Node
 ```
 
-**Node Examples**
-Visit: https://github.com/neuronumcybernetics/neuronum/tree/main/how_tos/nodes
-
-
 ------------------
 
-
 ### **Interact with Neuronum**
-**Web-based**
-1. Visit: https://neuronum.net
-2. Connect your Cell
-3. Explore Transmitters
+#### **Web-based**
+1. [Visit Neuronum](https://neuronum.net)
+2. [Connect your Cell](https://neuronum.net/connect)
+3. [Explore Transmitters](https://neuronum.net/explore)
 4. Activate Transmitters
 
-**Code-based**
+#### **Code-based**
+Activate Transmitters (TX) to send requests and receive responses
 ```python
 import asyncio
 import neuronum
