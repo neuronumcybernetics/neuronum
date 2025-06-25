@@ -872,42 +872,6 @@ async def async_delete_node():
     click.echo(f"Neuronum Node '{nodeID}' deleted!")
 
 
-@click.command()
-def call_cellai():
-    try:
-        credentials_folder_path = Path.home() / ".neuronum"
-        env_path = credentials_folder_path / ".env"
-
-        env_data = {}  
-
-        try:
-            with open(env_path, "r") as f:
-                for line in f:
-                    key, value = line.strip().split("=")
-                    env_data[key] = value
-
-            host = env_data.get("HOST", "")
-            password = env_data.get("PASSWORD", "")
-            network = env_data.get("NETWORK", "")
-            synapse = env_data.get("SYNAPSE", "")
-        except FileNotFoundError:
-            click.echo("No cell connected. Connect your cell with command neuronum connect-cell")
-            return
-        except Exception as e:
-            click.echo(f"Error reading .env file: {e}")
-            return
-
-        from cellai import cellai
-        asyncio.run(cellai.main(host, password, network, synapse))
-
-    except FileNotFoundError:
-        click.echo("Error: .env with credentials not found")
-    except ImportError:
-        click.echo("Cellai not found. Please check the necessary dependencies.")
-    except Exception as e:
-        click.echo(f"Unexpected error: {e}")
-
-
 cli.add_command(create_cell)
 cli.add_command(connect_cell)
 cli.add_command(view_cell)
@@ -920,7 +884,6 @@ cli.add_command(connect_node)
 cli.add_command(update_node)
 cli.add_command(disconnect_node)
 cli.add_command(delete_node)
-cli.add_command(call_cellai)
 
 
 if __name__ == "__main__":
