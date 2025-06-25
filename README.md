@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://neuronum.net/static/logo_pip.png" alt="Neuronum" width="400">
+  <img src="https://neuronum.net/static/logo_pip.png" alt="Neuronum" width="150">
 </p>
 
 <h4 align="center">Build, connect, and automate serverless data infrastructures with Neuronum</h4>
@@ -12,6 +12,8 @@
     <img src="https://img.shields.io/badge/Docs-Read%20now-green" alt="Documentation">
   </a>
 </p>
+
+---
 
 ## **Getting Started Goals**
 - Learn about Neuronum
