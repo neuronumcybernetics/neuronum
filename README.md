@@ -1,7 +1,17 @@
-![Neuronum Logo](https://neuronum.net/static/logo_pip.png "Neuronum")
+<p align="center">
+  <img src="https://neuronum.net/static/logo_pip.png" alt="Neuronum" width="400">
+</p>
 
-[![Website](https://img.shields.io/badge/Website-Neuronum-blue)](https://neuronum.net) [![Documentation](https://img.shields.io/badge/Docs-Read%20now-green)](https://github.com/neuronumcybernetics/neuronum)
+<h4 align="center">Build, connect, and automate serverless data infrastructures with Neuronum</h4>
 
+<p align="center">
+  <a href="https://neuronum.net">
+    <img src="https://img.shields.io/badge/Website-Neuronum-blue" alt="Website">
+  </a>
+  <a href="https://github.com/neuronumcybernetics/neuronum">
+    <img src="https://img.shields.io/badge/Docs-Read%20now-green" alt="Documentation">
+  </a>
+</p>
 
 ## **Getting Started Goals**
 - Learn about Neuronum
