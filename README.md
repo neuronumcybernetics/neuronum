@@ -37,12 +37,8 @@ Neuronum is a framework to build serverless connected app & data gateways automa
 - Circuits (CTX): Store data in cloud-based key-value-label databases
 - Streams (STX): Stream, synchronize, and control data in real time
 
-**Cellai**
-- Cellai is a CLI-based assistant that helps you interact with Neuronum
-
-
 #### Requirements
-- Python >= 3.9 -> https://www.python.org/downloads/
+- Python >= 3.8 -> https://www.python.org/downloads/
 - neuronum >= 5.4.0 -> https://pypi.org/project/neuronum/
 
 
@@ -94,18 +90,33 @@ Visit: https://github.com/neuronumcybernetics/neuronum/tree/main/how_tos/nodes
 
 
 ### **Interact with Neuronum**
-Web-based:
+**Web-based**
 1. Visit: https://neuronum.net
 2. Connect your Cell
 3. Explore Transmitters
 4. Activate Transmitters
 
-Code-based:
+**Code-based**
 ```python
-TX = txID                                          # select the Transmitter TX
-data = {
-    "say": "hello",
-}
-tx_response = await cell.activate_tx(TX, data)     # activate TX - > get response back
-print(tx_response)
+import asyncio
+import neuronum
+
+cell = neuronum.Cell(                                   # set Cell connection
+    host="host",                                        # Cell host
+    password="password",                                # Cell password
+    network="neuronum.net",                             # Cell network -> neuronum.net
+    synapse="synapse"                                   # Cell synapse
+)
+
+async def main():
+                                                            
+    TX = txID                                           # select the Transmitter TX
+    data = {
+        "say": "hello",
+    }
+    tx_response = await cell.activate_tx(TX, data)      # activate TX - > get response back
+    print(tx_response)                                  # print Cell list
+                                      
+asyncio.run(main())
 ```
+
