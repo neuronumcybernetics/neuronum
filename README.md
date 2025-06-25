@@ -62,7 +62,7 @@ neuronum connect-cell                   # connect Cell
 ------------------
 
 
-### **Build On Neuronum** **[(Build with Node Examples)](https://github.com/neuronumcybernetics/neuronum/tree/main/how_tos/nodes)**
+### **Build On Neuronum** **[(Build with Node Examples)](https://github.com/neuronumcybernetics/neuronum/tree/main/features/nodes)**
 Initialize a Node (app template):
 ```sh
 neuronum init-node --app                # initialize a Node with app template
