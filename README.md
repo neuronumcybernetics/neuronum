@@ -107,7 +107,7 @@ async def main():
         "say": "hello",
     }
     tx_response = await cell.activate_tx(TX, data)      # activate TX - > get response back
-    print(tx_response)                                  # print Cell list
+    print(tx_response)                                  # print tx response
                                       
 asyncio.run(main())
 ```
