@@ -37,7 +37,7 @@ Neuronum is a python framework to build serverless connected app & data gateways
 
 ### Requirements
 - Python >= 3.8
-- neuronum >= 5.4.0
+- neuronum >= 5.5.0
 
 ------------------
 
@@ -88,7 +88,6 @@ neuronum start-node                     # start Node
 4. Activate Transmitters
 
 #### **Code-based**
-Activate Transmitters (TX) to send requests and receive responses
 ```python
 import asyncio
 import neuronum
@@ -102,13 +101,16 @@ cell = neuronum.Cell(                                   # set Cell connection
 
 async def main():
                                                             
-    TX = txID                                           # select the Transmitter TX
-    data = {
-        "say": "hello",
-    }
+    TX = "id::tx"                                       # select the Transmitter TX
+    data = {"say": "hello"}
     tx_response = await cell.activate_tx(TX, data)      # activate TX - > get response back
     print(tx_response)                                  # print tx response
                                       
 asyncio.run(main())
+```
+
+#### **CLI-based**
+```sh
+neuronum activate --tx id::tx say:hello
 ```
 

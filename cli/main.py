@@ -319,6 +319,13 @@ async def async_init_node(sync, stream, app):
     gitignore_path = project_path / ".gitignore"
     await asyncio.to_thread(gitignore_path.write_text, ".env\n")
 
+    requirements_path = project_path / "requirements.txt"
+    requirements_content = """\
+# Please add additional packages below if your Node uses more
+neuronum
+"""
+    await asyncio.to_thread(requirements_path.write_text, requirements_content)
+
     nodemd_path = project_path / "NODE.md"
     await asyncio.to_thread(nodemd_path.write_text, """### NODE.md: How to interact with this Node
 
@@ -872,6 +879,46 @@ async def async_delete_node():
     click.echo(f"Neuronum Node '{nodeID}' deleted!")
 
 
+@click.command()
+@click.option('--tx', required=True, help="Transmitter ID")
+@click.argument('kvpairs', nargs=-1)
+def activate(tx, kvpairs):
+    try:
+        data = dict(pair.split(':', 1) for pair in kvpairs)
+    except ValueError:
+        click.echo("Invalid input. Use key:value pairs.")
+        return
+
+    asyncio.run(async_activate(tx, data))
+
+async def async_activate(tx, data):
+    credentials_folder_path = Path.home() / ".neuronum"
+    env_path = credentials_folder_path / ".env"
+    env_data = {}
+
+    try:
+        with open(env_path, "r") as f:
+            for line in f:
+                key, value = line.strip().split("=")
+                env_data[key] = value
+    except FileNotFoundError:
+        click.echo("No cell connected. Try: neuronum connect-cell")
+        return
+    except Exception as e:
+        click.echo(f"Error reading .env: {e}")
+        return
+
+    cell = neuronum.Cell(
+        host=env_data.get("HOST", ""),
+        password=env_data.get("PASSWORD", ""),
+        network=env_data.get("NETWORK", ""),
+        synapse=env_data.get("SYNAPSE", "")
+    )
+
+    tx_response = await cell.activate_tx(tx, data)
+    click.echo(tx_response)
+
+
 cli.add_command(create_cell)
 cli.add_command(connect_cell)
 cli.add_command(view_cell)
@@ -884,6 +931,7 @@ cli.add_command(connect_node)
 cli.add_command(update_node)
 cli.add_command(disconnect_node)
 cli.add_command(delete_node)
+cli.add_command(activate)
 
 
 if __name__ == "__main__":
