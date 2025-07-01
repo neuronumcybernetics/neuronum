@@ -12,7 +12,7 @@
   </a>
   <a href="https://pypi.org/project/neuronum/">
     <img src="https://img.shields.io/pypi/v/neuronum.svg" alt="PyPI Version">
-  </a>
+  </a><br>
   <img src="https://img.shields.io/badge/Python-3.8%2B-yellow" alt="Python Version">
   <a href="https://github.com/neuronumcybernetics/neuronum/blob/main/LICENSE.md">
     <img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License">
