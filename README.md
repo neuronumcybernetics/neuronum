@@ -1,7 +1,7 @@
 <h1 align="center">
   <img src="https://neuronum.net/static/neuronum.svg" alt="Neuronum" width="80">
 </h1>
-<h4 align="center">Build, connect, and automate serverless data infrastructures with Neuronum</h4>
+<h4 align="center">Real-Time Data Exchange Framework</h4>
 
 <p align="center">
   <a href="https://neuronum.net">
