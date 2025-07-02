@@ -22,7 +22,7 @@
 ---
 
 ### **About Neuronum**
-Neuronum is a python framework to build serverless connected app & data gateways automating the processing and distribution of real-time data transmission, storage, and streaming.
+Neuronum empowers developers to build & connect apps, services, and devices into serverless networks that automate data exchange in real time
 
 
 ### **Features**
