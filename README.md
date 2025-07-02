@@ -22,7 +22,7 @@
 ---
 
 ### **About Neuronum**
-Neuronum empowers developers to build & connect apps, services, and devices into serverless networks that automate data exchange in real time
+Neuronum empowers developers to build & connect apps, services, and devices into serverless networks to automate real time data exchange
 
 
 ### **Features**
