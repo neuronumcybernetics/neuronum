@@ -1,7 +1,7 @@
 <h1 align="center">
   <img src="https://neuronum.net/static/neuronum.svg" alt="Neuronum" width="80">
 </h1>
-<h4 align="center">Neuronum: Real-Time Data Exchange Framework in Pure Python</h4>
+<h4 align="center">Neuronum: Real-Time Data Exchange Network in Pure Python</h4>
 
 <p align="center">
   <a href="https://neuronum.net">
