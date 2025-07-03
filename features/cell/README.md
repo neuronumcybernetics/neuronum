@@ -26,36 +26,36 @@ Your Neuronum Cell is an unique Client to securely connect and interact with Neu
 
 ### **Set Cell Connection (Code-Based)**
 ```python
-cell = neuronum.Cell(                                   # set Cell connection
-    host="host",                                        # Cell host
-    password="password",                                # Cell password
-    network="neuronum.net",                             # Cell network -> neuronum.net
-    synapse="synapse"                                   # Cell synapse
+cell = neuronum.Cell(
+    host="host",              # Cell host
+    password="password",      # Cell password
+    network="neuronum.net",   # Cell network -> neuronum.net
+    synapse="synapse"         # Cell synapse
 )
 ```
 
 ### **Cell-CLI-Commands**
 Create your Cell:
 ```sh
-neuronum create-cell        # create Cell / Cell type / Cell network 
+neuronum create-cell          # create Cell / Cell type / Cell network 
 ```
 
 Connect your Cell:
 ```sh
-neuronum connect-cell       # connect Cell
+neuronum connect-cell         # connect Cell
 ```
 
 View your Cell:
 ```sh
-neuronum view-cell          # view connected Cell
+neuronum view-cell            # view connected Cell
 ```
 
 Disconnect your Cell:
 ```sh
-neuronum disconnect-cell    # disconnect Cell
+neuronum disconnect-cell      # disconnect Cell
 ```
 
 Delete your Cell:
 ```sh
-neuronum delete-cell        # delete Cell
+neuronum delete-cell          # delete Cell
 ```
