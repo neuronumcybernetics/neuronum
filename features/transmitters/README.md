@@ -110,7 +110,6 @@ async def main():
             await cell.tx_response(txID, client, data)
 
 asyncio.run(main())
-
 ```
 
 
