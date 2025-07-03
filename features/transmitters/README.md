@@ -22,7 +22,7 @@
 ---
 
 ### **About Neuronum Transmitters (TX)**
-Neuronum Transmitters (TX) is a serverless http alternative to send data from a client (Neuronum Cell) to a Neuronum Node, requesting a specific resource or action.
+Neuronum Transmitters (TX) is a serverless HTTP alternative to send data from a client (Neuronum Cell) to a Neuronum Node, requesting a specific resource or action.
 
 
 ### **Comparison: HTTP vs. Neuronum Transmitters (TX)**
