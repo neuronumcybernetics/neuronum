@@ -28,9 +28,9 @@ Neuronum empowers developers to build & connect apps, services, and devices into
 ### **Features**
 **Cell & Nodes**
 - Cell: Account to connect and interact with Neuronum. [Learn More](https://github.com/neuronumcybernetics/neuronum/tree/main/features/cell)
-- Nodes: Soft- and Hardware components hosting gateways. [Learn More](https://github.com/neuronumcybernetics/neuronum/tree/main/features/nodes)
+- Nodes: Soft- and Hardware components hosting Neuronum data gateways. [Learn More](https://github.com/neuronumcybernetics/neuronum/tree/main/features/nodes)
 
-**Gateways**
+**Data Gateways**
 - Transmitters (TX): Securely transmit and receive data packages. [Learn More](https://github.com/neuronumcybernetics/neuronum/tree/main/features/transmitters)
 - Circuits (CTX): Store data in cloud-based key-value-label databases. [Learn More](https://github.com/neuronumcybernetics/neuronum/tree/main/features/circuits)
 - Streams (STX): Stream, synchronize, and control data in real time. [Learn More](https://github.com/neuronumcybernetics/neuronum/tree/main/features/streams)
