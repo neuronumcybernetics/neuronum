@@ -22,7 +22,7 @@
 ---
 
 ### **About Neuronum Circuits (CTX)**
-Neuronum Circuits (CTX) are key-value-label databases in the cloud and used to store and share resources between Neuronum Nodes. Circuits (CTX) can be created to be private, public or accessible for a definded list of partners
+Neuronum Circuits (CTX) are key-value-label databases in the cloud and used to store and share resources between Neuronum Nodes. Circuits (CTX) can be created to be private, public or accessible for a defined list of partners
 
 ------------------
 
