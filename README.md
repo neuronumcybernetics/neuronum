@@ -111,6 +111,6 @@ asyncio.run(main())
 
 #### **CLI-based**
 ```sh
-neuronum activate --tx id::tx say:hello
+neuronum activate --tx id::tx 'say:hello'
 ```
 
