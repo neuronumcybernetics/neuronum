@@ -84,3 +84,8 @@ async def main():
 
 asyncio.run(main())
 ```
+
+#### **CLI-based**
+```sh
+neuronum sync --stx id::stx                                                 # use 'neuronum sync' without --stx flag to synchronize your private Stream (STX)
+```
