@@ -24,7 +24,7 @@
 ### **A Getting Started into the Neuronum Network**
 - Learn about Neuronum
 - Connect to the Network
-- Build a Neuroum Node
+- Build a Neuronum Node
 - Interact with your Node
 
 ------------------
