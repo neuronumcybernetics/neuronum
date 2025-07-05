@@ -19,11 +19,18 @@
   </a>
 </p>
 
----
+------------------
+
+### **A Getting Started into the Neuronum Network**
+- Learn about Neuronum
+- Connect to the Network
+- Build a Neuroum Node
+- Interact with your Node
+
+------------------
 
 ### **About Neuronum**
 Neuronum empowers developers to build & connect apps, services, and devices into serverless networks able to exchange data in real time
-
 
 ### **Features**
 **Cell & Nodes**
