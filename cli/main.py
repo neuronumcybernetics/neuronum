@@ -955,7 +955,6 @@ async def async_load(ctx, label):
         synapse=env_data.get("SYNAPSE", "")
     )
 
-    print(label, ctx)
     data = await cell.load(label, ctx)
     click.echo(data)
 
