@@ -71,3 +71,7 @@ async def main():
 asyncio.run(main())
 ```
 
+#### **CLI-based**
+```sh
+neuronum load --ctx id::ctx 'label'                                         # use '*' to fetch all data stored in the Circuit (CTX)
+```
