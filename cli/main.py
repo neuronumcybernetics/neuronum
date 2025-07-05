@@ -494,7 +494,7 @@ asyncio.run(main())
     if app and nodeID:
 
         descr = f"{nodeID} App"                                                  
-        partners = ["public"]                                      
+        partners = ["private"]                                      
         stxID = await cell.create_stx(descr, partners)  
 
 
@@ -504,7 +504,7 @@ asyncio.run(main())
         }
         STX = stxID                                                     
         label = "say:hello"                                                                                                                                                         
-        partners = ["public"]                                                   
+        partners = ["private"]                                                   
         txID = await cell.create_tx(descr, key_values, STX, label, partners)
 
 
@@ -919,6 +919,47 @@ async def async_activate(tx, data):
     click.echo(tx_response)
 
 
+@click.command()
+@click.option('--ctx', required=True, help="Circuit ID")
+@click.argument('label', nargs=-1)
+def load(ctx, label):
+    if len(label) > 1 and all(Path(x).exists() for x in label):
+        label = "*"
+    else:
+        label = " ".join(label)
+
+    asyncio.run(async_load(ctx, label))
+
+
+async def async_load(ctx, label):
+    credentials_folder_path = Path.home() / ".neuronum"
+    env_path = credentials_folder_path / ".env"
+    env_data = {}
+
+    try:
+        with open(env_path, "r") as f:
+            for line in f:
+                key, value = line.strip().split("=")
+                env_data[key] = value
+    except FileNotFoundError:
+        click.echo("No cell connected. Try: neuronum connect-cell")
+        return
+    except Exception as e:
+        click.echo(f"Error reading .env: {e}")
+        return
+
+    cell = neuronum.Cell(
+        host=env_data.get("HOST", ""),
+        password=env_data.get("PASSWORD", ""),
+        network=env_data.get("NETWORK", ""),
+        synapse=env_data.get("SYNAPSE", "")
+    )
+
+    print(label, ctx)
+    data = await cell.load(label, ctx)
+    click.echo(data)
+
+
 cli.add_command(create_cell)
 cli.add_command(connect_cell)
 cli.add_command(view_cell)
@@ -932,6 +973,7 @@ cli.add_command(update_node)
 cli.add_command(disconnect_node)
 cli.add_command(delete_node)
 cli.add_command(activate)
+cli.add_command(load)
 
 
 if __name__ == "__main__":
