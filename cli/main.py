@@ -959,6 +959,50 @@ async def async_load(ctx, label):
     click.echo(data)
 
 
+@click.command()
+@click.option('--stx', default=None, help="Stream ID (optional)")
+def sync(stx):
+    asyncio.run(async_sync(stx))
+
+
+async def async_sync(stx):
+    credentials_folder_path = Path.home() / ".neuronum"
+    env_path = credentials_folder_path / ".env"
+    env_data = {}
+
+    try:
+        with open(env_path, "r") as f:
+            for line in f:
+                key, value = line.strip().split("=")
+                env_data[key] = value
+    except FileNotFoundError:
+        click.echo("No cell connected. Try: neuronum connect-cell")
+        return
+    except Exception as e:
+        click.echo(f"Error reading .env: {e}")
+        return
+
+    cell = neuronum.Cell(
+        host=env_data.get("HOST", ""),
+        password=env_data.get("PASSWORD", ""),
+        network=env_data.get("NETWORK", ""),
+        synapse=env_data.get("SYNAPSE", "")
+    )
+
+    if stx:
+        print(f"Listening to Stream '{stx}'! Close connection with CTRL+C")
+    else:
+        print(f"Listening to '{cell.host}' private Stream! Close connection with CTRL+C")
+    async for operation in cell.sync() if stx is None else cell.sync(stx):
+        label = operation.get("label")                            
+        data = operation.get("data")
+        ts = operation.get("time")
+        stxID = operation.get("stxID")
+        operator = operation.get("operator")
+        txID = operation.get("txID")
+        print(label, data, ts, operator, txID, stxID)
+
+
 cli.add_command(create_cell)
 cli.add_command(connect_cell)
 cli.add_command(view_cell)
@@ -973,6 +1017,7 @@ cli.add_command(disconnect_node)
 cli.add_command(delete_node)
 cli.add_command(activate)
 cli.add_command(load)
+cli.add_command(sync)
 
 
 if __name__ == "__main__":
