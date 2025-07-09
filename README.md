@@ -22,10 +22,11 @@
 ------------------
 
 ### **A Getting Started into the Neuronum Network**
-- Learn about Neuronum
-- Connect to the Network
-- Build a Neuronum Node
-- Interact with your Node
+In this brief getting started guide, you will:
+- [Learn about Neuronum](#about-neuronum)
+- [Connect to the Network](#connect-to-neuronum)
+- [Build a Neuronum Node](#build-on-neuronum)
+- [Interact with your Node](#interact-with-neuronum)
 
 ------------------
 
@@ -69,10 +70,13 @@ neuronum connect-cell                   # connect Cell
 ------------------
 
 
-### **Build On Neuronum** **[(Build with Node Examples)](https://github.com/neuronumcybernetics/neuronum/tree/main/features/nodes)**
+### **Build On Neuronum** 
+[View Node Examples](https://github.com/neuronumcybernetics/neuronum/tree/main/features/nodes)
+
+
 Initialize a Node (app template):
 ```sh
-neuronum init-node --app                # initialize a Node with app template -> creates a folder named node_<node_id> containing all relevant files
+neuronum init-node --app                # initialize a Node with app template
 ```
 
 Change into Node folder
