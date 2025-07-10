@@ -402,6 +402,7 @@ import asyncio
 import neuronum
 import os
 from dotenv import load_dotenv
+import time                                   
 
 load_dotenv()
 host = os.getenv("HOST")
@@ -427,6 +428,7 @@ async def main():
             "key3": "value3",
         }}
         await cell.stream(label, data, STX)
+        time.sleep(5) 
 
 asyncio.run(main())
 """)
@@ -466,6 +468,7 @@ import asyncio
 import neuronum
 import os
 from dotenv import load_dotenv
+import time                               
 
 load_dotenv()
 host = os.getenv("HOST")
@@ -488,6 +491,7 @@ async def main():
             "message": "Hello, Neuronum!"
         }}
         await cell.stream(label, data)
+        time.sleep(5)                       
 
 asyncio.run(main())
 """)
@@ -614,8 +618,9 @@ def start_node(d):
                 )
             else:
                 process = subprocess.Popen(
-                    [python_cmd, str(script_path)],
-                    start_new_session=True
+                    ["python", str(script_path)],
+                    stdout = None,
+                    stderr = None
                 )
 
             processes.append(process.pid)
@@ -766,7 +771,11 @@ def restart_node(d):
                     start_new_session=True
                 )
             else:
-                process = subprocess.Popen([python_cmd, str(script_path)], start_new_session=True)
+                process = subprocess.Popen(
+                    ["python", str(script_path)],
+                    stdout = None,
+                    stderr = None
+                )
 
             processes.append(process.pid)
 
