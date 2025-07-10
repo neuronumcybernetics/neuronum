@@ -1098,6 +1098,7 @@ async def async_sync(stx):
 
 
 cli.add_command(create_cell)
+cli.add_command(connect_cell)
 cli.add_command(view_cell)
 cli.add_command(disconnect_cell)
 cli.add_command(delete_cell)
