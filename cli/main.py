@@ -327,16 +327,6 @@ async def async_init_node(sync, stream, app, descr):
     env_path = project_path / ".env"
     await asyncio.to_thread(env_path.write_text, f"NODE={nodeID}\nHOST={host}\nPASSWORD={password}\nNETWORK={network}\nSYNAPSE={synapse}\n")
 
-    gitignore_path = project_path / ".gitignore"
-    await asyncio.to_thread(gitignore_path.write_text, ".env\n")
-
-    requirements_path = project_path / "requirements.txt"
-    requirements_content = """\
-# Please add additional packages below if your Node uses more
-neuronum
-"""
-    await asyncio.to_thread(requirements_path.write_text, requirements_content)
-
     nodemd_path = project_path / "NODE.md"
     await asyncio.to_thread(nodemd_path.write_text, """### NODE.md: How to interact with this Node
 
