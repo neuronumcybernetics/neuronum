@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='neuronum',
-    version='5.7.0',
+    version='5.8.0',
     author='Neuronum Cybernetics',
     author_email='welcome@neuronum.net',
     description='Official client library to interact with the Neuronum Network',
@@ -26,6 +26,7 @@ setup(
         'questionary',
         'python-dotenv',
         'requests',
+        'psutil',
     ],
     entry_points={
         "console_scripts": [

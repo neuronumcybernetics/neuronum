@@ -5,10 +5,6 @@ Set up a Neuronum Node that synchronizes stream data in real time
 1. Visit: https://neuronum.net/streams
 2. Copy a Stream ID (id::stx)
 
-### **Connect your Neuronum Cell**
-```sh
-neuronum connect-cell
-```
 
 ### **Initialize your Node with Stream template**
 ```sh

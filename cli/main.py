@@ -10,6 +10,8 @@ import click
 import questionary
 from pathlib import Path
 import requests
+import psutil
+from datetime import datetime
 
 
 @click.group()
@@ -251,9 +253,13 @@ def delete_cell():
 @click.option('--stream', multiple=True, default=None, help="Optional stream ID for stream.")
 @click.option('--app', is_flag=True, help="Generate a Node with app template")
 def init_node(sync, stream, app):
-    asyncio.run(async_init_node(sync, stream, app))
+    descr = click.prompt("Node description: Type up to 25 characters").strip()
+    if descr and len(descr) > 25:
+        click.echo("Description too long. Max 25 characters allowed.")
+        return
+    asyncio.run(async_init_node(sync, stream, app, descr))
 
-async def async_init_node(sync, stream, app):
+async def async_init_node(sync, stream, app, descr):
     credentials_folder_path = Path.home() / ".neuronum"
     env_path = credentials_folder_path / ".env"
 
@@ -278,11 +284,16 @@ async def async_init_node(sync, stream, app):
         return
 
     url = f"https://{network}/api/init_node"
-    node_payload = {"host": host, "password": password, "synapse": synapse}
+    node = {
+        "host": host, 
+        "password": password, 
+        "synapse": synapse, 
+        "descr": descr,
+    }
 
     async with aiohttp.ClientSession() as session:
         try:
-            async with session.post(url, json=node_payload) as response:
+            async with session.post(url, json=node) as response:
                 response.raise_for_status()
                 data = await response.json()
                 nodeID = data["nodeID"]
@@ -565,13 +576,38 @@ asyncio.run(main())
 @click.command()
 @click.option('--d', is_flag=True, help="Start node in detached mode")
 def start_node(d):
+    pid_file = Path.cwd() / "status.txt"
+    system_name = platform.system()
+    active_pids = []
+
+    start_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    if pid_file.exists():
+        try:
+            with open(pid_file, "r") as f:
+                pids = [int(line.strip()) for line in f if line.strip().isdigit()]
+            for pid in pids:
+                if system_name == "Windows":
+                    if psutil.pid_exists(pid):
+                        active_pids.append(pid)
+                else:
+                    try:
+                        os.kill(pid, 0)
+                        active_pids.append(pid)
+                    except OSError:
+                        continue
+        except Exception as e:
+            click.echo(f"Failed to read PID file: {e}")
+
+    if active_pids:
+        click.echo(f"Node is already running. Active PIDs: {', '.join(map(str, active_pids))}")
+        return
+
     click.echo("Starting Node...")
 
     project_path = Path.cwd()
     script_files = glob.glob("sync_*.py") + glob.glob("stream_*.py") + glob.glob("app.py")
-
     processes = []
-    system_name = platform.system()
 
     for script in script_files:
         script_path = project_path / script
@@ -587,7 +623,10 @@ def start_node(d):
                     start_new_session=True
                 )
             else:
-                process = subprocess.Popen(["python", str(script_path)], start_new_session=True)
+                process = subprocess.Popen(
+                    [python_cmd, str(script_path)],
+                    start_new_session=True
+                )
 
             processes.append(process.pid)
 
@@ -595,10 +634,161 @@ def start_node(d):
         click.echo("Error: No valid node script found. Ensure the node is set up correctly.")
         return
 
-    with open("node_pid.txt", "w") as f:
+    with open(pid_file, "w") as f:
+        f.write(f"Started at: {start_time}\n")
         f.write("\n".join(map(str, processes)))
 
-    click.echo("Node started successfully!")
+    click.echo(f"Node started successfully with PIDs: {', '.join(map(str, processes))}")
+
+
+@click.command()
+def check_node():
+    click.echo("Checking Node status...")
+
+    env_data = {}
+    try:
+        with open(".env", "r") as f:
+            for line in f:
+                if "=" in line:
+                    key, value = line.strip().split("=", 1)
+                    env_data[key] = value
+        nodeID = env_data.get("NODE", "")
+    except FileNotFoundError:
+        click.echo("Error: .env with credentials not found")
+        return
+    except Exception as e:
+        click.echo(f"Error reading .env file: {e}")
+        return
+
+    pid_file = Path.cwd() / "status.txt"
+
+    if not pid_file.exists():
+        click.echo(f"Node {nodeID} is not running. Status file missing.")
+        return
+
+    try:
+        with open(pid_file, "r") as f:
+            lines = f.readlines()
+            timestamp_line = next((line for line in lines if line.startswith("Started at:")), None)
+            pids = [int(line.strip()) for line in lines if line.strip().isdigit()]
+
+        if timestamp_line:
+            click.echo(timestamp_line.strip())
+            start_time = datetime.strptime(timestamp_line.split(":", 1)[1].strip(), "%Y-%m-%d %H:%M:%S")
+            now = datetime.now()
+            uptime = now - start_time
+            click.echo(f"Uptime: {str(uptime).split('.')[0]}")
+    except Exception as e:
+        click.echo(f"Failed to read PID file: {e}")
+        return
+
+    system_name = platform.system()
+    running_pids = []
+
+    for pid in pids:
+        if system_name == "Windows":
+            if psutil.pid_exists(pid):
+                running_pids.append(pid)
+        else:
+            try:
+                os.kill(pid, 0)
+                running_pids.append(pid)
+            except OSError:
+                continue
+
+    if running_pids:
+        for pid in running_pids:
+                proc = psutil.Process(pid)
+                mem = proc.memory_info().rss / (1024 * 1024)  # in MB
+                cpu = proc.cpu_percent(interval=0.1)
+                click.echo(f"PID {pid} → Memory: {mem:.2f} MB | CPU: {cpu:.1f}%")
+        click.echo(f"Node {nodeID} is running. Active PIDs: {', '.join(map(str, running_pids))}")
+    else:
+        click.echo(f"Node {nodeID} is not running.")
+
+    
+@click.command()
+@click.option('--d', is_flag=True, help="Restart node in detached mode")
+def restart_node(d):
+    pid_file = Path.cwd() / "status.txt"
+    system_name = platform.system()
+
+    start_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    env_data = {}
+    try:
+        with open(".env", "r") as f:
+            for line in f:
+                key, value = line.strip().split("=")
+                env_data[key] = value
+
+        nodeID = env_data.get("NODE", "")
+
+    except FileNotFoundError:
+        print("Error: .env with credentials not found")
+        return
+    except Exception as e:
+        print(f"Error reading .env file: {e}")
+        return
+
+    if pid_file.exists():
+        try:
+            with open(pid_file, "r") as f:
+                pids = [int(line.strip()) for line in f if line.strip().isdigit()]
+
+            for pid in pids:
+                if system_name == "Windows":
+                    if psutil.pid_exists(pid):
+                        proc = psutil.Process(pid)
+                        proc.terminate()
+                else:
+                    try:
+                        os.kill(pid, 15)
+                    except OSError:
+                        continue
+
+            pid_file.unlink()
+
+            click.echo(f"Terminated existing {nodeID} processes: {', '.join(map(str, pids))}")
+
+        except Exception as e:
+            click.echo(f"Failed to terminate processes: {e}")
+            return
+    else:
+        click.echo(f"Node {nodeID} is not running")
+
+    click.echo(f"Starting Node {nodeID}...")
+    project_path = Path.cwd()
+    script_files = glob.glob("sync_*.py") + glob.glob("stream_*.py") + glob.glob("app.py")
+    processes = []
+
+    python_cmd = "pythonw" if system_name == "Windows" else "python"
+
+    for script in script_files:
+        script_path = project_path / script
+        if script_path.exists():
+            if d:
+                process = subprocess.Popen(
+                    ["nohup", python_cmd, str(script_path), "&"] if system_name != "Windows"
+                    else [python_cmd, str(script_path)],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    start_new_session=True
+                )
+            else:
+                process = subprocess.Popen([python_cmd, str(script_path)], start_new_session=True)
+
+            processes.append(process.pid)
+
+    if not processes:
+        click.echo("Error: No valid node script found.")
+        return
+
+    with open(pid_file, "w") as f:
+        f.write(f"Started at: {start_time}\n")
+        f.write("\n".join(map(str, processes)))
+
+    click.echo(f"Node {nodeID} started with new PIDs: {', '.join(map(str, processes))}")
 
 
 @click.command()
@@ -608,11 +798,27 @@ def stop_node():
 async def async_stop_node():
     click.echo("Stopping Node...")
 
-    node_pid_path = Path("node_pid.txt")
+    node_pid_path = Path("status.txt")
+
+    env_data = {}
+    try:
+        with open(".env", "r") as f:
+            for line in f:
+                key, value = line.strip().split("=")
+                env_data[key] = value
+
+        nodeID = env_data.get("NODE", "")
+
+    except FileNotFoundError:
+        print("Error: .env with credentials not found")
+        return
+    except Exception as e:
+        print(f"Error reading .env file: {e}")
+        return
 
     try:
-        with open("node_pid.txt", "r") as f:
-            pids = [int(pid.strip()) for pid in f.readlines()]
+        with open("status.txt", "r") as f:
+            pids = [int(line.strip()) for line in f if line.strip().isdigit()]
 
         system_name = platform.system()
 
@@ -626,7 +832,7 @@ async def async_stop_node():
                 click.echo(f"Warning: Process {pid} already stopped or does not exist.")
 
         await asyncio.to_thread(os.remove, node_pid_path)
-        click.echo("Node stopped successfully!")
+        click.echo(f"Node {nodeID} stopped successfully!")
 
     except FileNotFoundError:
         click.echo("Error: No active node process found.")
@@ -635,82 +841,22 @@ async def async_stop_node():
 
 
 @click.command()
-def connect_node():
+def update_node():
     node_type = questionary.select(
-        "Choose Node type:",
+        "Update Node type:",
         choices=["public", "private"]
     ).ask()
-    descr = click.prompt("Node description (max. 25 characters)")
-    asyncio.run(async_connect_node(descr, node_type))
-
-async def async_connect_node(descr, node_type):
-    env_data = {}
-    try:
-        with open(".env", "r") as f:
-            for line in f:
-                key, value = line.strip().split("=")
-                env_data[key] = value
-
-        nodeID = env_data.get("NODE", "")
-        host = env_data.get("HOST", "")
-        password = env_data.get("PASSWORD", "")
-        network = env_data.get("NETWORK", "")
-        synapse = env_data.get("SYNAPSE", "")
-
-    except FileNotFoundError:
-        print("Error: .env with credentials not found")
+    descr = click.prompt(
+        "Update Node description: Type up to 25 characters, or press Enter to leave it unchanged",
+        default="None",
+        show_default=False
+    ).strip()
+    if descr and len(descr) > 25:
+        click.echo("Description too long. Max 25 characters allowed.")
         return
-    except Exception as e:
-        print(f"Error reading .env file: {e}")
-        return
+    asyncio.run(async_update_node(node_type, descr))
 
-    try:
-        with open("NODE.md", "r") as f: 
-            nodemd_file = f.read() 
-
-    except FileNotFoundError:
-        print("Error: NODE.md file not found")
-        return
-    except Exception as e:
-        print(f"Error reading NODE.md file: {e}")
-        return
-
-    url = f"https://{network}/api/connect_node/{node_type}"
-
-    node = {
-        "nodeID": nodeID,
-        "descr": descr,
-        "host": host,
-        "password": password,
-        "synapse": synapse,
-        "nodemd_file": nodemd_file
-    }
-
-    async with aiohttp.ClientSession() as session:
-        try:
-            async with session.post(url, json=node) as response:
-                response.raise_for_status()
-                data = await response.json()
-                nodeID = data["nodeID"]
-                node_url = data["node_url"]
-        except aiohttp.ClientError as e:
-            click.echo(f"Error sending request: {e}")
-            return
-        
-    if nodeID == "Node does not exist":
-        click.echo(f"Neuronum Node not found! Make sure you initialized your Node correctly")
-    else:
-        if node_type == "public":
-            click.echo(f"Public Neuronum Node '{nodeID}' connected! Visit: {node_url}")
-        else:   
-            click.echo(f"Private Neuronum Node '{nodeID}' connected!")
-
-
-@click.command()
-def update_node():
-    asyncio.run(async_update_node())
-
-async def async_update_node():
+async def async_update_node(node_type: str, descr: str) -> None:
     env_data = {}
 
     try:
@@ -744,17 +890,19 @@ async def async_update_node():
         return
 
     url = f"https://{network}/api/update_node"
-    node_payload = {
+    node = {
         "nodeID": nodeID,
         "host": host,
         "password": password,
         "synapse": synapse,
-        "nodemd_file": nodemd_file
+        "node_type": node_type,
+        "nodemd_file": nodemd_file,
+        "descr": descr,
     }
 
     async with aiohttp.ClientSession() as session:
         try:
-            async with session.post(url, json=node_payload) as response:
+            async with session.post(url, json=node) as response:
                 response.raise_for_status()
                 data = await response.json()
                 nodeID = data["nodeID"]
@@ -782,54 +930,10 @@ async def async_update_node():
     await asyncio.to_thread(Path("streams.json").write_text, json.dumps(stx, indent=4))
     await asyncio.to_thread(Path("nodes.json").write_text, json.dumps(nodes, indent=4))
 
-    click.echo(f"Neuronum Node '{nodeID}' updated! Visit: {node_url}")
-
-
-@click.command()
-def disconnect_node():
-    asyncio.run(async_disconnect_node())
-
-async def async_disconnect_node():
-    env_data = {}
-
-    try:
-        with open(".env", "r") as f:
-            for line in f:
-                key, value = line.strip().split("=")
-                env_data[key] = value
-
-        nodeID = env_data.get("NODE", "")
-        host = env_data.get("HOST", "")
-        password = env_data.get("PASSWORD", "")
-        network = env_data.get("NETWORK", "")
-        synapse = env_data.get("SYNAPSE", "")
-
-    except FileNotFoundError:
-        click.echo("Error: .env with credentials not found")
-        return
-    except Exception as e:
-        click.echo(f"Error reading .env file: {e}")
-        return
-
-    url = f"https://{network}/api/disconnect_node"
-    node_payload = {
-        "nodeID": nodeID,
-        "host": host,
-        "password": password,
-        "synapse": synapse
-    }
-
-    async with aiohttp.ClientSession() as session:
-        try:
-            async with session.post(url, json=node_payload) as response:
-                response.raise_for_status()
-                data = await response.json()
-                nodeID = data["nodeID"]
-        except aiohttp.ClientError as e:
-            click.echo(f"Error sending request: {e}")
-            return
-
-    click.echo(f"Neuronum Node '{nodeID}' disconnected!")
+    if node_type == "public":
+        click.echo(f"Neuronum Node '{nodeID}' updated! Visit: {node_url}")
+    else:
+        click.echo(f"Neuronum Node '{nodeID}' updated!")
 
 
 @click.command()
@@ -1004,16 +1108,15 @@ async def async_sync(stx):
 
 
 cli.add_command(create_cell)
-cli.add_command(connect_cell)
 cli.add_command(view_cell)
 cli.add_command(disconnect_cell)
 cli.add_command(delete_cell)
 cli.add_command(init_node)
 cli.add_command(start_node)
+cli.add_command(restart_node)
 cli.add_command(stop_node)
-cli.add_command(connect_node)
+cli.add_command(check_node)
 cli.add_command(update_node)
-cli.add_command(disconnect_node)
 cli.add_command(delete_node)
 cli.add_command(activate)
 cli.add_command(load)

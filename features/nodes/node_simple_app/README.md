@@ -35,11 +35,6 @@ neuronum start-node --d   # start your Node in "detached" mode
 3. Activate your Transmitter -> response loads in your Browser
 
 
-### **Connect your Node to Neuronum**
-```sh
-neuronum connect-node
-```
-
 ### **NODE.md File**
 The `NODE.md` file provides guidelines for interacting with your Node's data gateways.  
 Add markdown content (follow best practice and format key details in ```json) to structure your instructions:

@@ -58,19 +58,24 @@ or
 neuronum start-node --d                 # start your Node in "detached" mode
 ```
 
+Restart your Node:
+```sh
+neuronum restart-node                   # restart your Node
+```
+or
+
+```sh
+neuronum restart-node --d               # restart your Node in "detached" mode
+```
+
 Stop your Node:
 ```sh
 neuronum stop-node                      # stop your Node
 ```
 
-Connect your Node:
+Check Node status:
 ```sh
-neuronum connect-node                   # connect your Node to Neuronum
-```
-
-Disconnect your Node:
-```sh
-neuronum disconnect-node                # disconnect your Node
+neuronum check-node                     # check Node status
 ```
 
 Update your Node:
