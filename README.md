@@ -1,7 +1,7 @@
 <h1 align="center">
   <img src="https://neuronum.net/static/neuronum.svg" alt="Neuronum" width="80">
 </h1>
-<h4 align="center">Neuronum: Build Apps to Connect the World</h4>
+<h4 align="center">Neuronum: Build Apps that Connect the World</h4>
 
 <p align="center">
   <a href="https://neuronum.net">
