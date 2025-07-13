@@ -841,10 +841,23 @@ async def async_stop_node():
 
 @click.command()
 def update_node():
+    click.echo("Update your Node")
     node_type = questionary.select(
-        "Update Node type:",
-        choices=["public", "private"]
+        "Who can view your Node?:",
+        choices=["public", "private", "partners"]
     ).ask()
+    partners = "None"
+    if node_type == "partners":
+        prompt_msg = (
+            "Enter the list of partners who can view this Node.\n"
+            "Format: partner::cell, partner::cell, partner::cell\n"
+            "Press Enter to leave the list unchanged"
+        )
+        partners = click.prompt(
+            prompt_msg,
+            default="None",
+            show_default=False
+        ).strip()
     descr = click.prompt(
         "Update Node description: Type up to 25 characters, or press Enter to leave it unchanged",
         default="None",
@@ -853,9 +866,9 @@ def update_node():
     if descr and len(descr) > 25:
         click.echo("Description too long. Max 25 characters allowed.")
         return
-    asyncio.run(async_update_node(node_type, descr))
+    asyncio.run(async_update_node(node_type, descr, partners))
 
-async def async_update_node(node_type: str, descr: str) -> None:
+async def async_update_node(node_type: str, descr: str, partners:str) -> None:
     env_data = {}
 
     try:
@@ -887,6 +900,9 @@ async def async_update_node(node_type: str, descr: str) -> None:
     except Exception as e:
         click.echo(f"Error reading NODE.md file: {e}")
         return
+    
+    if node_type == "partners":
+        node_type = partners
 
     url = f"https://{network}/api/update_node"
     node = {
