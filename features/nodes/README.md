@@ -27,6 +27,41 @@ Neuronum Nodes refer to the software and hardware systems that host Neuronum dat
 **!NOTE!**: While the data flow between Nodes is fully serverless and managed by Neuronum, participating in the Network requires a physical or virtual Node capable of running Python 3.8, along with the ability to install and execute Neuronum dependencies.
 
 
+### **The NODE.md File**
+Because Neuronum Nodes aren't hosted via traditional web servers (e.g., NGINX) and lack static domain addresses (e.g., www.neuronum.net), they require a lightweight, standardized method to communicate how their data gateways can be interacted with. The NODE.md file serves this purpose by providing structured information about the Node’s available services
+
+#### NODE.md Example:
+```markdown
+```json
+{
+    "gateways": [
+        {
+            "type": "stream",
+            "id": "gy3w11qAEibN::stx",
+            "info": "synchronize this Node streaming: Hello, Neuronum!"
+        },
+        {
+            "type": "transmitter",
+            "id": "ICfyWjdExPBh::tx",
+            "info": "greet this Node"
+        },
+        {
+            "type": "circuit",
+            "id": "bPjx22Hr4Qf7::ctx",
+            "info": "view request log of this Node"
+        }
+    ]
+}
+```
+
+### **Neuronum Node Examples**
+- node_public_stream: Set up a Neuronum Node that publicly streams data
+- node_sync_stream: Set up a Neuronum Node that synchronizes stream data in real time
+- node_private_stream: Set up a Neuronum Node that privately streams data
+- node_simple_app: Set up a Neuronum Node app to receive requests and send responses
+
+These Examples assume you've already installed the latest version of Neuronum and created your Neuronum Cell.
+
 ### **Node-CLI-Commands**
 Initialize a Node (default template):
 ```sh
@@ -87,39 +122,3 @@ Delete your Node:
 ```sh
 neuronum delete-node                    # delete your Node
 ```
-
-### **The NODE.md File**
-Because most Neuronum Nodes aren't hosted via traditional web servers (e.g., NGINX) and lack static domain addresses (e.g., www.neuronum.net), they require a lightweight, standardized method to communicate how their data gateways can be interacted with. The NODE.md file serves this purpose by providing structured information about the Node’s available services
-
-#### NODE.md Example:
-```markdown
-```json
-{
-    "gateways": [
-        {
-            "type": "stream",
-            "id": "gy3w11qAEibN::stx",
-            "info": "synchronize this Node streaming: Hello, Neuronum!"
-        },
-        {
-            "type": "transmitter",
-            "id": "ICfyWjdExPBh::tx",
-            "info": "greet this Node"
-        },
-        {
-            "type": "circuit",
-            "id": "bPjx22Hr4Qf7::ctx",
-            "info": "view request log of this Node"
-        }
-    ]
-}
-```
-
-### **Neuronum Node Examples**
-- node_public_stream: Set up a Neuronum Node that publicly streams data
-- node_sync_stream: Set up a Neuronum Node that synchronizes stream data in real time
-- node_private_stream: Set up a Neuronum Node that privately streams data
-- node_simple_app: Set up a Neuronum Node app to receive requests and send responses
-
-
-These Examples assume you've already installed the latest version of Neuronum and created your Neuronum Cell.
