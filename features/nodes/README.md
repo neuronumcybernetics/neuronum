@@ -27,12 +27,12 @@ Neuronum Nodes refer to the software and hardware systems that host Neuronum dat
 **!NOTE!**: While the data flow between Nodes is fully serverless and managed by Neuronum, participating in the Network requires a physical or virtual Node capable of running Python 3.8, along with the ability to install and execute Neuronum dependencies.
 
 ### Node App
-The simplest way to setup a Neuronum Node is to use the CLI:
+The simplest way to set up a Neuronum Node is to use the CLI:
 ```sh
 neuronum init-node --app                # creates a Node with app template
 ```
 
-This command creates a new folder node_<node_id> in your working directory. A Neuronum Node App is designed to **receive**, **process**, and **respond to requests**—making it a powerful starting point for interacting with the Neuronum Network.
+This command generates a new folder node_<node_id> in your working directory. A Neuronum Node App is designed to **receive**, **process**, and **respond to requests**—making it a powerful starting point for interacting with the Neuronum Network.
 
 #### NODE App Template:
 ```python
