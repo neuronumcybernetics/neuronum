@@ -71,7 +71,7 @@ neuronum connect-cell                   # connect Cell
 
 
 ### **Build On Neuronum** 
-[View Node Examples](https://github.com/neuronumcybernetics/neuronum/tree/main/features/nodes)
+To dive deeper into Neuronum App development, visit & build with [Node Examples](https://github.com/neuronumcybernetics/neuronum/tree/main/nodes/examples)
 
 
 Initialize a Node (app template):
