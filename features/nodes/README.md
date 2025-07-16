@@ -34,7 +34,7 @@ neuronum init-node --app                # creates a Node with app template
 
 This command generates a new folder node_<node_id> in your working directory. A Neuronum Node App is designed to **receive**, **process**, and **respond to requests**—making it a powerful starting point for interacting with the Neuronum Network.
 
-To dive deeper into Neuronum App development, visit & build with [Node Examples](https://github.com/neuronumcybernetics/neuronum/tree/main/nodes/examples)
+To dive deeper into Neuronum App development, visit & build with [Node Examples](https://github.com/neuronumcybernetics/neuronum/tree/main/features/nodes/examples)
 
 #### NODE App Template:
 ```python
