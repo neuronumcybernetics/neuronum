@@ -22,10 +22,68 @@
 ---
 
 ### **About Neuronum Nodes**
-Neuronum Nodes refer to the software and hardware systems that host Neuronum data gateways. In practice, these Nodes can connect and exchange data with one another, forming a distributed yet highly interconnected network of applications, services, and devices.
+Neuronum Nodes refer to the software and hardware systems that host Neuronum data gateways. In practice, the Nodes can connect and exchange data with one another through these data gateways, forming a distributed yet highly interconnected network of applications, services, and devices.
 
 **!NOTE!**: While the data flow between Nodes is fully serverless and managed by Neuronum, participating in the Network requires a physical or virtual Node capable of running Python 3.8, along with the ability to install and execute Neuronum dependencies.
 
+### Node App
+The simplest way to setup a Neuronum Node is to use the CLI:
+```sh
+neuronum init-node --app                # creates a Node with app template
+```
+
+This command creates a new folder node_<node_id> in your working directory. A Neuronum Node App is designed to **receive**, **process**, and **respond to requests**—making it a powerful starting point for interacting with the Neuronum Network.
+
+#### NODE App Template:
+```python
+import asyncio
+import neuronum
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+host = os.getenv("HOST")
+password = os.getenv("PASSWORD")
+network = os.getenv("NETWORK")
+synapse = os.getenv("SYNAPSE")
+
+cell = neuronum.Cell(
+    host=host,
+    password=password,
+    network=network,
+    synapse=synapse
+)
+
+async def main():      
+    STX = "id::stx"                                          
+    async for operation in cell.sync(STX):       
+        txID = operation.get("txID")
+        client = operation.get("operator")                    
+                            
+        if txID == "id::tx":             
+            data = {
+                "json": f"Hello {client} from id::node",
+                "html": f"""
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>Greeting Node</title>
+  </head>
+  <body>
+    <div class="card">
+      <h1>Hello, {client}</h1>
+      <p>Greetings from <span class="node">id::node</span></p>
+    </div>
+  </body>
+</html>
+"""
+
+            }
+            await cell.tx_response(txID, client, data)
+
+asyncio.run(main())
+```
 
 ### **The NODE.md File**
 Because Neuronum Nodes aren't hosted via traditional web servers (e.g., NGINX) and lack static domain addresses (e.g., www.neuronum.net), they require a lightweight, standardized method to communicate how their data gateways can be interacted with. The NODE.md file serves this purpose by providing structured information about the Node’s available services
@@ -37,18 +95,18 @@ Because Neuronum Nodes aren't hosted via traditional web servers (e.g., NGINX) a
     "gateways": [
         {
             "type": "stream",
-            "id": "gy3w11qAEibN::stx",
-            "info": "synchronize this Node streaming: Hello, Neuronum!"
+            "id": "id::stx",
+            "info": "info about this stream"
         },
         {
             "type": "transmitter",
-            "id": "ICfyWjdExPBh::tx",
-            "info": "greet this Node"
+            "id": "id::tx",
+            "info": "info about this transmitter"
         },
         {
             "type": "circuit",
-            "id": "bPjx22Hr4Qf7::ctx",
-            "info": "view request log of this Node"
+            "id": "id::ctx",
+            "info": "info about this circuit"
         }
     ]
 }
