@@ -34,6 +34,8 @@ neuronum init-node --app                # creates a Node with app template
 
 This command generates a new folder node_<node_id> in your working directory. A Neuronum Node App is designed to **receive**, **process**, and **respond to requests**—making it a powerful starting point for interacting with the Neuronum Network.
 
+To dive deeper into Neuronum App development, visit & build with [Node Examples](https://github.com/neuronumcybernetics/neuronum/tree/main/nodes/examples)
+
 #### NODE App Template:
 ```python
 import asyncio
@@ -172,11 +174,3 @@ Delete your Node:
 ```sh
 neuronum delete-node                    # delete your Node
 ```
-
-### **Neuronum Node Examples**
-- node_public_stream: Set up a Neuronum Node that publicly streams data
-- node_sync_stream: Set up a Neuronum Node that synchronizes stream data in real time
-- node_private_stream: Set up a Neuronum Node that privately streams data
-- node_simple_app: Set up a Neuronum Node app to receive requests and send responses
-
-These Examples assume you've already installed the latest version of Neuronum and created your Neuronum Cell.
