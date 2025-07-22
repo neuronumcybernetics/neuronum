@@ -79,6 +79,94 @@ Initialize a Node (app template):
 neuronum init-node --app                # initialize a Node with app template
 ```
 
+This command prompts you to enter a node description (e.g Getting Started Node) and create a new directory named node_<node_id> containing the following files:
+
+.env
+```python
+NODE=<your_node_id>
+HOST=<your_cell_id>
+PASSWORD=<your_password>
+NETWORK=neuronum.net
+SYNAPSE=<your_synapse>                  # auth token
+```
+
+app.py
+```python
+import asyncio
+import neuronum
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+host = os.getenv("HOST")
+password = os.getenv("PASSWORD")
+network = os.getenv("NETWORK")
+synapse = os.getenv("SYNAPSE")
+
+cell = neuronum.Cell(
+    host=host,
+    password=password,
+    network=network,
+    synapse=synapse
+)
+
+async def main():      
+    STX = "id::stx"                                          
+    async for operation in cell.sync(STX):       
+        txID = operation.get("txID")
+        client = operation.get("operator")                    
+                            
+        if txID == "id::tx":             
+            data = {
+                "json": f"Hello {client}",
+                "html": f"""
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>Greeting Node</title>
+  </head>
+  <body>
+    <div class="card">
+      <h1>Hello, {client}</h1>
+    </div>
+  </body>
+</html>
+"""
+
+            }
+            await cell.tx_response(txID, client, data)
+
+asyncio.run(main())
+```
+
+NODE.md
+```
+```json
+{
+    "gateways": [
+        {
+            "type": "stream",
+            "id": "id::stx",
+            "link": "https://neuronum.net/stream/id::stx",
+            "info": "stream info"
+        },
+        {
+            "type": "transmitter",
+            "id": "id::tx",
+            "link": "https://neuronum.net/tx/id::tx",
+            "info": "transmitter info"
+        },
+        {
+            "type": "circuit",
+            "id": "id::ctx",
+            "link": "https://neuronum.net/circuit/id::ctx",
+            "info": "circuit info"
+        }
+    ]
+}
+```
+
 Change into Node folder
 ```sh
 cd node_node_id                         # change directory
