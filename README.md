@@ -31,7 +31,7 @@ In this brief getting started guide, you will:
 ------------------
 
 ### **About Neuronum**
-Neuronum empowers developers to build & connect apps, services, and devices into serverless networks able to exchange data in real time
+Neuronum empowers developers to build, ship & connect apps, services, and devices into serverless networks able to exchange data in real time
 
 ### **Features**
 **Cell & Nodes**
