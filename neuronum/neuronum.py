@@ -82,17 +82,18 @@ class Cell:
 
     async def sync(self, stx: Optional[str] = None) -> AsyncGenerator[str, None]:
         full_url = f"wss://{self.network}/sync/{stx}"
-        
         auth_payload = {
             "host": self.host,
             "password": self.password,
             "synapse": self.synapse,
         }
 
-        try:
-            async with websockets.connect(full_url) as ws:
-                await ws.send(json.dumps(auth_payload))
-                try:
+        while True:
+            try:
+                async with websockets.connect(full_url) as ws:
+                    await ws.send(json.dumps(auth_payload))
+                    print("Connected to WebSocket.")
+
                     while True:
                         try:
                             raw_operation = await ws.recv()
@@ -100,17 +101,20 @@ class Cell:
                             yield operation
 
                         except asyncio.TimeoutError:
-                            print("No initial data received. Continuing to listen...")
-                            continue
+                            print("No data received. Continuing...")
+                        except websockets.exceptions.ConnectionClosedError as e:
+                            print(f"Connection closed with error: {e}. Reconnecting...")
+                            break
+                        except Exception as e:
+                            print(f"Unexpected error in recv loop: {e}")
+                            break
 
-                except asyncio.CancelledError:
-                    print("Connection closed.")
+            except websockets.exceptions.WebSocketException as e:
+                print(f"WebSocket error occurred: {e}. Retrying in 5 seconds...")
+            except Exception as e:
+                print(f"General error occurred: {e}. Retrying in 5 seconds...")
 
-        except websockets.exceptions.WebSocketException as e:
-            print(f"WebSocket error occurred: {e}")
-
-        except Exception as e:
-            print(f"An unexpected error occurred: {e}")
+            await asyncio.sleep(3)
            
 
     async def create_tx(self, descr: str, key_values: dict, stx: str, label: str, partners: list):

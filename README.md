@@ -79,15 +79,15 @@ Initialize a Node (app template):
 neuronum init-node --app                # initialize a Node with app template
 ```
 
-This command prompts you to enter a node description (e.g Getting Started Node) and create a new directory named node_<node_id> containing the following files:
+This command prompts you to enter a Node description (e.g Getting Started Node) and creates a new directory named node_<node_id> containing the following files:
 
 .env
-```python
-NODE=<your_node_id>
-HOST=<your_cell_id>
-PASSWORD=<your_password>
+```env
+NODE=your_node_id
+HOST=your_cell_id
+PASSWORD=your_password
 NETWORK=neuronum.net
-SYNAPSE=<your_synapse>                  # auth token
+SYNAPSE=your_synapse                    # auth token
 ```
 
 app.py
