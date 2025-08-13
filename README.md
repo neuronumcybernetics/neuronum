@@ -1,7 +1,7 @@
 <h1 align="center">
   <img src="https://neuronum.net/static/neuronum.svg" alt="Neuronum" width="80">
 </h1>
-<h4 align="center">Neuronum: The Real Time App Engine</h4>
+<h4 align="center">Neuronum: The Real Time Data Engine</h4>
 
 <p align="center">
   <a href="https://neuronum.net">
@@ -31,7 +31,7 @@ In this brief getting started guide, you will:
 ------------------
 
 ### **About Neuronum**
-Neuronum is a real-time app engine designed for developers to build event-driven apps and services in minutes using high-level Python
+Neuronum is the real-time data engine designed for developers to build event-driven apps and services in minutes using high-level Python
 
 ### **Features**
 **Cell & Nodes**
