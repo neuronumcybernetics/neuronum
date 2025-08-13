@@ -1,7 +1,7 @@
 <h1 align="center">
   <img src="https://neuronum.net/static/neuronum.svg" alt="Neuronum" width="80">
 </h1>
-<h4 align="center">Neuronum: The Web Framework to Build Smart Networks</h4>
+<h4 align="center">Neuronum: The Real Time App Engine</h4>
 
 <p align="center">
   <a href="https://neuronum.net">
@@ -31,12 +31,12 @@ In this brief getting started guide, you will:
 ------------------
 
 ### **About Neuronum**
-Neuronum empowers developers to build, ship & connect apps, services, and devices into serverless networks able to exchange data in real time
+Neuronum is a real-time app engine designed for developers to build event-driven apps and services in minutes using high-level Python
 
 ### **Features**
 **Cell & Nodes**
 - Cell: Account to connect and interact with Neuronum. [Learn More](https://github.com/neuronumcybernetics/neuronum/tree/main/features/cell)
-- Nodes: Soft- and Hardware components hosting Neuronum data gateways. [Learn More](https://github.com/neuronumcybernetics/neuronum/tree/main/features/nodes)
+- Nodes (Apps): Soft- and Hardware components hosting Neuronum data gateways. [Learn More](https://github.com/neuronumcybernetics/neuronum/tree/main/features/nodes)
 
 **Data Gateways**
 - Transmitters (TX): Securely transmit and receive data packages. [Learn More](https://github.com/neuronumcybernetics/neuronum/tree/main/features/transmitters)
