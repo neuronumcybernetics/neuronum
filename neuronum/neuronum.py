@@ -490,4 +490,30 @@ class Cell:
                 print(f"Unexpected error: {e}")
 
 
+    async def notify(self, receiver: str, title: str, message: str):
+        full_url = f"https://{self.network}/api/notify"
+
+        notify_payload = {
+            "receiver": receiver,
+            "notification": {
+                "title": title,
+                "message": message
+            },
+            "cell": self.to_dict()
+        }
+
+        async with aiohttp.ClientSession() as session:
+            try:
+                async with session.post(full_url, json=notify_payload) as response:
+                    response.raise_for_status()
+                    data = await response.json()
+                    print(f"Notification sent successfully: {data}")
+                    return data
+
+            except aiohttp.ClientError as e:
+                print(f"HTTP error while sending notification: {e}")
+            except Exception as e:
+                print(f"Unexpected error: {e}")
+
+
 __all__ = ['Cell']
