@@ -73,13 +73,12 @@ neuronum connect-cell                   # connect Cell
 ### **Build On Neuronum** 
 To dive deeper into Neuronum App development, visit & build with [Node Examples](https://github.com/neuronumcybernetics/neuronum/tree/main/features/nodes/examples)
 
-
 Initialize a Node (app template):
 ```sh
 neuronum init-node --app                # initialize a Node with app template
 ```
 
-This command prompts you to enter a Node description (e.g Getting Started Node) and creates a new directory named node_<node_id> containing the following files:
+This command prompts you to enter a Node description (e.g Test App) and creates a new directory named node_<node_id> containing the following files:
 
 .env
 ```env
@@ -140,32 +139,34 @@ async def main():
 asyncio.run(main())
 ```
 
-NODE.md
-```
+config.json (required if you want to make your app accessible to Cellai (currently in testing))
 ```json
-{
-    "gateways": [
+{                       
+    "data_gateways": [
         {
-            "type": "stream",
-            "id": "id::stx",
-            "link": "https://neuronum.net/stream/id::stx",
-            "info": "stream info"
+        "type": "stream",
+        "id": "id::stx",
+        "info": "provide a detailed description about the stream"
         },
         {
-            "type": "transmitter",
-            "id": "id::tx",
-            "link": "https://neuronum.net/tx/id::tx",
-            "info": "transmitter info"
+        "type": "transmitter",
+        "id": "id::tx",
+        "info": "provide a detailed description about the transmitter"
         },
         {
-            "type": "circuit",
-            "id": "id::ctx",
-            "link": "https://neuronum.net/circuit/id::ctx",
-            "info": "circuit info"
+        "type": "circuit",
+        "id": "id::ctx",
+        "info": "provide a detailed description about the circuit"
         }
     ]
 }
 ```
+
+NODE.md (required if you want to publish your App)
+```
+### NODE.md: Create a detailed Markdown File on how to interact with this Node
+```
+
 
 Change into Node folder
 ```sh
@@ -212,4 +213,7 @@ asyncio.run(main())
 ```sh
 neuronum activate --tx id::tx 'say:hello'
 ```
+
+#### **Cellai**
+Cellai is a mobile interface that lets you interact with Neuronum apps using natural language. It is currently in testing.
 

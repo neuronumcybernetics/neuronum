@@ -1,7 +1,6 @@
 import subprocess
 import os
 import neuronum
-import json
 import platform
 import glob
 import asyncio
@@ -12,6 +11,7 @@ from pathlib import Path
 import requests
 import psutil
 from datetime import datetime
+import sys
 
 
 @click.group()
@@ -276,6 +276,13 @@ async def async_init_node(sync, stream, app, descr):
         network = env_data.get("NETWORK", "")
         synapse = env_data.get("SYNAPSE", "")
 
+        cell = neuronum.Cell(
+        host=host,         
+        password=password,                         
+        network=network,                        
+        synapse=synapse
+        )
+
     except FileNotFoundError:
         click.echo("No cell connected. Connect your cell with command neuronum connect-cell")
         return
@@ -305,56 +312,35 @@ async def async_init_node(sync, stream, app, descr):
     project_path = Path(node_filename)
     project_path.mkdir(exist_ok=True)
 
-    cell = neuronum.Cell(
-        host=host,         
-        password=password,                         
-        network=network,                        
-        synapse=synapse
-    )
-
-    cells = await cell.list_cells()
-    tx = await cell.list_tx()
-    ctx = await cell.list_ctx()
-    stx = await cell.list_stx()
-    nodes = await cell.list_nodes()
-
-    await asyncio.to_thread((project_path / "cells.json").write_text, json.dumps(cells, indent=4))
-    await asyncio.to_thread((project_path / "transmitters.json").write_text, json.dumps(tx, indent=4))
-    await asyncio.to_thread((project_path / "circuits.json").write_text, json.dumps(ctx, indent=4))
-    await asyncio.to_thread((project_path / "streams.json").write_text, json.dumps(stx, indent=4))
-    await asyncio.to_thread((project_path / "nodes.json").write_text, json.dumps(nodes, indent=4))
-
     env_path = project_path / ".env"
     await asyncio.to_thread(env_path.write_text, f"NODE={nodeID}\nHOST={host}\nPASSWORD={password}\nNETWORK={network}\nSYNAPSE={synapse}\n")
-
-    nodemd_path = project_path / "NODE.md"
-    await asyncio.to_thread(nodemd_path.write_text, """### NODE.md: How to interact with this Node
-
-```json
-{
-    "gateways": [
+    
+    if app:
+        config_path = project_path / "config.json"
+        await asyncio.to_thread(config_path.write_text, """{                       
+    "data_gateways": [
         {
-            "type": "stream",
-            "id": "id::stx",
-            "link": "https://neuronum.net/stream/id::stx",
-            "info": "stream info"
+        "type": "stream",
+        "id": "id::stx",
+        "info": "provide a detailed description about the stream"
         },
         {
-            "type": "transmitter",
-            "id": "id::tx",
-            "link": "https://neuronum.net/tx/id::tx",
-            "info": "transmitter info"
+        "type": "transmitter",
+        "id": "id::tx",
+        "info": "provide a detailed description about the transmitter"
         },
         {
-            "type": "circuit",
-            "id": "id::ctx",
-            "link": "https://neuronum.net/circuit/id::ctx",
-            "info": "circuit info"
+        "type": "circuit",
+        "id": "id::ctx",
+        "info": "provide a detailed description about the circuit"
         }
     ]
 }
-```"""
-)
+    """
+    )
+
+        nodemd_path = project_path / "NODE.md"
+        await asyncio.to_thread(nodemd_path.write_text, """### NODE.md: Create a detailed Markdown File on how to interact with this Node""")
 
     stx = sync[0] if sync else (stream[0] if stream else host.replace("::cell", "::stx"))
 
@@ -618,9 +604,9 @@ def start_node(d):
                 )
             else:
                 process = subprocess.Popen(
-                    ["python", str(script_path)],
-                    stdout = None,
-                    stderr = None
+                    [sys.executable, str(script_path)],
+                    stdout=None,
+                    stderr=None
                 )
 
             processes.append(process.pid)
@@ -772,9 +758,9 @@ def restart_node(d):
                 )
             else:
                 process = subprocess.Popen(
-                    ["python", str(script_path)],
-                    stdout = None,
-                    stderr = None
+                    [sys.executable, str(script_path)],
+                    stdout=None,
+                    stderr=None
                 )
 
             processes.append(process.pid)
@@ -894,6 +880,9 @@ async def async_update_node(node_type: str, descr: str, partners:str) -> None:
         with open("NODE.md", "r") as f:
             nodemd_file = f.read()
 
+        with open("config.json", "r") as f:
+            config_file = f.read()
+
     except FileNotFoundError:
         click.echo("Error: NODE.md file not found")
         return
@@ -912,6 +901,7 @@ async def async_update_node(node_type: str, descr: str, partners:str) -> None:
         "synapse": synapse,
         "node_type": node_type,
         "nodemd_file": nodemd_file,
+        "config_file": config_file,
         "descr": descr,
     }
 
@@ -925,25 +915,6 @@ async def async_update_node(node_type: str, descr: str, partners:str) -> None:
         except aiohttp.ClientError as e:
             click.echo(f"Error sending request: {e}")
             return
-
-    cell = neuronum.Cell(
-        host=host,
-        password=password,
-        network=network,
-        synapse=synapse
-    )
-
-    cells = await cell.list_cells()
-    tx = await cell.list_tx()
-    ctx = await cell.list_ctx()
-    stx = await cell.list_stx()
-    nodes = await cell.list_nodes()
-
-    await asyncio.to_thread(Path("cells.json").write_text, json.dumps(cells, indent=4))
-    await asyncio.to_thread(Path("transmitters.json").write_text, json.dumps(tx, indent=4))
-    await asyncio.to_thread(Path("circuits.json").write_text, json.dumps(ctx, indent=4))
-    await asyncio.to_thread(Path("streams.json").write_text, json.dumps(stx, indent=4))
-    await asyncio.to_thread(Path("nodes.json").write_text, json.dumps(nodes, indent=4))
 
     if node_type == "public":
         click.echo(f"Neuronum Node '{nodeID}' updated! Visit: {node_url}")
