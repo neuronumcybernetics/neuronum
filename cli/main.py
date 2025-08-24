@@ -315,9 +315,9 @@ async def async_init_node(sync, stream, app, descr):
     env_path = project_path / ".env"
     await asyncio.to_thread(env_path.write_text, f"NODE={nodeID}\nHOST={host}\nPASSWORD={password}\nNETWORK={network}\nSYNAPSE={synapse}\n")
     
-    if app:
-        config_path = project_path / "config.json"
-        await asyncio.to_thread(config_path.write_text, """{                       
+    
+    config_path = project_path / "config.json"
+    await asyncio.to_thread(config_path.write_text, """{                       
     "data_gateways": [
         {
         "type": "stream",
@@ -333,14 +333,14 @@ async def async_init_node(sync, stream, app, descr):
         "type": "circuit",
         "id": "id::ctx",
         "info": "provide a detailed description about the circuit"
-        }
+        }    
     ]
 }
-    """
+"""
     )
 
-        nodemd_path = project_path / "NODE.md"
-        await asyncio.to_thread(nodemd_path.write_text, """### NODE.md: Create a detailed Markdown File on how to interact with this Node""")
+    nodemd_path = project_path / "NODE.md"
+    await asyncio.to_thread(nodemd_path.write_text, """### NODE.md: Create a detailed Markdown File on how to interact with this Node""")
 
     stx = sync[0] if sync else (stream[0] if stream else host.replace("::cell", "::stx"))
 
@@ -828,10 +828,33 @@ async def async_stop_node():
 @click.command()
 def update_node():
     click.echo("Update your Node")
-    node_type = questionary.select(
-        "Who can view your Node?:",
-        choices=["public", "private", "partners"]
-    ).ask()
+    env_data = {}
+
+    try:
+        with open(".env", "r") as f:
+            for line in f:
+                key, value = line.strip().split("=")
+                env_data[key] = value
+
+        host = env_data.get("HOST", "")
+
+    except FileNotFoundError:
+        click.echo("Error: .env with credentials not found")
+        return
+    except Exception as e:
+        click.echo(f"Error reading .env file: {e}")
+        return
+    
+    if host.startswith("CMTY_"):
+        node_type = questionary.select(
+            "Community Cells can only create private Nodes",
+            choices=["private"]
+        ).ask()
+    else:
+        node_type = questionary.select(
+            "Who can view your Node?:",
+            choices=["public", "private", "partners"]
+        ).ask()
     partners = "None"
     if node_type == "partners":
         prompt_msg = (
