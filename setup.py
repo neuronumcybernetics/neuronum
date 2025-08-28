@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='neuronum',
-    version='6.0.1',
+    version='7.0.0',
     author='Neuronum Cybernetics',
     author_email='welcome@neuronum.net',
     description='Official client library to interact with the Neuronum Network',
@@ -27,6 +27,7 @@ setup(
         'python-dotenv',
         'requests',
         'psutil',
+        'jinja2',
     ],
     entry_points={
         "console_scripts": [

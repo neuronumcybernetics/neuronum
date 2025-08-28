@@ -71,102 +71,27 @@ neuronum connect-cell                   # connect Cell
 
 
 ### **Build On Neuronum** 
-To dive deeper into Neuronum App development, visit & build with [Node Examples](https://github.com/neuronumcybernetics/neuronum/tree/main/features/nodes/examples)
+Visit & build with [Node Examples](https://github.com/neuronumcybernetics/neuronum/tree/main/features/nodes/examples) to gain deeper knowledge on how to build on Neuronum.
 
-Initialize a Node (app template):
+To get started, initialize a new Node with the command below. 
 ```sh
-neuronum init-node --app                # initialize a Node with app template
+neuronum init-node
 ```
 
-This command prompts you to enter a Node description (e.g Test App) and creates a new directory named node_<node_id> containing the following files:
+This command will prompt you for a description (e.g., Test App) and will create
 
-.env
-```env
-NODE=your_node_id
-HOST=your_cell_id
-PASSWORD=your_password
-NETWORK=neuronum.net
-SYNAPSE=your_synapse                    # auth token
-```
+1. A Stream (STX) so your App can receive requests, and a Transmitter (TX) to match those requests
+2. A new directory named "Test App_<your_node_id>" with the following files
 
-app.py
-```python
-import asyncio
-import neuronum
-import os
-from dotenv import load_dotenv
+.env: Stores your Node's credentials for connecting to the network.
 
-load_dotenv()
-host = os.getenv("HOST")
-password = os.getenv("PASSWORD")
-network = os.getenv("NETWORK")
-synapse = os.getenv("SYNAPSE")
+app.py: The main Python script that contains your Node's core logic.
 
-cell = neuronum.Cell(
-    host=host,
-    password=password,
-    network=network,
-    synapse=synapse
-)
+NODE.md: Public documentation that provides instructions for interacting with your Node.
 
-async def main():      
-    STX = "id::stx"                                          
-    async for operation in cell.sync(STX):       
-        txID = operation.get("txID")
-        client = operation.get("operator")                    
-                            
-        if txID == "id::tx":             
-            data = {
-                "json": f"Hello {client}",
-                "html": f"""
-<!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="UTF-8">
-    <title>Greeting Node</title>
-  </head>
-  <body>
-    <div class="card">
-      <h1>Hello, {client}</h1>
-    </div>
-  </body>
-</html>
-"""
+config.json: A configuration file that stores metadata about your app and enables Cellai to interact with your Node's data gateways.
 
-            }
-            await cell.tx_response(txID, client, data)
-
-asyncio.run(main())
-```
-
-config.json (required if you want to make your app accessible to Cellai (currently in testing))
-```json
-{                       
-    "data_gateways": [
-        {
-        "type": "stream",
-        "id": "id::stx",
-        "info": "provide a detailed description about the stream"
-        },
-        {
-        "type": "transmitter",
-        "id": "id::tx",
-        "info": "provide a detailed description about the transmitter"
-        },
-        {
-        "type": "circuit",
-        "id": "id::ctx",
-        "info": "provide a detailed description about the circuit"
-        }
-    ]
-}
-```
-
-NODE.md (required if you want to publish your App)
-```
-### NODE.md: Create a detailed Markdown File on how to interact with this Node
-```
-
+ping.html: A static HTML file used to render web-based responses.
 
 Change into Node folder
 ```sh
@@ -214,6 +139,6 @@ asyncio.run(main())
 neuronum activate --tx id::tx 'say:hello'
 ```
 
-#### **Cellai**
-Cellai is a mobile interface that lets you interact with Neuronum apps using natural language. It is currently in testing.
+#### **Cellai (in Testing)**
+Cellai is an AI tool for developers to test their apps built on Neuronum and will soon be published to the Google Play Store.
 
