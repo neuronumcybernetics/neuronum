@@ -45,7 +45,6 @@ Neuronum is the real-time data engine designed for developers to build event-dri
 
 ### Requirements
 - Python >= 3.8
-- neuronum >= 5.5.0
 
 ------------------
 
