@@ -463,6 +463,18 @@ asyncio.run(main())
       .data-value.operation-id {{
           color: #f7a2a2;
       }}
+      .api-button {{
+        background: #01c07d 100%;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        padding: 12px 24px;
+        font-size: 16px;
+        font-weight: bold;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        cursor: pointer;
+        margin-top: 10px;
+      }}
     </style>
   </head>
   <body>
@@ -497,7 +509,7 @@ asyncio.run(main())
 
     <script>
     document.getElementById('send-request-btn').addEventListener('click', () => {{
-        const apiEndpoint = 'https://neuronum.net/api/activate/{{{{txID}}}}';
+        const apiEndpoint = 'https://neuronum.net/api/activate/{txID}';
 
         const dataToSend = {{
             "data": {{"ping": "node"}},
