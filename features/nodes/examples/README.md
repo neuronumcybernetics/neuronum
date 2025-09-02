@@ -20,11 +20,8 @@
 </p>
 
 ---
+These Examples assume you've already installed the latest version of Neuronum, created & connected your Neuronum Cell using the CLI commands `neuronum create-cell` and `neuronum connect-cell`. To confirm that your Cell is connected use `neuronum view-cell`
 
 ### **Neuronum Node Examples**
-- node_public_stream: Set up a Neuronum Node that publicly streams data
-- node_sync_stream: Set up a Neuronum Node that synchronizes stream data in real time
-- node_private_stream: Set up a Neuronum Node that privately streams data
-- node_simple_app: Set up a Neuronum Node app to receive requests and send responses
+- **default_app**: Set up the default Neuronum Node (App) template to receive requests and send responses.
 
-These Examples assume you've already installed the latest version of Neuronum and created your Neuronum Cell.

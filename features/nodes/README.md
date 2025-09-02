@@ -29,110 +29,34 @@ Neuronum Nodes refer to the software and hardware systems that host Neuronum dat
 ### Node App
 The simplest way to set up a Neuronum Node is to use the CLI:
 ```sh
-neuronum init-node --app                # creates a Node with app template
+neuronum init-node
 ```
 
-This command generates a new folder node_<node_id> in your working directory. A Neuronum Node App is designed to **receive**, **process**, and **respond to requests**—making it a powerful starting point for interacting with the Neuronum Network.
+This command generates a new folder in your working directory. A Neuronum Node App is designed to **receive**, **process**, and **respond to requests**—making it a powerful starting point for interacting with the Neuronum Network.
 
 To dive deeper into Neuronum App development, visit & build with [Node Examples](https://github.com/neuronumcybernetics/neuronum/tree/main/features/nodes/examples)
 
-#### NODE App Template:
-```python
-import asyncio
-import neuronum
-import os
-from dotenv import load_dotenv
 
-load_dotenv()
-host = os.getenv("HOST")
-password = os.getenv("PASSWORD")
-network = os.getenv("NETWORK")
-synapse = os.getenv("SYNAPSE")
+### **.env File**
+The `.env` file securely stores your Cell credentials, which are required to connect to and interact with the Neuronum Network.
 
-cell = neuronum.Cell(
-    host=host,
-    password=password,
-    network=network,
-    synapse=synapse
-)
+### **app.py File**
+The `app.py` file contains the core logic of your Node (App). It handles Cell requests, push notifications, database interactions, streaming data, and other backend operations.
 
-async def main():      
-    STX = "id::stx"                                          
-    async for operation in cell.sync(STX):       
-        txID = operation.get("txID")
-        client = operation.get("operator")                    
-                            
-        if txID == "id::tx":             
-            data = {
-                "json": f"Hello {client} from id::node",
-                "html": f"""
-<!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="UTF-8">
-    <title>Greeting Node</title>
-  </head>
-  <body>
-    <div class="card">
-      <h1>Hello, {client}</h1>
-      <p>Greetings from <span class="node">id::node</span></p>
-    </div>
-  </body>
-</html>
-"""
+### **ping.html File**
+The `ping.html` file provides a basic HTML-based response
 
-            }
-            await cell.tx_response(txID, client, data)
+### **NODE.md File**
+The `NODE.md` file serves as the public-facing documentation for your Node. It includes instructions for developers and users on how to interact with your Node effectively.
 
-asyncio.run(main())
-```
+### **config.json File**
+Neuronum Nodes are not hosted on traditional web servers (e.g., NGINX) and do not have static domain names (e.g., www.neuronum.net). To address this, the `config.json` file provides a lightweight, standardized way to inform the Network how to handle incoming data. It defines the Node’s data gateways and includes additional metadata such as the App Name, Terms of Use, and Privacy Policy.
 
-### **The NODE.md File**
-Because Neuronum Nodes aren't hosted via traditional web servers (e.g., NGINX) and lack static domain addresses (e.g., www.neuronum.net), they require a lightweight, standardized method to communicate how their data gateways can be interacted with. The NODE.md file serves this purpose by providing structured information about the Node’s available services
-
-#### NODE.md Example:
-```markdown
-```json
-{
-    "gateways": [
-        {
-            "type": "stream",
-            "id": "id::stx",
-            "info": "info about this stream"
-        },
-        {
-            "type": "transmitter",
-            "id": "id::tx",
-            "info": "info about this transmitter"
-        },
-        {
-            "type": "circuit",
-            "id": "id::ctx",
-            "info": "info about this circuit"
-        }
-    ]
-}
-```
 
 ### **Node-CLI-Commands**
-Initialize a Node (default template):
+Initialize a Node:
 ```sh
-neuronum init-node                      # create a Node with default template
-```
-
-Initialize a Node (app template):
-```sh
-neuronum init-node --app                # create a Node with app template
-```
-
-Initialize a Node (sync template):
-```sh
-neuronum init-node --sync id::stx       # create a Node with sync template
-```
-
-Initialize a Node (stream template):
-```sh
-neuronum init-node --stream id::stx     # create a Node with stream template
+neuronum init-node
 ```
 
 Start your Node:
