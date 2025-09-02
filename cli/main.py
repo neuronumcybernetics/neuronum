@@ -330,11 +330,19 @@ async def async_init_node(descr):
 import asyncio
 import neuronum
 import os
+import json                        
 from dotenv import load_dotenv
 from jinja2 import Environment, FileSystemLoader                        
 
 env = Environment(loader=FileSystemLoader('.'))
-template = env.get_template('ping.html')                        
+template = env.get_template('ping.html')    
+
+with open('config.json', 'r') as f:
+    data = json.load(f)
+terms_url = data['legals']['terms']
+privacy_url = data['legals']['privacy_policy']
+last_update = data['legals']['last_update']                         
+                                           
                         
 load_dotenv()
 host = os.getenv("HOST")
@@ -360,10 +368,10 @@ async def main():
                             
         if txID == "{txID}":  
         
-            def render_html_template(client, ts, data, operation_id):
-                return template.render(client=client, ts=ts, data=data, operation_id=operation_id)
+            def render_html_template(client, ts, data, operation_id, terms_url, privacy_url, last_update):
+                return template.render(client=client, ts=ts, data=data, operation_id=operation_id, terms_url=terms_url, privacy_url=privacy_url, last_update=last_update)
 
-            html_content = render_html_template(client, ts, data, operation_id)       
+            html_content = render_html_template(client, ts, data, operation_id, terms_url, privacy_url, last_update)        
 
             data = {{
                 "json": f"{{operation_id}} - Reply from {nodeID}: Pinged by {{client}} at {{ts}} with data: {{data}}",
@@ -550,6 +558,25 @@ asyncio.run(main())
         }});
     }});
     </script>
+
+    <div id="legal-banner" style="border-radius: 10px;  margin: 15px; position: fixed; bottom: 0; left: 0; right: 0; background-color: #2a2a2a; color: #e0e0e0; padding: 16px; text-align: center; font-size: 14px; z-index: 9999; box-shadow: 0 -2px 10px rgba(0,0,0,0.5);">
+      By continuing, you agree to our 
+      Terms (<span style="color: #8cafff;">{{{{terms_url}}}}</span>) & 
+      Privacy Policy (<span style="color: #8cafff;">{{{{privacy_url}}}}</span>)
+      <br>
+      <button id="accept-legal" style="margin-top: 15px; margin-bottom: 15px; background: #01c07d; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer;">Accept</button>
+      <br>
+      Last Update: {{{{last_update}}}}
+    </div>
+
+    <script>
+      const banner = document.getElementById('legal-banner');
+      const acceptBtn = document.getElementById('accept-legal');
+      acceptBtn.addEventListener('click', () => {{
+        banner.remove();
+      }});
+    </script>
+
   </body>
 </html>
 """
@@ -572,8 +599,9 @@ f"""{{
         }}
     ],
     "legals": {{
-        "terms_and_conditions": "https://neuronum.net/legals",
-        "data_privacy": "https://neuronum.net/legals"
+        "terms": "https://url_to_your/terms",
+        "privacy_policy": "https://url_to_your/privacy_policy",
+        "last_update" : "DD/MM/YYYY"
     }}
 }}"""
 )
@@ -590,14 +618,6 @@ Welcome to your Node's documentation! This guide provides several ways for users
 To ping this Node via the command-line interface, use the following command:
 
 `neuronum activate --tx {txID} 'ping:node'`
-
-***
-
-### 🌐 Via the Web
-
-You can also interact with this Node by simply visiting this URL in your web browser:
-
-[https://neuronum.net/tx/{txID}](https://neuronum.net/tx/{txID})
 
 ***
 

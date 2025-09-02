@@ -105,12 +105,6 @@ neuronum start-node                     # start Node
 ------------------
 
 ### **Interact with Neuronum**
-#### **Web-based**
-1. [Visit Neuronum](https://neuronum.net)
-2. [Connect your Cell](https://neuronum.net/connect)
-3. [Explore Transmitters](https://neuronum.net/explore)
-4. Activate Transmitters
-
 #### **Code-based**
 ```python
 import asyncio
