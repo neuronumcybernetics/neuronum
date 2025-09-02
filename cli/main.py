@@ -664,7 +664,7 @@ Send the command "Ping Node" to Cellai
 @click.command()
 @click.option('--d', is_flag=True, help="Start node in detached mode")
 def start_node(d):
-    update_node()
+    update_node_at_start()
     pid_file = Path.cwd() / "status.txt"
     system_name = platform.system()
     active_pids = []
@@ -792,7 +792,7 @@ def check_node():
 @click.command()
 @click.option('--d', is_flag=True, help="Restart node in detached mode")
 def restart_node(d):
-    update_node()
+    update_node_at_start()
     pid_file = Path.cwd() / "status.txt"
     system_name = platform.system()
 
@@ -923,6 +923,7 @@ async def async_stop_node():
         click.echo("Error: Unable to stop some node processes.")
 
 
+@click.command()
 def update_node():
     click.echo("Update your Node")
     env_data = {}
@@ -975,6 +976,125 @@ def update_node():
     asyncio.run(async_update_node(node_type, descr, partners))
 
 async def async_update_node(node_type: str, descr: str, partners:str) -> None:
+    env_data = {}
+
+    try:
+        with open(".env", "r") as f:
+            for line in f:
+                key, value = line.strip().split("=")
+                env_data[key] = value
+
+        nodeID = env_data.get("NODE", "")
+        host = env_data.get("HOST", "")
+        password = env_data.get("PASSWORD", "")
+        network = env_data.get("NETWORK", "")
+        synapse = env_data.get("SYNAPSE", "")
+
+    except FileNotFoundError:
+        click.echo("Error: .env with credentials not found")
+        return
+    except Exception as e:
+        click.echo(f"Error reading .env file: {e}")
+        return
+
+    try:
+        with open("NODE.md", "r") as f:
+            nodemd_file = f.read()
+
+        with open("config.json", "r") as f:
+            config_file = f.read()
+
+    except FileNotFoundError:
+        click.echo("Error: NODE.md file not found")
+        return
+    except Exception as e:
+        click.echo(f"Error reading NODE.md file: {e}")
+        return
+    
+    if node_type == "partners":
+        node_type = partners
+
+    url = f"https://{network}/api/update_node"
+    node = {
+        "nodeID": nodeID,
+        "host": host,
+        "password": password,
+        "synapse": synapse,
+        "node_type": node_type,
+        "nodemd_file": nodemd_file,
+        "config_file": config_file,
+        "descr": descr,
+    }
+
+    async with aiohttp.ClientSession() as session:
+        try:
+            async with session.post(url, json=node) as response:
+                response.raise_for_status()
+                data = await response.json()
+                nodeID = data["nodeID"]
+                node_url = data["node_url"]
+        except aiohttp.ClientError as e:
+            click.echo(f"Error sending request: {e}")
+            return
+
+    if node_type == "public":
+        click.echo(f"Neuronum Node '{nodeID}' updated! Visit: {node_url}")
+    else:
+        click.echo(f"Neuronum Node '{nodeID}' updated!")
+
+
+def update_node_at_start():
+    click.echo("Update your Node")
+    env_data = {}
+
+    try:
+        with open(".env", "r") as f:
+            for line in f:
+                key, value = line.strip().split("=")
+                env_data[key] = value
+
+        host = env_data.get("HOST", "")
+
+    except FileNotFoundError:
+        click.echo("Error: .env with credentials not found")
+        return
+    except Exception as e:
+        click.echo(f"Error reading .env file: {e}")
+        return
+    
+    if host.startswith("CMTY_"):
+        node_type = questionary.select(
+            "Community Cells can only create private Nodes",
+            choices=["private"]
+        ).ask()
+    else:
+        node_type = questionary.select(
+            "Who can view your Node?:",
+            choices=["public", "private", "partners"]
+        ).ask()
+    partners = "None"
+    if node_type == "partners":
+        prompt_msg = (
+            "Enter the list of partners who can view this Node.\n"
+            "Format: partner::cell, partner::cell, partner::cell\n"
+            "Press Enter to leave the list unchanged"
+        )
+        partners = click.prompt(
+            prompt_msg,
+            default="None",
+            show_default=False
+        ).strip()
+    descr = click.prompt(
+        "Update Node description: Type up to 25 characters, or press Enter to leave it unchanged",
+        default="None",
+        show_default=False
+    ).strip()
+    if descr and len(descr) > 25:
+        click.echo("Description too long. Max 25 characters allowed.")
+        return
+    asyncio.run(async_update_node_at_start(node_type, descr, partners))
+
+async def async_update_node_at_start(node_type: str, descr: str, partners:str) -> None:
     env_data = {}
 
     try:
@@ -1219,6 +1339,7 @@ cli.add_command(view_cell)
 cli.add_command(disconnect_cell)
 cli.add_command(delete_cell)
 cli.add_command(init_node)
+cli.add_command(update_node)
 cli.add_command(start_node)
 cli.add_command(restart_node)
 cli.add_command(stop_node)
