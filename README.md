@@ -94,7 +94,7 @@ ping.html: A static HTML file used to render web-based responses.
 
 Change into Node folder
 ```sh
-cd node_node_id                         # change directory
+cd  Test App_<your_node_id>
 ```
 
 Start your Node:
@@ -120,7 +120,7 @@ cell = neuronum.Cell(                                   # set Cell connection
 async def main():
                                                             
     TX = "id::tx"                                       # select the Transmitter TX
-    data = {"say": "hello"}
+    data = {"ping": "node"}
     tx_response = await cell.activate_tx(TX, data)      # activate TX - > get response back
     print(tx_response)                                  # print tx response
                                       
@@ -129,7 +129,7 @@ asyncio.run(main())
 
 #### **CLI-based**
 ```sh
-neuronum activate --tx id::tx 'say:hello'
+neuronum activate --tx id::tx 'ping:node'
 ```
 
 #### **Cellai (in Testing)**

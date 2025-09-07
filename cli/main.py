@@ -249,14 +249,15 @@ def delete_cell():
 
 
 @click.command()
-def init_node():
+@click.option('--blank', is_flag=True, help="Generate a Node Template without Stream and Transmitter")
+def init_node(blank):
     descr = click.prompt("Node description: Type up to 25 characters").strip()
     if descr and len(descr) > 25:
         click.echo("Description too long. Max 25 characters allowed.")
         return
-    asyncio.run(async_init_node(descr))
+    asyncio.run(async_init_node(blank, descr))
 
-async def async_init_node(descr):
+async def async_init_node(blank, descr):
     credentials_folder_path = Path.home() / ".neuronum"
     env_path = credentials_folder_path / ".env"
 
@@ -312,21 +313,22 @@ async def async_init_node(descr):
     env_path = project_path / ".env"
     await asyncio.to_thread(env_path.write_text, f"NODE={nodeID}\nHOST={host}\nPASSWORD={password}\nNETWORK={network}\nSYNAPSE={synapse}\n")
 
-    stx_descr = f"{nodeID} App"                                                  
-    partners = ["private"]                                      
-    stxID = await cell.create_stx(stx_descr, partners)  
+    if blank is False:
+        stx_descr = f"{nodeID} App"                                                  
+        partners = ["private"]                                      
+        stxID = await cell.create_stx(stx_descr, partners)  
 
-    tx_descr = f"Greet {nodeID}"                                           
-    key_values = {                                                          
-        "ping": "pong",
-    }
-    STX = stxID                                                     
-    label = "ping:pong"                                                                                                                                                         
-    partners = ["private"]                                                   
-    txID = await cell.create_tx(tx_descr, key_values, STX, label, partners)
+        tx_descr = f"Greet {nodeID}"                                           
+        key_values = {                                                          
+            "ping": "pong",
+        }
+        STX = stxID                                                     
+        label = "ping:pong"                                                                                                                                                         
+        partners = ["private"]                                                   
+        txID = await cell.create_tx(tx_descr, key_values, STX, label, partners)
 
-    app_path = project_path / "app.py"
-    app_path.write_text(f"""\
+        app_path = project_path / "app.py"
+        app_path.write_text(f"""\
 import asyncio
 import neuronum
 import os
@@ -385,8 +387,8 @@ async def main():
 asyncio.run(main())
 """)
     
-    html_path = project_path / "ping.html"
-    html_content = f"""\
+        html_path = project_path / "ping.html"
+        html_content = f"""\
 <!DOCTYPE html>
 <html>
   <head>
@@ -580,11 +582,11 @@ asyncio.run(main())
   </body>
 </html>
 """
-    html_path.write_text(html_content)
+        html_path.write_text(html_content)
     
-    config_path = project_path / "config.json"
-    await asyncio.to_thread(
-    config_path.write_text,
+        config_path = project_path / "config.json"
+        await asyncio.to_thread(
+        config_path.write_text,
 f"""{{
     "app_metadata": {{
         "name": "{descr}",
@@ -606,8 +608,345 @@ f"""{{
 }}"""
 )
 
-    nodemd_path = project_path / "NODE.md"
-    await asyncio.to_thread(nodemd_path.write_text, f"""### NODE.md of {nodeID}
+        nodemd_path = project_path / "NODE.md"
+        await asyncio.to_thread(nodemd_path.write_text, f"""### NODE.md of {nodeID}
+
+Welcome to your Node's documentation! This guide provides several ways for users to interact with your application.
+
+***
+
+### 💻 Using the CLI
+
+To ping this Node via the command-line interface, use the following command:
+
+`neuronum activate --tx {txID} 'ping:node'`
+
+***
+
+### 🐍 With Python
+
+For programmatic access, use the following Python code snippet. This script utilizes the `neuronum` library to activate the transaction and receive a response.
+
+```python
+import asyncio
+import neuronum
+
+# Set up Cell connection parameters
+cell = neuronum.Cell(
+    host="host",                                  # Cell host
+    password="password",                          # Cell password
+    network="neuronum.net",                       # Cell network
+    synapse="synapse"                             # Cell synapse
+)
+
+async def main():
+    # Define the transaction ID and data payload
+    TX = "{txID}"
+    data = {{"ping": "node"}}
+    
+    # Activate the transaction and get the response
+    tx_response = await cell.activate_tx(TX, data)
+    
+    # Print the response from the Node
+    print(tx_response)
+                                      
+# Run the main asynchronous function
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+
+🤖 Via Cellai (Android App - Currently in Testing)
+Download the app from the Google Play Store.
+Send the command "Ping Node" to Cellai
+""")
+        
+    else:                                 
+        stxID = "id::stx"                                                                                                 
+        txID = "id::tx"
+
+        app_path = project_path / "app.py"
+        app_path.write_text(f"""\
+import asyncio
+import neuronum
+import os
+import json                        
+from dotenv import load_dotenv
+from jinja2 import Environment, FileSystemLoader                        
+
+env = Environment(loader=FileSystemLoader('.'))
+template = env.get_template('ping.html')    
+
+with open('config.json', 'r') as f:
+    data = json.load(f)
+terms_url = data['legals']['terms']
+privacy_url = data['legals']['privacy_policy']
+last_update = data['legals']['last_update']                         
+                                           
+                        
+load_dotenv()
+host = os.getenv("HOST")
+password = os.getenv("PASSWORD")
+network = os.getenv("NETWORK")
+synapse = os.getenv("SYNAPSE")
+
+cell = neuronum.Cell(
+    host=host,
+    password=password,
+    network=network,
+    synapse=synapse
+)
+
+async def main():      
+    STX = "{stxID}"                                          
+    async for operation in cell.sync(STX):       
+        txID = operation.get("txID")
+        client = operation.get("operator")   
+        ts = operation.get("time")  
+        data = operation.get("data") 
+        operation_id = operation.get("operationID")                
+                            
+        if txID == "{txID}":  
+        
+            def render_html_template(client, ts, data, operation_id, terms_url, privacy_url, last_update):
+                return template.render(client=client, ts=ts, data=data, operation_id=operation_id, terms_url=terms_url, privacy_url=privacy_url, last_update=last_update)
+
+            html_content = render_html_template(client, ts, data, operation_id, terms_url, privacy_url, last_update)        
+
+            data = {{
+                "json": f"{{operation_id}} - Reply from {nodeID}: Pinged by {{client}} at {{ts}} with data: {{data}}",
+                "html": html_content
+            }}
+
+            await cell.notify(f"{{client}}", "{nodeID} Ping","Pinged successfully")
+
+            await cell.tx_response(txID, client, data)
+
+asyncio.run(main())
+""")
+    
+        html_path = project_path / "ping.html"
+        html_content = f"""\
+<!DOCTYPE html>
+<html>
+  <head>
+    <style>
+      body {{
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        background-color: #121212;
+        color: #e0e0e0;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+      }}
+
+      .container {{
+        background-color: #1e1e1e;
+        border-radius: 12px;
+        padding: 40px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+        width: 100%;
+        max-width: 500px;
+        text-align: center;
+        box-sizing: border-box;
+      }}
+
+      .logo {{
+        width: 80px;
+        margin-bottom: 25px;
+        filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.1));
+      }}
+
+      h1 {{
+        font-size: 1.5em;
+        font-weight: 600;
+        margin-bottom: 5px;
+        color: #f5f5f5;
+      }}
+
+      .subtitle {{
+        font-size: 0.9em;
+        color: #a0a0a0;
+        margin-bottom: 30px;
+      }}
+
+      .data-row {{
+        background-color: #2a2a2a;
+        padding: 12px 15px;
+        border-radius: 8px;
+        margin-bottom: 10px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }}
+
+      .data-label {{
+        font-weight: 400;
+        color: #a0a0a0;
+        margin: 0;
+      }}
+
+      .data-value {{
+        font-weight: 500;
+        color: #e0e0e0;
+        margin: 0;
+      }}
+
+      .data-value.truncated {{
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 60%;
+      }}
+
+      .data-value.client {{
+          color: #8cafff;
+      }}
+      .data-value.timestamp {{
+          color: #a1e8a1;
+      }}
+      .data-value.operation-id {{
+          color: #f7a2a2;
+      }}
+      .api-button {{
+        background: #01c07d 100%;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        padding: 12px 24px;
+        font-size: 16px;
+        font-weight: bold;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        cursor: pointer;
+        margin-top: 10px;
+      }}
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <img class="logo" src="https://neuronum.net/static/logo.png" alt="Neuronum Logo">
+      
+      <h1>Reply from {nodeID}</h1>
+      <p class="subtitle">Pinged successfully.</p>
+      
+      <div class="data-row">
+        <p class="data-label">Client</p>
+        <p class="data-value client">{{{{client}}}}</p>
+      </div>
+      
+      <div class="data-row">
+        <p class="data-label">Timestamp</p>
+        <p class="data-value timestamp">{{{{ts}}}}</p>
+      </div>
+      
+      <div class="data-row">
+        <p class="data-label">Data</p>
+        <p class="data-value">{{{{data}}}}</p>
+      </div>
+      
+      <div class="data-row">
+        <p class="data-label">Operation ID</p>
+        <p class="data-value operation-id truncated">{{{{operation_id}}}}</p>
+      </div>
+
+      <button id="send-request-btn" class="api-button">Ping again</button>
+    </div>
+
+    <script>
+    document.getElementById('send-request-btn').addEventListener('click', () => {{
+        const apiEndpoint = 'https://neuronum.net/api/activate/{txID}';
+
+        const dataToSend = {{
+            "data": {{"ping": "node"}},
+            "cell": {{
+                "host": CLIENT_CELL,
+                "session": CLIENT_SESSION, 
+            }}
+        }};
+
+        fetch(apiEndpoint, {{
+            method: 'POST',
+            headers: {{
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            }},
+            body: JSON.stringify(dataToSend)
+        }})
+        .then(response => {{
+            if (!response.ok) {{
+                throw new Error(`HTTP error! status: ${{response.status}}`);
+            }}
+            return response.json();
+        }})
+        .then(data => {{
+            if (data.success && data.response && data.response.html) {{
+                document.open();
+                document.write(data.response.html);
+                document.close();
+                console.log('API Response: Page replaced with new HTML.');
+            }} else {{
+                console.error('API Response does not contain HTML to replace the page:', data);
+                alert('API response error: Expected HTML content to replace the page.');
+            }}
+        }})
+        .catch(error => {{
+            console.error('API request failed:', error);
+            alert('API request failed. See the console for details.');
+        }});
+    }});
+    </script>
+
+    <div id="legal-banner" style="border-radius: 10px;  margin: 15px; position: fixed; bottom: 0; left: 0; right: 0; background-color: #2a2a2a; color: #e0e0e0; padding: 16px; text-align: center; font-size: 14px; z-index: 9999; box-shadow: 0 -2px 10px rgba(0,0,0,0.5);">
+      By continuing, you agree to our 
+      Terms (<span style="color: #8cafff;">{{{{terms_url}}}}</span>) & 
+      Privacy Policy (<span style="color: #8cafff;">{{{{privacy_url}}}}</span>)
+      <br>
+      <button id="accept-legal" style="margin-top: 15px; margin-bottom: 15px; background: #01c07d; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer;">Accept</button>
+      <br>
+      Last Update: {{{{last_update}}}}
+    </div>
+
+    <script>
+      const banner = document.getElementById('legal-banner');
+      const acceptBtn = document.getElementById('accept-legal');
+      acceptBtn.addEventListener('click', () => {{
+        banner.remove();
+      }});
+    </script>
+
+  </body>
+</html>
+"""
+        html_path.write_text(html_content)
+    
+        config_path = project_path / "config.json"
+        await asyncio.to_thread(
+        config_path.write_text,
+f"""{{
+    "app_metadata": {{
+        "name": "{descr}",
+        "version": "1.0.0",
+        "author": "{host}"
+    }},
+    "data_gateways": [
+        {{
+        "type": "transmitter",
+        "id": "{txID}",
+        "info": "Ping Your Node"
+        }}
+    ],
+    "legals": {{
+        "terms": "https://url_to_your/terms",
+        "privacy_policy": "https://url_to_your/privacy_policy",
+        "last_update" : "DD/MM/YYYY"
+    }}
+}}"""
+)
+
+        nodemd_path = project_path / "NODE.md"
+        await asyncio.to_thread(nodemd_path.write_text, f"""### NODE.md of {nodeID}
 
 Welcome to your Node's documentation! This guide provides several ways for users to interact with your application.
 
@@ -695,7 +1034,7 @@ def start_node(d):
     click.echo("Starting Node...")
 
     project_path = Path.cwd()
-    script_files = glob.glob("stream.py") + glob.glob("app.py")
+    script_files = glob.glob("app.py")
     processes = []
 
     for script in script_files:
@@ -842,7 +1181,7 @@ def restart_node(d):
 
     click.echo(f"Starting Node {nodeID}...")
     project_path = Path.cwd()
-    script_files = glob.glob("stream.py") + glob.glob("app.py")
+    script_files = glob.glob("app.py")
     processes = []
 
     for script in script_files:
