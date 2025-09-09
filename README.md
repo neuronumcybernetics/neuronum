@@ -25,13 +25,15 @@
 In this brief getting started guide, you will:
 - [Learn about Neuronum](#about-neuronum)
 - [Connect to the Network](#connect-to-neuronum)
-- [Build a Neuronum Node](#build-on-neuronum)
+- [Build a Neuronum Node (App)](#build-on-neuronum)
 - [Interact with your Node](#interact-with-neuronum)
+
+Once you've covered the basics, check out our [Node Examples](https://github.com/neuronumcybernetics/neuronum/tree/main/features/nodes/examples) to see what's possible with Neuronum and how to build on it.
 
 ------------------
 
 ### **About Neuronum**
-Neuronum is the real-time data engine designed for developers to build event-driven apps and services in minutes using high-level Python
+Neuronum is the real-time data engine designed for developers to build AI-native apps and services in minutes using high-level Python
 
 ### **Features**
 **Cell & Nodes**
@@ -80,17 +82,7 @@ neuronum init-node
 This command will prompt you for a description (e.g., Test App) and will create
 
 1. A Stream (STX) so your App can receive requests, and a Transmitter (TX) to match those requests
-2. A new directory named "Test App_<your_node_id>" with the following files
-
-.env: Stores your Node's credentials for connecting to the network.
-
-app.py: The main Python script that contains your Node's core logic.
-
-NODE.md: Public documentation that provides instructions for interacting with your Node.
-
-config.json: A configuration file that stores metadata about your app and enables Cellai to interact with your Node's data gateways.
-
-ping.html: A static HTML file used to render web-based responses.
+2. A new directory named "Test App_<your_node_id>" with the necessary files to run your Node
 
 Change into Node folder
 ```sh
@@ -105,6 +97,15 @@ neuronum start-node                     # start Node
 ------------------
 
 ### **Interact with Neuronum**
+#### **CELLai**
+
+**CELLai** is an AI tool for developers to test and interact with apps built on Neuronum using natural language.
+[Launch in your browser](https://cellai.neuronum.net)
+
+**Now available on Google Play**  
+*(Germany, Switzerland & Austria)*  
+[Download on Google Play](https://play.google.com/store/apps/details?id=net.neuronum.cellai&utm_source=emea_Med)
+
 #### **Code-based**
 ```python
 import asyncio
@@ -131,7 +132,4 @@ asyncio.run(main())
 ```sh
 neuronum activate --tx id::tx 'ping:node'
 ```
-
-#### **Cellai (in Testing)**
-Cellai is an AI tool for developers to test their apps built on Neuronum and will soon be published to the Google Play Store.
 

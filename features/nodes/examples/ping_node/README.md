@@ -1,5 +1,5 @@
-## **default_app**
-Set up the default Neuronum Node (App) template to receive requests and send responses
+## **ping_node**
+Set up the default Neuronum Node (App) template and ping your Node
 
 
 ### **Start with initializing your Node (App)**
@@ -7,10 +7,10 @@ Set up the default Neuronum Node (App) template to receive requests and send res
 neuronum init-node
 ```
 
-This command will prompt you for a description (e.g., Test App) and will create
+This command will prompt you for a description (e.g., PingNode) and will create
 
 1. A Stream (STX) so your App can receive requests, and a Transmitter (TX) to match those requests
-2. A new directory named "Test App_<your_node_id>" with the following files
+2. A new directory named "PingNode_<your_node_id>" with the following files
 
 .env: Stores your Node's credentials for connecting to the network.
 
@@ -24,7 +24,7 @@ ping.html: A static HTML file used to render web-based responses.
 
 ### **Change to Node folder**
 ```sh
-cd  Test App_<your_node_id>
+cd PingNode_<your_node_id>
 ```
 
 ### **Simply start your App with**
@@ -64,5 +64,15 @@ Node started successfully with PIDs: 2104
 ```sh
 neuronum stop-node
 ```
+
+## **Interact with your Node**
+**CELLai** is an AI tool for developers to test and interact with apps built on Neuronum using natural language.
+[Launch in your browser](https://cellai.neuronum.net)
+
+**Now available on Google Play**  
+*(Supported Locations: Germany, Switzerland & Austria)*  
+[Download on Google Play](https://play.google.com/store/apps/details?id=net.neuronum.cellai&utm_source=emea_Med)
+
+Send this Commands to Cellai: Ping My Node
 
 
