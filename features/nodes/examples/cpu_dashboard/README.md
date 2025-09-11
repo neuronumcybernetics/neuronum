@@ -1,12 +1,12 @@
-### **weather_service**
- Set up a Neuronum Node (App) that provides current wheater data
+### **cpu_dashboard**
+Set up a Neuronum Node (App) that provides a real-time dashboard showing its CPU resources
 
 ## 1. **Start with initializing your Node (App)**
 ```sh
 neuronum init-node --blank
 ```
 
-This command will prompt you for a description (e.g. WeatherService) and will create a new directory named "WeatherService_<your_node_id>" with the following files
+This command will prompt you for a description (e.g. CPU-Dashboard) and will create a new directory named "CPU-Dashboard_<your_node_id>" with the following files
 
 .env: Stores your Node's credentials for connecting to the network.<br>
 ```env
@@ -21,15 +21,30 @@ app.py: The main Python script that contains your Node's core logic. Replace the
 ```python
 import asyncio
 import neuronum
-import os                     
-from dotenv import load_dotenv   
-import python_weather                
+import os
+import json
+from dotenv import load_dotenv
+from jinja2 import Environment, FileSystemLoader
+import psutil
+import time
+
+
+env = Environment(loader=FileSystemLoader('.'))
+template = env.get_template('ping.html')
+
+with open('config.json', 'r') as f:
+    data = json.load(f)
+terms_url = data['legals']['terms']
+privacy_url = data['legals']['privacy_policy']
+last_update = data['legals']['last_update']
 
 load_dotenv()
 host = os.getenv("HOST")
 password = os.getenv("PASSWORD")
 network = os.getenv("NETWORK")
 synapse = os.getenv("SYNAPSE")
+
+sync_stream_id = "id::stx"  # replace with actual Stream ID 2. (see section 2.)
 
 cell = neuronum.Cell(
     host=host,
@@ -38,34 +53,64 @@ cell = neuronum.Cell(
     synapse=synapse
 )
 
-async def main():      
-    STX = "id::stx" #replace with your actual Stream ID (see section 2.)                                         
-    async for operation in cell.sync(STX):       
-        txID = operation.get("txID")
-        client = operation.get("operator")   
-        data = operation.get("data")                 
-                            
-        if txID == "id::tx":  #replace with your actual Transmitter ID (see section 2.)
-
-            place = operation.get("data").get("place")
-
-            async with python_weather.Client() as cc:
-                weather = await cc.get(place)
-                print(weather.temperature, weather.description)
+async def stream_data():
+    label = "test"
+    while True:
+        try:
+            cpu_percent = psutil.cpu_percent(interval=0.1)
+            mem = psutil.virtual_memory()
+            load_avg = psutil.getloadavg() if hasattr(psutil, "getloadavg") else (0, 0, 0)
+            uptime = time.time() - psutil.boot_time()
 
             data = {
-                "json": f"The Weather in {place} is {weather. temperature}°. {weather.description}"
+                "cpu_percent": cpu_percent,
+                "memory_percent": mem.percent,
+                "load_average_1m": load_avg[0],
+                "load_average_5m": load_avg[1],
+                "load_average_15m": load_avg[2],
+                "uptime_seconds": int(uptime),
             }
 
-            await cell.tx_response(txID, client, data)
+            await cell.stream(label, data, sync_stream_id)
+            await asyncio.sleep(1)
+        except Exception as e:
+            print(f"Stream error: {e}")
+            await asyncio.sleep(5)
 
+
+async def sync_operations():
+    STX = "id::stx"  # replace with actual Stream ID 2. (see section 2.)
+    async for operation in cell.sync(STX):
+        txID = operation.get("txID")
+        client = operation.get("operator")
+        data = operation.get("data")
+        label = operation.get("label")
+
+        def render_html_template(sync_stream_id, terms_url, privacy_url, last_update):
+            return template.render(sync_stream_id=sync_stream_id, terms_url=terms_url, privacy_url=privacy_url, last_update=last_update)
+
+        if txID == "id::tx":  # replace with actual Transmitter ID (see section 2.)
+            html_content = render_html_template(sync_stream_id, terms_url, privacy_url, last_update)
+
+            response_data = {
+                "html": html_content
+            }
+
+            await cell.tx_response(txID, client, response_data)
+
+
+async def main():
+    await asyncio.gather(
+        stream_data(),
+        sync_operations()
+    )
 asyncio.run(main())
 ```
 
 
 **Make sure to install the required dependencies before running your Node:**
 ```sh
-pip install python_weather python-dotenv neuronum
+pip install psutil jinja2 python-dotenv neuronum
 ```
 
 NODE.md: Public documentation that provides instructions for interacting with your Node. You can ignore this file unless you want to publish your App
@@ -75,7 +120,7 @@ config.json: A configuration file that stores metadata about your app and enable
 ```json
 {
     "app_metadata": {
-        "name": "Weather Service",
+        "name": "CPU-Dashboard",
         "version": "1.0.0",
         "author": "id::cell"
     },
@@ -83,7 +128,7 @@ config.json: A configuration file that stores metadata about your app and enable
         {
         "type": "transmitter",
         "id": "id::tx",
-        "info": "Whats the Weather. Provide Place"
+        "info": "Open CPU Stream"
         }
     ],
     "legals": {
@@ -99,25 +144,29 @@ config.json: A configuration file that stores metadata about your app and enable
 ping.html: A static HTML file used to render web-based responses. You can delete this file, as we're building a headless application
 
 ## 2. **Create Data Gateways**
-You need to create 2 data gateways. A Stream (STX) that allows your Node to receive data/requests and a Transmitter (TX) to match client requests
+You need to create 3 data gateways. A Streams (STX) that allows your Node to receive data/requests, a Stream (STX) to stream real-time CPU data and a Transmitter (TX) to match client requests
 
 1. [Connect to Neuronum](https://neuronum.net/connect)
-2. [Create A Stream](https://neuronum.net/createSTX)<br>
-Description: Weather Service<br>
+2. [Create 1. Stream](https://neuronum.net/createSTX)<br>
+Description: CPU App<br>
+Partner Cell List: private<br>
+-> publish STX
+2. [Create 2. Stream](https://neuronum.net/createSTX)<br>
+Description: CPU Stream<br>
 Partner Cell List: private<br>
 -> publish STX
 3. [Create A Transmitter](https://neuronum.net/createTX)<br>
-Description: Get Weather Data<br>
-Key: place / Example: city<br>
-Select Stream: Select your created Stream ID<br>
-Label: get:weather<br>
+Description: Send Transaction<br>
+Key: open / Example: stream<br>
+Select Stream: Select your created Stream ID 1.<br>
+Label: open:stream<br>
 Partner Cell List: private<br>
 -> publish TX
 
 ## 3. **Run your Node**
 ### **Change to Node folder**
 ```sh
-cd WeatherService_<your_node_id>
+cd CPU-Dashboard_<your_node_id>
 ```
 
 ### **Simply start your App with**
@@ -166,4 +215,4 @@ neuronum stop-node
 *(Supported Locations: Germany, Switzerland & Austria)*  
 [Download on Google Play](https://play.google.com/store/apps/details?id=net.neuronum.cellai&utm_source=emea_Med)
 
-Send this Command to Cellai: Whats the Weather in Augsburg
+Send this Command to Cellai: Open CPU Stream

@@ -24,7 +24,8 @@ These Examples assume you've already installed the latest version of Neuronum `p
 
 ### **Neuronum Node Examples**
 - [**ping_node**](https://github.com/neuronumcybernetics/neuronum/tree/main/features/nodes/examples/ping_node): Set up the default Neuronum Node (App) template and ping your Node
-- [**weather_service**](https://github.com/neuronumcybernetics/neuronum/tree/main/features/nodes/examples/weather_service): Set up a Neuronum Node (App) that provides real-time wheater data
+- [**weather_service**](https://github.com/neuronumcybernetics/neuronum/tree/main/features/nodes/examples/weather_service): Set up a Neuronum Node (App) that provides current wheater data
+- [**cpu_dashboard**](https://github.com/neuronumcybernetics/neuronum/tree/main/features/nodes/examples/cpu_dashboard): Set up a Neuronum Node (App) that provides a real-time dashboard showing its CPU resources
 - [**knowledge_center**](https://github.com/neuronumcybernetics/neuronum/tree/main/features/nodes/examples/knowledge_center): Set up a Neuronum Node (App) that lets you store and fetch knowledge
 - [**smart_city**](https://github.com/neuronumcybernetics/neuronum/tree/main/features/nodes/examples/smart_city): Set up Neuronum Nodes (App) to showcase a few advanced Smart City capabilities
 - [**hr_assistant**](https://github.com/neuronumcybernetics/neuronum/tree/main/features/nodes/examples/hr_assistant): Set up a Neuronum Node (App) that helps with common tasks in the Human Resources department
