@@ -79,7 +79,7 @@ async def stream_data():
 
 
 async def sync_operations():
-    STX = "id::stx"  # replace with actual Stream ID 2. (see section 2.)
+    STX = "id::stx"  # replace with actual Stream ID 1. (see section 2.)
     async for operation in cell.sync(STX):
         txID = operation.get("txID")
         client = operation.get("operator")
