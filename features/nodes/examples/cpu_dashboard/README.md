@@ -30,7 +30,7 @@ import time
 
 
 env = Environment(loader=FileSystemLoader('.'))
-template = env.get_template('ping.html')
+template = env.get_template('dashboard.html')
 
 with open('config.json', 'r') as f:
     data = json.load(f)
@@ -141,7 +141,212 @@ config.json: A configuration file that stores metadata about your app and enable
 
 **make sure to replace "id::tx" with your actual Transmitter ID (see section 2.)**
 
-ping.html: A static HTML file used to render web-based responses. You can delete this file, as we're building a headless application
+dashboard.html: A static HTML file used to render web-based responses. 
+```html
+<!DOCTYPE html>
+<html>
+  <head>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        background-color: #121212;
+        color: #e0e0e0;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+      }
+
+      .container {
+        background-color: #1e1e1e;
+        border-radius: 12px;
+        padding: 40px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+        width: 100%;
+        max-width: 600px;
+        text-align: center;
+        box-sizing: border-box;
+      }
+
+      .logo {
+        width: 80px;
+        margin-bottom: 25px;
+        filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.1));
+      }
+
+      h1 {
+        font-size: 1.5em;
+        font-weight: 600;
+        margin-bottom: 5px;
+        color: #f5f5f5;
+      }
+
+      .subtitle {
+        font-size: 0.9em;
+        color: #a0a0a0;
+        margin-bottom: 20px;
+      }
+
+      #message-log {
+        background-color: #2a2a2a;
+        border-radius: 8px;
+        padding: 15px;
+        max-height: 300px;
+        overflow-y: auto;
+        text-align: left;
+        font-family: monospace;
+        font-size: 13px;
+        color: #c5f3ff;
+        margin-bottom: 20px;
+      }
+
+      .log-entry {
+        margin-bottom: 10px;
+        word-break: break-word;
+      }
+
+      .api-button {
+        background: #01c07d 100%;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        padding: 12px 24px;
+        font-size: 16px;
+        font-weight: bold;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        cursor: pointer;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="container">
+      <img class="logo" src="https://neuronum.net/static/logo.png" alt="Neuronum Logo">
+      <h1>Stream {{sync_stream_id}}</h1>
+      <p class="subtitle" id="status">Stream connected.</p>
+
+      <div id="metrics">
+        <p><strong>CPU:</strong> <span id="cpu">--</span>%</p>
+        <p><strong>Memory:</strong> <span id="memory">--</span>%</p>
+        <p><strong>Load Avg:</strong>
+          <span id="load1">--</span>,
+          <span id="load5">--</span>,
+          <span id="load15">--</span>
+        </p>
+        <p><strong>Machine Uptime:</strong> <span id="uptime">--</span></p>
+      </div>
+
+      <div id="message-log"></div>
+
+      <button id="ping-button" class="api-button">Disconnect WebSocket</button>
+    </div>
+
+    <script>
+      let socket = null;
+      let connected = false;
+
+      const btn = document.getElementById("ping-button");
+      const statusText = document.getElementById("status");
+      const log = document.getElementById("message-log");
+
+      function appendToLog(message) {
+        const div = document.createElement("div");
+        div.classList.add("log-entry");
+        div.textContent = message;
+        log.prepend(div);
+      }
+
+      function formatUptime(seconds) {
+        const h = Math.floor(seconds / 3600);
+        const m = Math.floor((seconds % 3600) / 60);
+        const s = Math.floor(seconds % 60);
+        return `${h}h ${m}m ${s}s`;
+      }
+
+      function updateMetrics(metrics) {
+        if ("cpu_percent" in metrics) {
+          document.getElementById("cpu").textContent = metrics.cpu_percent.toFixed(1);
+        }
+        if ("memory_percent" in metrics) {
+          document.getElementById("memory").textContent = metrics.memory_percent.toFixed(1);
+        }
+        if ("load_average_1m" in metrics) {
+          document.getElementById("load1").textContent = metrics.load_average_1m.toFixed(2);
+          document.getElementById("load5").textContent = metrics.load_average_5m.toFixed(2);
+          document.getElementById("load15").textContent = metrics.load_average_15m.toFixed(2);
+        }
+        if ("uptime_seconds" in metrics) {
+          document.getElementById("uptime").textContent = formatUptime(metrics.uptime_seconds);
+        }
+      }
+
+      function connectWebSocket() {
+        socket = new WebSocket(`wss://neuronum.net/ws/{{sync_stream_id}}`);
+
+        socket.onopen = () => {
+          connected = true;
+          btn.textContent = "Disconnect Stream";
+          statusText.textContent = "Stream connected.";
+
+          const payload = {
+            session: CLIENT_SESSION,
+            cellHost: CLIENT_CELL,
+          };
+          socket.send(JSON.stringify(payload));
+          appendToLog(">> Sent: " + JSON.stringify(payload));
+        };
+
+        socket.onmessage = (event) => {
+          appendToLog("<< " + event.data);
+
+          try {
+            const data = JSON.parse(event.data);
+            console.log("Parsed data:", data);
+
+            const metrics = data.data || data.message || data;
+
+            updateMetrics(metrics);
+          } catch (e) {
+            console.error("Invalid JSON in message:", e);
+          }
+        };
+
+        socket.onclose = () => {
+          connected = false;
+          btn.textContent = "Connect Stream";
+          statusText.textContent = "Stream disconnected.";
+          socket = null;
+          appendToLog("!! Stream closed");
+        };
+
+        socket.onerror = (err) => {
+          console.error("WebSocket error:", err);
+          appendToLog("!! WebSocket error");
+          socket.close();
+        };
+      }
+
+      function disconnectWebSocket() {
+        if (socket) {
+          socket.close();
+        }
+      }
+
+      btn.addEventListener("click", () => {
+        if (!connected) {
+          connectWebSocket();
+        } else {
+          disconnectWebSocket();
+        }
+      });
+
+      connectWebSocket();
+    </script>
+  </body>
+</html>
+```
 
 ## 2. **Create Data Gateways**
 You need to create 3 data gateways. A Streams (STX) that allows your Node to receive data/requests, a Stream (STX) to stream real-time CPU data and a Transmitter (TX) to match client requests
