@@ -36,7 +36,7 @@ Neuronum is a real-time web engine designed for developers to build E2E-native a
 ### **Tools & Features**
 - Cell: Account to interact with Neuronum
 - Nodes: Apps & Services built on Neuronum
-- Browser: Open Source Web Engine -> [build from source](https://github.com/neuronumcybernetics/neuronum_browser)
+- Browser: Web Browser built on Neuronum -> [build from source](https://github.com/neuronumcybernetics/neuronum_browser)
 
 ### Requirements
 - Python >= 3.8
