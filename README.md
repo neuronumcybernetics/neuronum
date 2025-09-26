@@ -86,4 +86,4 @@ neuronum start-node
 
 ### **Interact with your Node**
 
-The **Neuronum Browser** is an open source web engine that allows you to interact with your nodes -> [build from source](https://github.com/neuronumcybernetics/neuronum_browser)
+The **Neuronum Browser** is an open source E2E web browser that allows you to interact with your nodes -> [build from source](https://github.com/neuronumcybernetics/neuronum_browser)
