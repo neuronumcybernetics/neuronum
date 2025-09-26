@@ -65,8 +65,6 @@ neuronum connect-cell
 
 
 ### **Build On Neuronum** 
-Visit & build with [Node Examples](https://github.com/neuronumcybernetics/neuronum/tree/main/features/nodes/examples) to gain deeper knowledge on how to build on Neuronum.
-
 To get started, initialize a new Node with the command below. 
 ```sh
 neuronum init-node
