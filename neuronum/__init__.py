@@ -1,2 +1,1 @@
-from .neuronum import Cell
-__all__ = ['Cell']
+from .neuronum import Node

@@ -340,21 +340,21 @@ async def async_init_node(descr):
     app_path = project_path / "app.py"
     app_path.write_text(f"""\
 import asyncio
-import neuronum                       
+from neuronum import Node                     
 from jinja2 import Environment, FileSystemLoader   
           
 env = Environment(loader=FileSystemLoader('.'))
 template = env.get_template('ping.html')    
                                           
-cell = neuronum.Cell(
-    private_key_path="{private_key_file}",
-    public_key_path="{public_key_file}"                   
+node = Node(
+    id="{node_id}",
+    private_key="{private_key_file}",
+    public_key="{public_key_file}"                   
 )
     
 async def main():    
-  
-    node_id = "{node_id}"                                              
-    async for transmitter in cell.sync(node_id):   
+                                             
+    async for transmitter in node.sync():   
         ts = transmitter.get("time")
         data = transmitter.get("data")
         transmitter_id = transmitter.get("transmitter_id")   
@@ -373,7 +373,7 @@ async def main():
                 "html": html_content
             }}
             
-            await cell.tx_response(transmitter_id, response_data, client_public_key)
+            await node.tx_response(transmitter_id, response_data, client_public_key)
 
 asyncio.run(main())
 """)

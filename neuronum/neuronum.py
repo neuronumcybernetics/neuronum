@@ -14,10 +14,11 @@ from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 from cryptography.hazmat.backends import default_backend
 
 
-class Cell:
-    def __init__(self, private_key_path: str, public_key_path: str):
-        self.private_key_path = private_key_path
-        self.public_key_path = public_key_path
+class Node:
+    def __init__(self, id: str, private_key: str, public_key: str):
+        self.node_id = id
+        self.private_key_path = private_key
+        self.public_key_path = public_key
         self.queue = asyncio.Queue()
         self.host = self._load_host()
         self.network = self._load_network()
@@ -184,8 +185,8 @@ class Cell:
             return None
 
 
-    async def sync(self, node_id: str) -> AsyncGenerator[str, None]:
-        full_url = f"wss://{self.network}/sync/{node_id}"
+    async def sync(self) -> AsyncGenerator[str, None]:
+        full_url = f"wss://{self.network}/sync/{self.node_id}"
         auth_payload = {
             "host": self.host,
             "password": self.password,
@@ -261,108 +262,7 @@ class Cell:
                 print(f"Error sending request: {e}")
             except Exception as e:
                 print(f"Unexpected error: {e}")
-
-
-    async def activate_tx(self, node_id: str, data: dict):
-        url = f"https://{self.network}/api/activate_tx/{node_id}"
-        
-        nodes = await self.list_nodes()
-
-        target_public_key_pem = None
-        target_node = node_id
-
-        for node in nodes:
-            node_ids = node.get('config', {}).get('data_gateways', [])
-            for node_id_entry in node_ids:
-                if node_id_entry.get('node_id') == target_node:
-                    target_public_key_pem = node.get('config', {}).get('public_key')
-                    break
-            if target_public_key_pem:
-                break
-
-        if not target_public_key_pem:
-            print(f"Target node not found or public key is missing.")
-            return None
-
-        try:
-            print(target_public_key_pem)
-            partner_public_key_jwk = self._load_public_key_from_pem(target_public_key_pem)
-            if not partner_public_key_jwk:
-                print("Failed to convert public key to JWK format. Aborting.")
-                return None
-            
-            partner_public_key = self._load_public_key_from_jwk(partner_public_key_jwk)
-            if not partner_public_key:
-                print("Failed to load partner's public key. Aborting.")
-                return None
-
-            data_to_encrypt = data.copy()
-            data_to_encrypt["publicKey"] = self.get_public_key_jwk()
-
-            encrypted_payload = self._encrypt_with_ecdh_aesgcm(partner_public_key, data_to_encrypt)
-
-            TX = {
-                "data": {
-                "encrypted": encrypted_payload
-                },
-                "cell": self.to_dict()
-            }
-
-            async with aiohttp.ClientSession() as session:
-                async with session.post(url, json=TX) as response:
-                    if response.status == 504:
-                        print(f"Gateway Timeout: No response from transmitter for txID: {node_id}")
-                        return None
-                    
-                    response.raise_for_status()
-                    
-                    response_data = await response.json()
-                    
-                    if "response" in response_data:
-                        inner_response = response_data["response"]
-                        
-                        if "ciphertext" in inner_response:
-                            ephemeral_public_key_b64 = inner_response["ephemeralPublicKey"]
-                            ephemeral_public_key_b64 += '=' * ((4 - len(ephemeral_public_key_b64) % 4) % 4)
-                            ephemeral_public_key_bytes = base64.urlsafe_b64decode(ephemeral_public_key_b64)
-
-                            nonce_b64 = inner_response["nonce"]
-                            nonce_b64 += '=' * ((4 - len(nonce_b64) % 4) % 4)
-                            nonce = base64.urlsafe_b64decode(nonce_b64)
-                            
-                            ciphertext_b64 = inner_response["ciphertext"]
-                            ciphertext_b64 += '=' * ((4 - len(ciphertext_b64) % 4) % 4)
-                            ciphertext = base64.urlsafe_b64decode(ciphertext_b64)
-                            
-                            decrypted_response = self._decrypt_with_ecdh_aesgcm(
-                                ephemeral_public_key_bytes, nonce, ciphertext
-                            )
-                            
-                            if decrypted_response:
-                                return decrypted_response
-                            else:
-                                print("Failed to decrypt server response.")
-                                return None
-                        else:
-                            print("Server response was not encrypted as expected.")
-                            return inner_response
-
-                    else:
-                        print("Unexpected response format.")
-                        return response_data
-
-        except aiohttp.ClientResponseError as e:
-            print(f"HTTP Error: {e.status}, Message: {e.message}, URL: {e.request_info.url}")
-            return None
-
-        except aiohttp.ClientError as e:
-            print(f"Connection Error: {e}")
-            return None
-
-        except Exception as e:
-            print(f"Unexpected error: {e}")
-            return None
-            
+  
 
     def _load_public_key_from_jwk(self, jwk):
         try:
@@ -377,31 +277,6 @@ class Cell:
             return public_numbers.public_key(default_backend())
         except (KeyError, ValueError, TypeError) as e:
             print(f"Error loading public key from JWK string: {e}")
-            return None
-        
-
-    def _load_public_key_from_pem(self, pem_string: str):
-        try:
-            print(pem_string)
-            corrected_pem_string = pem_string.replace("-----BEGINPUBLICKEY-----", "-----BEGIN PUBLIC KEY-----")
-            corrected_pem_string = corrected_pem_string.replace("-----ENDPUBLICKEY-----", "-----END PUBLIC KEY-----")
-
-            public_key = serialization.load_pem_public_key(
-                corrected_pem_string.encode(),
-                backend=default_backend()
-            )
-
-            public_numbers = public_key.public_numbers()
-            x_bytes = public_numbers.x.to_bytes((public_numbers.x.bit_length() + 7) // 8, 'big')
-            y_bytes = public_numbers.y.to_bytes((public_numbers.y.bit_length() + 7) // 8, 'big')
-            return {
-                "kty": "EC",
-                "crv": "P-256",
-                "x": base64.urlsafe_b64encode(x_bytes).rstrip(b'=').decode('utf-8'),
-                "y": base64.urlsafe_b64encode(y_bytes).rstrip(b'=').decode('utf-8')
-            }
-        except Exception as e:
-            print(f"Error loading public key from PEM string: {e}")
             return None
 
 
@@ -463,5 +338,3 @@ class Cell:
                 print(f"Error sending request: {e}")
             except Exception as e:
                 print(f"Unexpected error: {e}")
-           
-__all__ = ['Cell']
