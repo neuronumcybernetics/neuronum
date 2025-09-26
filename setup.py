@@ -2,10 +2,10 @@ from setuptools import setup, find_packages
 
 setup(
     name='neuronum',
-    version='7.0.4',
+    version='8.0.0',
     author='Neuronum Cybernetics',
     author_email='welcome@neuronum.net',
-    description='Official client library to interact with the Neuronum Network',
+    description='The E2E Web Engine',
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
     url="https://neuronum.net",
@@ -18,7 +18,6 @@ setup(
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
-    
     install_requires=[
         'aiohttp',
         'websockets',
@@ -28,6 +27,7 @@ setup(
         'requests',
         'psutil',
         'jinja2',
+        'cryptography',
     ],
     entry_points={
         "console_scripts": [

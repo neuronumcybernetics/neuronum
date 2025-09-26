@@ -1,6 +1,5 @@
 import subprocess
 import os
-import neuronum
 import platform
 import glob
 import asyncio
@@ -12,7 +11,9 @@ import requests
 import psutil
 from datetime import datetime
 import sys
-
+import json
+from cryptography.hazmat.primitives.asymmetric import ec
+from cryptography.hazmat.primitives import serialization
 
 @click.group()
 def cli():
@@ -223,6 +224,7 @@ def delete_cell():
         return
 
     confirm = click.confirm(f" Are you sure you want to delete '{host}'?", default=True)
+    os.remove(env_path)
     if not confirm:
         click.echo("Deletion canceled.")
         return
@@ -249,15 +251,14 @@ def delete_cell():
 
 
 @click.command()
-@click.option('--blank', is_flag=True, help="Generate a Node Template without Stream and Transmitter")
-def init_node(blank):
+def init_node():
     descr = click.prompt("Node description: Type up to 25 characters").strip()
     if descr and len(descr) > 25:
         click.echo("Description too long. Max 25 characters allowed.")
         return
-    asyncio.run(async_init_node(blank, descr))
+    asyncio.run(async_init_node(descr))
 
-async def async_init_node(blank, descr):
+async def async_init_node(descr):
     credentials_folder_path = Path.home() / ".neuronum"
     env_path = credentials_folder_path / ".env"
 
@@ -269,17 +270,11 @@ async def async_init_node(blank, descr):
                 key, value = line.strip().split("=")
                 env_data[key] = value
 
+
         host = env_data.get("HOST", "")
         password = env_data.get("PASSWORD", "")
         network = env_data.get("NETWORK", "")
         synapse = env_data.get("SYNAPSE", "")
-
-        cell = neuronum.Cell(
-        host=host,         
-        password=password,                         
-        network=network,                        
-        synapse=synapse
-        )
 
     except FileNotFoundError:
         click.echo("No cell connected. Connect your cell with command neuronum connect-cell")
@@ -301,94 +296,90 @@ async def async_init_node(blank, descr):
             async with session.post(url, json=node) as response:
                 response.raise_for_status()
                 data = await response.json()
-                nodeID = data["nodeID"]
+                node_id = data["nodeID"]
         except aiohttp.ClientError as e:
             click.echo(f"Error sending request: {e}")
             return
 
-    node_filename = descr + "_" + nodeID.replace("::node", "")
+    node_filename = descr + "_" + node_id.replace("::node", "")
     project_path = Path(node_filename)
     project_path.mkdir(exist_ok=True)
 
-    env_path = project_path / ".env"
-    await asyncio.to_thread(env_path.write_text, f"NODE={nodeID}\nHOST={host}\nPASSWORD={password}\nNETWORK={network}\nSYNAPSE={synapse}\n")
+    try:
+        private_key = ec.generate_private_key(ec.SECP256R1())
+        public_key = private_key.public_key()
 
-    if blank is False:
-        stx_descr = f"{nodeID} App"                                                  
-        partners = ["private"]                                      
-        stxID = await cell.create_stx(stx_descr, partners)  
+        pem_private = private_key.private_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PrivateFormat.PKCS8,
+            encryption_algorithm=serialization.NoEncryption()
+        )
 
-        tx_descr = f"Greet {nodeID}"                                           
-        key_values = {                                                          
-            "ping": "pong",
-        }
-        STX = stxID                                                     
-        label = "ping:pong"                                                                                                                                                         
-        partners = ["private"]                                                   
-        txID = await cell.create_tx(tx_descr, key_values, STX, label, partners)
+        pem_public = public_key.public_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PublicFormat.SubjectPublicKeyInfo
+        )
 
-        app_path = project_path / "app.py"
-        app_path.write_text(f"""\
+        public_key_pem_file = project_path / "public_key.pem"
+        with open(public_key_pem_file, "wb") as key_file:
+            key_file.write(pem_public) 
+
+        private_key_pem_file = project_path / "private_key.pem"
+        with open(private_key_pem_file, "wb") as key_file:
+            key_file.write(pem_private) 
+
+        pem_public_str = pem_public.decode('utf-8')
+        pem_public_oneline = "".join(pem_public_str.split())
+
+        current_directory = os.getcwd()
+        private_key_file = os.path.join(current_directory / project_path, "private_key.pem")
+        public_key_file = os.path.join(current_directory / project_path, "public_key.pem")
+    except:
+        print("Error creating Private/Public Key Pair")
+                                                                                                           
+    app_path = project_path / "app.py"
+    app_path.write_text(f"""\
 import asyncio
-import neuronum
-import os
-import json                        
-from dotenv import load_dotenv
-from jinja2 import Environment, FileSystemLoader                        
-
+import neuronum                       
+from jinja2 import Environment, FileSystemLoader   
+          
 env = Environment(loader=FileSystemLoader('.'))
 template = env.get_template('ping.html')    
-
-with open('config.json', 'r') as f:
-    data = json.load(f)
-terms_url = data['legals']['terms']
-privacy_url = data['legals']['privacy_policy']
-last_update = data['legals']['last_update']                         
-                                           
-                        
-load_dotenv()
-host = os.getenv("HOST")
-password = os.getenv("PASSWORD")
-network = os.getenv("NETWORK")
-synapse = os.getenv("SYNAPSE")
-
+                                          
 cell = neuronum.Cell(
-    host=host,
-    password=password,
-    network=network,
-    synapse=synapse
+    private_key_path="{private_key_file}",
+    public_key_path="{public_key_file}"                   
 )
+    
+async def main():    
+  
+    node_id = "{node_id}"                                              
+    async for transmitter in cell.sync(node_id):   
+        ts = transmitter.get("time")
+        data = transmitter.get("data")
+        transmitter_id = transmitter.get("transmitter_id")   
+        client = transmitter.get("operator")
+        client_public_key = data.get("publicKey")  
+        action = data.get("action")
 
-async def main():      
-    STX = "{stxID}"                                          
-    async for operation in cell.sync(STX):       
-        txID = operation.get("txID")
-        client = operation.get("operator")   
-        ts = operation.get("time")  
-        data = operation.get("data") 
-        operation_id = operation.get("operationID")                
-                            
-        if txID == "{txID}":  
+        response_data = {{}}
+              
+        if action == "ping_node":
         
-            def render_html_template(client, ts, data, operation_id, terms_url, privacy_url, last_update):
-                return template.render(client=client, ts=ts, data=data, operation_id=operation_id, terms_url=terms_url, privacy_url=privacy_url, last_update=last_update)
+            html_content = template.render(client=client, ts=ts, data=action, transmitter_id=transmitter_id)
 
-            html_content = render_html_template(client, ts, data, operation_id, terms_url, privacy_url, last_update)        
-
-            data = {{
-                "json": f"{{operation_id}} - Reply from {nodeID}: Pinged by {{client}} at {{ts}} with data: {{data}}",
+            response_data = {{
+                "json": f"{{transmitter_id}} - Reply from {node_id}: Pinged by {{client}} at {{ts}} with action: {{action}}",
                 "html": html_content
             }}
-
-            await cell.notify(f"{{client}}", "{nodeID} Ping","Pinged successfully")
-
-            await cell.tx_response(txID, client, data)
+            
+            await cell.tx_response(transmitter_id, response_data, client_public_key)
 
 asyncio.run(main())
 """)
     
-        html_path = project_path / "ping.html"
-        html_content = f"""\
+    html_path = project_path / "ping.html"
+    html_content = f"""\
 <!DOCTYPE html>
 <html>
   <head>
@@ -470,7 +461,7 @@ asyncio.run(main())
       .data-value.timestamp {{
           color: #a1e8a1;
       }}
-      .data-value.operation-id {{
+      .data-value.transmitter-id {{
           color: #f7a2a2;
       }}
       .api-button {{
@@ -491,7 +482,7 @@ asyncio.run(main())
     <div class="container">
       <img class="logo" src="https://neuronum.net/static/logo.png" alt="Neuronum Logo">
       
-      <h1>Reply from {nodeID}</h1>
+      <h1>Reply from {node_id}</h1>
       <p class="subtitle">Pinged successfully.</p>
       
       <div class="data-row">
@@ -510,494 +501,61 @@ asyncio.run(main())
       </div>
       
       <div class="data-row">
-        <p class="data-label">Operation ID</p>
-        <p class="data-value operation-id truncated">{{{{operation_id}}}}</p>
+        <p class="data-label">Transmitter ID</p>
+        <p class="data-value transmitter-id truncated">{{{{transmitter_id}}}}</p>
       </div>
 
       <button id="send-request-btn" class="api-button">Ping again</button>
     </div>
 
     <script>
-    document.getElementById('send-request-btn').addEventListener('click', () => {{
-        const apiEndpoint = 'https://neuronum.net/api/activate/{txID}';
+        document.getElementById('send-request-btn').addEventListener('click', () => {{
+            const messagePayload = {{
+                type: 'iframe_request',
+                endpoint: 'https://neuronum.net/browser/api/activate_tx/{node_id}',
+                data: {{ "action": "ping_node" }},
+                nodePublicKey: '{pem_public_oneline}',
+            }};
 
-        const dataToSend = {{
-            "data": {{"ping": "node"}},
-            "cell": {{
-                "host": CLIENT_CELL,
-                "session": CLIENT_SESSION, 
+            if (window.parent) {{
+                window.parent.postMessage(messagePayload, '*');
             }}
-        }};
-
-        fetch(apiEndpoint, {{
-            method: 'POST',
-            headers: {{
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
-            }},
-            body: JSON.stringify(dataToSend)
-        }})
-        .then(response => {{
-            if (!response.ok) {{
-                throw new Error(`HTTP error! status: ${{response.status}}`);
-            }}
-            return response.json();
-        }})
-        .then(data => {{
-            if (data.success && data.response && data.response.html) {{
-                document.open();
-                document.write(data.response.html);
-                document.close();
-                console.log('API Response: Page replaced with new HTML.');
-            }} else {{
-                console.error('API Response does not contain HTML to replace the page:', data);
-                alert('API response error: Expected HTML content to replace the page.');
-            }}
-        }})
-        .catch(error => {{
-            console.error('API request failed:', error);
-            alert('API request failed. See the console for details.');
         }});
-    }});
-    </script>
-
-    <div id="legal-banner" style="border-radius: 10px;  margin: 15px; position: fixed; bottom: 0; left: 0; right: 0; background-color: #2a2a2a; color: #e0e0e0; padding: 16px; text-align: center; font-size: 14px; z-index: 9999; box-shadow: 0 -2px 10px rgba(0,0,0,0.5);">
-      By continuing, you agree to our 
-      Terms (<span style="color: #8cafff;">{{{{terms_url}}}}</span>) & 
-      Privacy Policy (<span style="color: #8cafff;">{{{{privacy_url}}}}</span>)
-      <br>
-      <button id="accept-legal" style="margin-top: 15px; margin-bottom: 15px; background: #01c07d; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer;">Accept</button>
-      <br>
-      Last Update: {{{{last_update}}}}
-    </div>
-
-    <script>
-      const banner = document.getElementById('legal-banner');
-      const acceptBtn = document.getElementById('accept-legal');
-      acceptBtn.addEventListener('click', () => {{
-        banner.remove();
-      }});
     </script>
 
   </body>
 </html>
 """
-        html_path.write_text(html_content)
-    
-        config_path = project_path / "config.json"
-        await asyncio.to_thread(
-        config_path.write_text,
+    html_path.write_text(html_content)
+    config_path = project_path / "config.json"
+    await asyncio.to_thread(
+    config_path.write_text,
 f"""{{
-    "app_metadata": {{
-        "name": "{descr}",
-        "version": "1.0.0",
-        "author": "{host}"
-    }},
-    "data_gateways": [
+  "app_metadata": {{
+    "name": "{descr}",
+    "version": "1.0.0",
+    "author": "{host}"
+  }},
+  "data_gateways": [
+    {{
+      "node_id": "{node_id}",
+      "actions": [
         {{
-        "type": "transmitter",
-        "id": "{txID}",
-        "info": "Ping Your Node"
+          "action": "ping_node",
+          "info": "Ping Node"
         }}
-    ],
-    "legals": {{
-        "terms": "https://url_to_your/terms",
-        "privacy_policy": "https://url_to_your/privacy_policy",
-        "last_update" : "DD/MM/YYYY"
+      ]
     }}
+  ],
+  "legals": {{
+    "terms": "https://url_to_your/terms",
+    "privacy_policy": "https://url_to_your/privacy_policy"
+  }},
+  "public_key": "{pem_public_oneline}"
 }}"""
+
 )
-
-        nodemd_path = project_path / "NODE.md"
-        await asyncio.to_thread(nodemd_path.write_text, f"""### NODE.md of {nodeID}
-
-Welcome to your Node's documentation! This guide provides several ways for users to interact with your application.
-
-***
-
-### 💻 Using the CLI
-
-To ping this Node via the command-line interface, use the following command:
-
-`neuronum activate --tx {txID} 'ping:node'`
-
-***
-
-### 🐍 With Python
-
-For programmatic access, use the following Python code snippet. This script utilizes the `neuronum` library to activate the transaction and receive a response.
-
-```python
-import asyncio
-import neuronum
-
-# Set up Cell connection parameters
-cell = neuronum.Cell(
-    host="host",                                  # Cell host
-    password="password",                          # Cell password
-    network="neuronum.net",                       # Cell network
-    synapse="synapse"                             # Cell synapse
-)
-
-async def main():
-    # Define the transaction ID and data payload
-    TX = "{txID}"
-    data = {{"ping": "node"}}
-    
-    # Activate the transaction and get the response
-    tx_response = await cell.activate_tx(TX, data)
-    
-    # Print the response from the Node
-    print(tx_response)
-                                      
-# Run the main asynchronous function
-if __name__ == "__main__":
-    asyncio.run(main())
-```
-
-🤖 Via Cellai (Android App - Currently in Testing)
-Download the app from the Google Play Store.
-Send the command "Ping Node" to Cellai
-""")
-        
-    else:                                 
-        stxID = "id::stx"                                                                                                 
-        txID = "id::tx"
-
-        app_path = project_path / "app.py"
-        app_path.write_text(f"""\
-import asyncio
-import neuronum
-import os
-import json                        
-from dotenv import load_dotenv
-from jinja2 import Environment, FileSystemLoader                        
-
-env = Environment(loader=FileSystemLoader('.'))
-template = env.get_template('ping.html')    
-
-with open('config.json', 'r') as f:
-    data = json.load(f)
-terms_url = data['legals']['terms']
-privacy_url = data['legals']['privacy_policy']
-last_update = data['legals']['last_update']                         
-                                           
-                        
-load_dotenv()
-host = os.getenv("HOST")
-password = os.getenv("PASSWORD")
-network = os.getenv("NETWORK")
-synapse = os.getenv("SYNAPSE")
-
-cell = neuronum.Cell(
-    host=host,
-    password=password,
-    network=network,
-    synapse=synapse
-)
-
-async def main():      
-    STX = "{stxID}"                                          
-    async for operation in cell.sync(STX):       
-        txID = operation.get("txID")
-        client = operation.get("operator")   
-        ts = operation.get("time")  
-        data = operation.get("data") 
-        operation_id = operation.get("operationID")                
-                            
-        if txID == "{txID}":  
-        
-            def render_html_template(client, ts, data, operation_id, terms_url, privacy_url, last_update):
-                return template.render(client=client, ts=ts, data=data, operation_id=operation_id, terms_url=terms_url, privacy_url=privacy_url, last_update=last_update)
-
-            html_content = render_html_template(client, ts, data, operation_id, terms_url, privacy_url, last_update)        
-
-            data = {{
-                "json": f"{{operation_id}} - Reply from {nodeID}: Pinged by {{client}} at {{ts}} with data: {{data}}",
-                "html": html_content
-            }}
-
-            await cell.notify(f"{{client}}", "{nodeID} Ping","Pinged successfully")
-
-            await cell.tx_response(txID, client, data)
-
-asyncio.run(main())
-""")
-    
-        html_path = project_path / "ping.html"
-        html_content = f"""\
-<!DOCTYPE html>
-<html>
-  <head>
-    <style>
-      body {{
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-        background-color: #121212;
-        color: #e0e0e0;
-        margin: 0;
-        padding: 0;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        min-height: 100vh;
-      }}
-
-      .container {{
-        background-color: #1e1e1e;
-        border-radius: 12px;
-        padding: 40px;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-        width: 100%;
-        max-width: 500px;
-        text-align: center;
-        box-sizing: border-box;
-      }}
-
-      .logo {{
-        width: 80px;
-        margin-bottom: 25px;
-        filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.1));
-      }}
-
-      h1 {{
-        font-size: 1.5em;
-        font-weight: 600;
-        margin-bottom: 5px;
-        color: #f5f5f5;
-      }}
-
-      .subtitle {{
-        font-size: 0.9em;
-        color: #a0a0a0;
-        margin-bottom: 30px;
-      }}
-
-      .data-row {{
-        background-color: #2a2a2a;
-        padding: 12px 15px;
-        border-radius: 8px;
-        margin-bottom: 10px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-      }}
-
-      .data-label {{
-        font-weight: 400;
-        color: #a0a0a0;
-        margin: 0;
-      }}
-
-      .data-value {{
-        font-weight: 500;
-        color: #e0e0e0;
-        margin: 0;
-      }}
-
-      .data-value.truncated {{
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        max-width: 60%;
-      }}
-
-      .data-value.client {{
-          color: #8cafff;
-      }}
-      .data-value.timestamp {{
-          color: #a1e8a1;
-      }}
-      .data-value.operation-id {{
-          color: #f7a2a2;
-      }}
-      .api-button {{
-        background: #01c07d 100%;
-        color: white;
-        border: none;
-        border-radius: 8px;
-        padding: 12px 24px;
-        font-size: 16px;
-        font-weight: bold;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-        cursor: pointer;
-        margin-top: 10px;
-      }}
-    </style>
-  </head>
-  <body>
-    <div class="container">
-      <img class="logo" src="https://neuronum.net/static/logo.png" alt="Neuronum Logo">
-      
-      <h1>Reply from {nodeID}</h1>
-      <p class="subtitle">Pinged successfully.</p>
-      
-      <div class="data-row">
-        <p class="data-label">Client</p>
-        <p class="data-value client">{{{{client}}}}</p>
-      </div>
-      
-      <div class="data-row">
-        <p class="data-label">Timestamp</p>
-        <p class="data-value timestamp">{{{{ts}}}}</p>
-      </div>
-      
-      <div class="data-row">
-        <p class="data-label">Data</p>
-        <p class="data-value">{{{{data}}}}</p>
-      </div>
-      
-      <div class="data-row">
-        <p class="data-label">Operation ID</p>
-        <p class="data-value operation-id truncated">{{{{operation_id}}}}</p>
-      </div>
-
-      <button id="send-request-btn" class="api-button">Ping again</button>
-    </div>
-
-    <script>
-    document.getElementById('send-request-btn').addEventListener('click', () => {{
-        const apiEndpoint = 'https://neuronum.net/api/activate/{txID}';
-
-        const dataToSend = {{
-            "data": {{"ping": "node"}},
-            "cell": {{
-                "host": CLIENT_CELL,
-                "session": CLIENT_SESSION, 
-            }}
-        }};
-
-        fetch(apiEndpoint, {{
-            method: 'POST',
-            headers: {{
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
-            }},
-            body: JSON.stringify(dataToSend)
-        }})
-        .then(response => {{
-            if (!response.ok) {{
-                throw new Error(`HTTP error! status: ${{response.status}}`);
-            }}
-            return response.json();
-        }})
-        .then(data => {{
-            if (data.success && data.response && data.response.html) {{
-                document.open();
-                document.write(data.response.html);
-                document.close();
-                console.log('API Response: Page replaced with new HTML.');
-            }} else {{
-                console.error('API Response does not contain HTML to replace the page:', data);
-                alert('API response error: Expected HTML content to replace the page.');
-            }}
-        }})
-        .catch(error => {{
-            console.error('API request failed:', error);
-            alert('API request failed. See the console for details.');
-        }});
-    }});
-    </script>
-
-    <div id="legal-banner" style="border-radius: 10px;  margin: 15px; position: fixed; bottom: 0; left: 0; right: 0; background-color: #2a2a2a; color: #e0e0e0; padding: 16px; text-align: center; font-size: 14px; z-index: 9999; box-shadow: 0 -2px 10px rgba(0,0,0,0.5);">
-      By continuing, you agree to our 
-      Terms (<span style="color: #8cafff;">{{{{terms_url}}}}</span>) & 
-      Privacy Policy (<span style="color: #8cafff;">{{{{privacy_url}}}}</span>)
-      <br>
-      <button id="accept-legal" style="margin-top: 15px; margin-bottom: 15px; background: #01c07d; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer;">Accept</button>
-      <br>
-      Last Update: {{{{last_update}}}}
-    </div>
-
-    <script>
-      const banner = document.getElementById('legal-banner');
-      const acceptBtn = document.getElementById('accept-legal');
-      acceptBtn.addEventListener('click', () => {{
-        banner.remove();
-      }});
-    </script>
-
-  </body>
-</html>
-"""
-        html_path.write_text(html_content)
-    
-        config_path = project_path / "config.json"
-        await asyncio.to_thread(
-        config_path.write_text,
-f"""{{
-    "app_metadata": {{
-        "name": "{descr}",
-        "version": "1.0.0",
-        "author": "{host}"
-    }},
-    "data_gateways": [
-        {{
-        "type": "transmitter",
-        "id": "{txID}",
-        "info": "Ping Your Node"
-        }}
-    ],
-    "legals": {{
-        "terms": "https://url_to_your/terms",
-        "privacy_policy": "https://url_to_your/privacy_policy",
-        "last_update" : "DD/MM/YYYY"
-    }}
-}}"""
-)
-
-        nodemd_path = project_path / "NODE.md"
-        await asyncio.to_thread(nodemd_path.write_text, f"""### NODE.md of {nodeID}
-
-Welcome to your Node's documentation! This guide provides several ways for users to interact with your application.
-
-***
-
-### 💻 Using the CLI
-
-To ping this Node via the command-line interface, use the following command:
-
-`neuronum activate --tx {txID} 'ping:node'`
-
-***
-
-### 🐍 With Python
-
-For programmatic access, use the following Python code snippet. This script utilizes the `neuronum` library to activate the transaction and receive a response.
-
-```python
-import asyncio
-import neuronum
-
-# Set up Cell connection parameters
-cell = neuronum.Cell(
-    host="host",                                  # Cell host
-    password="password",                          # Cell password
-    network="neuronum.net",                       # Cell network
-    synapse="synapse"                             # Cell synapse
-)
-
-async def main():
-    # Define the transaction ID and data payload
-    TX = "{txID}"
-    data = {{"ping": "node"}}
-    
-    # Activate the transaction and get the response
-    tx_response = await cell.activate_tx(TX, data)
-    
-    # Print the response from the Node
-    print(tx_response)
-                                      
-# Run the main asynchronous function
-if __name__ == "__main__":
-    asyncio.run(main())
-```
-
-🤖 Via Cellai (Android App - Currently in Testing)
-Download the app from the Google Play Store.
-Send the command "Ping Node" to Cellai
-""")
-        
-    click.echo(f"Neuronum Node '{nodeID}' initialized!")
+    click.echo(f"Neuronum Node '{node_id}' initialized!")
 
 
 @click.command()
@@ -1071,14 +629,12 @@ def start_node(d):
 def check_node():
     click.echo("Checking Node status...")
 
-    env_data = {}
     try:
-        with open(".env", "r") as f:
-            for line in f:
-                if "=" in line:
-                    key, value = line.strip().split("=", 1)
-                    env_data[key] = value
-        nodeID = env_data.get("NODE", "")
+        with open('config.json', 'r') as f:
+            data = json.load(f)
+
+        nodeID = data['data_gateways'][0]['node_id']
+
     except FileNotFoundError:
         click.echo("Error: .env with credentials not found")
         return
@@ -1137,14 +693,11 @@ def restart_node(d):
 
     start_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    env_data = {}
     try:
-        with open(".env", "r") as f:
-            for line in f:
-                key, value = line.strip().split("=")
-                env_data[key] = value
+        with open('config.json', 'r') as f:
+            data = json.load(f)
 
-        nodeID = env_data.get("NODE", "")
+        nodeID = data['data_gateways'][0]['node_id']
 
     except FileNotFoundError:
         print("Error: .env with credentials not found")
@@ -1222,14 +775,11 @@ async def async_stop_node():
 
     node_pid_path = Path("status.txt")
 
-    env_data = {}
     try:
-        with open(".env", "r") as f:
-            for line in f:
-                key, value = line.strip().split("=")
-                env_data[key] = value
+        with open('config.json', 'r') as f:
+            data = json.load(f)
 
-        nodeID = env_data.get("NODE", "")
+        nodeID = data['data_gateways'][0]['node_id']
 
     except FileNotFoundError:
         print("Error: .env with credentials not found")
@@ -1265,10 +815,12 @@ async def async_stop_node():
 @click.command()
 def update_node():
     click.echo("Update your Node")
+    credentials_folder_path = Path.home() / ".neuronum"
+    env_path = credentials_folder_path / ".env"
     env_data = {}
 
     try:
-        with open(".env", "r") as f:
+        with open(env_path, "r") as f:
             for line in f:
                 key, value = line.strip().split("=")
                 env_data[key] = value
@@ -1315,19 +867,25 @@ def update_node():
     asyncio.run(async_update_node(node_type, descr, partners))
 
 async def async_update_node(node_type: str, descr: str, partners:str) -> None:
+    credentials_folder_path = Path.home() / ".neuronum"
+    env_path = credentials_folder_path / ".env"
     env_data = {}
 
     try:
-        with open(".env", "r") as f:
+        with open(env_path, "r") as f:
             for line in f:
                 key, value = line.strip().split("=")
                 env_data[key] = value
 
-        nodeID = env_data.get("NODE", "")
         host = env_data.get("HOST", "")
         password = env_data.get("PASSWORD", "")
         network = env_data.get("NETWORK", "")
         synapse = env_data.get("SYNAPSE", "")
+
+        with open('config.json', 'r') as f:
+            data = json.load(f)
+
+        nodeID = data['data_gateways'][0]['node_id']
 
     except FileNotFoundError:
         click.echo("Error: .env with credentials not found")
@@ -1337,17 +895,14 @@ async def async_update_node(node_type: str, descr: str, partners:str) -> None:
         return
 
     try:
-        with open("NODE.md", "r") as f:
-            nodemd_file = f.read()
-
         with open("config.json", "r") as f:
             config_file = f.read()
 
     except FileNotFoundError:
-        click.echo("Error: NODE.md file not found")
+        click.echo("Error: Config File not found")
         return
     except Exception as e:
-        click.echo(f"Error reading NODE.md file: {e}")
+        click.echo(f"Error reading Config file: {e}")
         return
     
     if node_type == "partners":
@@ -1360,7 +915,6 @@ async def async_update_node(node_type: str, descr: str, partners:str) -> None:
         "password": password,
         "synapse": synapse,
         "node_type": node_type,
-        "nodemd_file": nodemd_file,
         "config_file": config_file,
         "descr": descr,
     }
@@ -1371,23 +925,24 @@ async def async_update_node(node_type: str, descr: str, partners:str) -> None:
                 response.raise_for_status()
                 data = await response.json()
                 nodeID = data["nodeID"]
-                node_url = data["node_url"]
         except aiohttp.ClientError as e:
             click.echo(f"Error sending request: {e}")
             return
 
     if node_type == "public":
-        click.echo(f"Neuronum Node '{nodeID}' updated! Visit: {node_url}")
+        click.echo(f"Neuronum Node '{nodeID}' updated!")
     else:
         click.echo(f"Neuronum Node '{nodeID}' updated!")
 
 
 def update_node_at_start():
     click.echo("Update your Node")
+    credentials_folder_path = Path.home() / ".neuronum"
+    env_path = credentials_folder_path / ".env"
     env_data = {}
 
     try:
-        with open(".env", "r") as f:
+        with open(env_path, "r") as f:
             for line in f:
                 key, value = line.strip().split("=")
                 env_data[key] = value
@@ -1434,19 +989,25 @@ def update_node_at_start():
     asyncio.run(async_update_node_at_start(node_type, descr, partners))
 
 async def async_update_node_at_start(node_type: str, descr: str, partners:str) -> None:
+    credentials_folder_path = Path.home() / ".neuronum"
+    env_path = credentials_folder_path / ".env"
     env_data = {}
 
     try:
-        with open(".env", "r") as f:
+        with open(env_path, "r") as f:
             for line in f:
                 key, value = line.strip().split("=")
                 env_data[key] = value
 
-        nodeID = env_data.get("NODE", "")
         host = env_data.get("HOST", "")
         password = env_data.get("PASSWORD", "")
         network = env_data.get("NETWORK", "")
         synapse = env_data.get("SYNAPSE", "")
+
+        with open('config.json', 'r') as f:
+            data = json.load(f)
+
+        nodeID = data['data_gateways'][0]['node_id']
 
     except FileNotFoundError:
         click.echo("Error: .env with credentials not found")
@@ -1456,17 +1017,14 @@ async def async_update_node_at_start(node_type: str, descr: str, partners:str) -
         return
 
     try:
-        with open("NODE.md", "r") as f:
-            nodemd_file = f.read()
-
         with open("config.json", "r") as f:
             config_file = f.read()
 
     except FileNotFoundError:
-        click.echo("Error: NODE.md file not found")
+        click.echo("Error: File not found")
         return
     except Exception as e:
-        click.echo(f"Error reading NODE.md file: {e}")
+        click.echo(f"Error reading file: {e}")
         return
     
     if node_type == "partners":
@@ -1479,7 +1037,6 @@ async def async_update_node_at_start(node_type: str, descr: str, partners:str) -
         "password": password,
         "synapse": synapse,
         "node_type": node_type,
-        "nodemd_file": nodemd_file,
         "config_file": config_file,
         "descr": descr,
     }
@@ -1490,13 +1047,12 @@ async def async_update_node_at_start(node_type: str, descr: str, partners:str) -
                 response.raise_for_status()
                 data = await response.json()
                 nodeID = data["nodeID"]
-                node_url = data["node_url"]
         except aiohttp.ClientError as e:
             click.echo(f"Error sending request: {e}")
             return
 
     if node_type == "public":
-        click.echo(f"Neuronum Node '{nodeID}' updated! Visit: {node_url}")
+        click.echo(f"Neuronum Node '{nodeID}' updated!")
     else:
         click.echo(f"Neuronum Node '{nodeID}' updated!")
 
@@ -1506,19 +1062,25 @@ def delete_node():
     asyncio.run(async_delete_node())
 
 async def async_delete_node():
+    credentials_folder_path = Path.home() / ".neuronum"
+    env_path = credentials_folder_path / ".env"
     env_data = {}
 
     try:
-        with open(".env", "r") as f:
+        with open(env_path, "r") as f:
             for line in f:
                 key, value = line.strip().split("=")
                 env_data[key] = value
 
-        nodeID = env_data.get("NODE", "")
         host = env_data.get("HOST", "")
         password = env_data.get("PASSWORD", "")
         network = env_data.get("NETWORK", "")
         synapse = env_data.get("SYNAPSE", "")
+
+        with open('config.json', 'r') as f:
+            data = json.load(f)
+
+        nodeID = data['data_gateways'][0]['node_id']
 
     except FileNotFoundError:
         click.echo("Error: .env with credentials not found")
@@ -1548,130 +1110,6 @@ async def async_delete_node():
     click.echo(f"Neuronum Node '{nodeID}' deleted!")
 
 
-@click.command()
-@click.option('--tx', required=True, help="Transmitter ID")
-@click.argument('kvpairs', nargs=-1)
-def activate(tx, kvpairs):
-    try:
-        data = dict(pair.split(':', 1) for pair in kvpairs)
-    except ValueError:
-        click.echo("Invalid input. Use key:value pairs.")
-        return
-
-    asyncio.run(async_activate(tx, data))
-
-async def async_activate(tx, data):
-    credentials_folder_path = Path.home() / ".neuronum"
-    env_path = credentials_folder_path / ".env"
-    env_data = {}
-
-    try:
-        with open(env_path, "r") as f:
-            for line in f:
-                key, value = line.strip().split("=")
-                env_data[key] = value
-    except FileNotFoundError:
-        click.echo("No cell connected. Try: neuronum connect-cell")
-        return
-    except Exception as e:
-        click.echo(f"Error reading .env: {e}")
-        return
-
-    cell = neuronum.Cell(
-        host=env_data.get("HOST", ""),
-        password=env_data.get("PASSWORD", ""),
-        network=env_data.get("NETWORK", ""),
-        synapse=env_data.get("SYNAPSE", "")
-    )
-
-    tx_response = await cell.activate_tx(tx, data)
-    click.echo(tx_response)
-
-
-@click.command()
-@click.option('--ctx', required=True, help="Circuit ID")
-@click.argument('label', nargs=-1)
-def load(ctx, label):
-    if len(label) > 1 and all(Path(x).exists() for x in label):
-        label = "*"
-    else:
-        label = " ".join(label)
-
-    asyncio.run(async_load(ctx, label))
-
-
-async def async_load(ctx, label):
-    credentials_folder_path = Path.home() / ".neuronum"
-    env_path = credentials_folder_path / ".env"
-    env_data = {}
-
-    try:
-        with open(env_path, "r") as f:
-            for line in f:
-                key, value = line.strip().split("=")
-                env_data[key] = value
-    except FileNotFoundError:
-        click.echo("No cell connected. Try: neuronum connect-cell")
-        return
-    except Exception as e:
-        click.echo(f"Error reading .env: {e}")
-        return
-
-    cell = neuronum.Cell(
-        host=env_data.get("HOST", ""),
-        password=env_data.get("PASSWORD", ""),
-        network=env_data.get("NETWORK", ""),
-        synapse=env_data.get("SYNAPSE", "")
-    )
-
-    data = await cell.load(label, ctx)
-    click.echo(data)
-
-
-@click.command()
-@click.option('--stx', default=None, help="Stream ID (optional)")
-def sync(stx):
-    asyncio.run(async_sync(stx))
-
-
-async def async_sync(stx):
-    credentials_folder_path = Path.home() / ".neuronum"
-    env_path = credentials_folder_path / ".env"
-    env_data = {}
-
-    try:
-        with open(env_path, "r") as f:
-            for line in f:
-                key, value = line.strip().split("=")
-                env_data[key] = value
-    except FileNotFoundError:
-        click.echo("No cell connected. Try: neuronum connect-cell")
-        return
-    except Exception as e:
-        click.echo(f"Error reading .env: {e}")
-        return
-
-    cell = neuronum.Cell(
-        host=env_data.get("HOST", ""),
-        password=env_data.get("PASSWORD", ""),
-        network=env_data.get("NETWORK", ""),
-        synapse=env_data.get("SYNAPSE", "")
-    )
-
-    if stx:
-        print(f"Listening to Stream '{stx}'! Close connection with CTRL+C")
-    else:
-        print(f"Listening to '{cell.host}' private Stream! Close connection with CTRL+C")
-    async for operation in cell.sync() if stx is None else cell.sync(stx):
-        label = operation.get("label")                            
-        data = operation.get("data")
-        ts = operation.get("time")
-        stxID = operation.get("stxID")
-        operator = operation.get("operator")
-        txID = operation.get("txID")
-        print(label, data, ts, operator, txID, stxID)
-
-
 cli.add_command(create_cell)
 cli.add_command(connect_cell)
 cli.add_command(view_cell)
@@ -1684,9 +1122,6 @@ cli.add_command(restart_node)
 cli.add_command(stop_node)
 cli.add_command(check_node)
 cli.add_command(delete_node)
-cli.add_command(activate)
-cli.add_command(load)
-cli.add_command(sync)
 
 
 if __name__ == "__main__":

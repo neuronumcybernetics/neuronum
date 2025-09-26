@@ -1,17 +1,30 @@
 import aiohttp
-from typing import Optional, AsyncGenerator
-import ssl
+from typing import AsyncGenerator
 import websockets
 import json
 import asyncio
+import base64
+import os
+from pathlib import Path
+from websockets.exceptions import ConnectionClosed
+from cryptography.hazmat.primitives.asymmetric import ec
+from cryptography.hazmat.primitives import serialization, hashes
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+from cryptography.hazmat.primitives.kdf.hkdf import HKDF
+from cryptography.hazmat.backends import default_backend
+
 
 class Cell:
-    def __init__(self, host: str, password: str, network: str, synapse: str):
-        self.host = host
-        self.password = password
-        self.network = network
-        self.synapse = synapse
+    def __init__(self, private_key_path: str, public_key_path: str):
+        self.private_key_path = private_key_path
+        self.public_key_path = public_key_path
         self.queue = asyncio.Queue()
+        self.host = self._load_host()
+        self.network = self._load_network()
+        self.synapse = self._load_synapse()
+        self.password = self._load_password()
+        self._private_key = self._load_private_key()
+        self._public_key = self._load_public_key()
 
 
     def to_dict(self) -> dict:
@@ -21,186 +34,424 @@ class Cell:
             "synapse": self.synapse
         }
 
+    def _load_private_key(self):
+        try:
+            with open(self.private_key_path, "rb") as f:
+                private_key = serialization.load_pem_private_key(
+                    f.read(),
+                    password=None,
+                    backend=default_backend()
+                )
+                print("Private key loaded successfully.")
+                return private_key
+        except FileNotFoundError:
+            print(f"Private key file not found at {self.private_key_path}.")
+            return None
+        
+    def _load_host(self):
+        credentials_folder_path = Path.home() / ".neuronum"
+        env_path = credentials_folder_path / ".env"
 
-    def __repr__(self) -> str:
-        return f"Cell(host={self.host}, password={self.password}, network={self.network}, synapse={self.synapse})"
+        env_data = {}  
+
+        try:
+            with open(env_path, "r") as f:
+                for line in f:
+                    key, value = line.strip().split("=")
+                    env_data[key] = value
+
+            host = env_data.get("HOST", "")
+            return host
+        except FileNotFoundError:
+            print(f"Cell Host not found")
+            return None
+        
+
+    def _load_password(self):
+        credentials_folder_path = Path.home() / ".neuronum"
+        env_path = credentials_folder_path / ".env"
+
+        env_data = {}  
+
+        try:
+            with open(env_path, "r") as f:
+                for line in f:
+                    key, value = line.strip().split("=")
+                    env_data[key] = value
+
+            host = env_data.get("PASSWORD", "")
+            return host
+        except FileNotFoundError:
+            print(f"Cell Password not found")
+            return None
+        
+    def _load_synapse(self):
+        credentials_folder_path = Path.home() / ".neuronum"
+        env_path = credentials_folder_path / ".env"
+
+        env_data = {}  
+
+        try:
+            with open(env_path, "r") as f:
+                for line in f:
+                    key, value = line.strip().split("=")
+                    env_data[key] = value
+
+            host = env_data.get("SYNAPSE", "")
+            return host
+        except FileNotFoundError:
+            print(f"Cell Synapse not found")
+            return None
+        
+    def _load_network(self):
+        credentials_folder_path = Path.home() / ".neuronum"
+        env_path = credentials_folder_path / ".env"
+
+        env_data = {}  
+
+        try:
+            with open(env_path, "r") as f:
+                for line in f:
+                    key, value = line.strip().split("=")
+                    env_data[key] = value
+
+            host = env_data.get("NETWORK", "")
+            return host
+        except FileNotFoundError:
+            print(f"Cell Network not found")
+            return None
+
+
+    def _load_public_key(self):
+        try:
+            with open(self.public_key_path, "rb") as f:
+                public_key = serialization.load_pem_public_key(
+                    f.read(),
+                    backend=default_backend()
+                )
+                print("Public key loaded successfully.")
+                print(public_key)
+                return public_key
+        except FileNotFoundError:
+            print(f"Public key file not found at {self.public_key_path}. Deriving from private key.")
+            if self._private_key:
+                return self._private_key.public_key()
+            else:
+                return None
+
+
+    def get_public_key_jwk(self):
+        public_key = self._load_public_key()
+        if not public_key:
+            print("Public key not loaded. Cannot generate JWK.")
+            return None
+        
+        print("Public key loaded successfully.")
+        public_numbers = public_key.public_numbers()
+        
+        x_bytes = public_numbers.x.to_bytes((public_numbers.x.bit_length() + 7) // 8, 'big')
+        y_bytes = public_numbers.y.to_bytes((public_numbers.y.bit_length() + 7) // 8, 'big')
+        
+        return {
+            "kty": "EC",
+            "crv": "P-256",
+            "x": base64.urlsafe_b64encode(x_bytes).rstrip(b'=').decode('utf-8'),
+            "y": base64.urlsafe_b64encode(y_bytes).rstrip(b'=').decode('utf-8')
+        }
     
+  
+    def _decrypt_with_ecdh_aesgcm(self, ephemeral_public_key_bytes, nonce, ciphertext):
+        try:
+            ephemeral_public_key = ec.EllipticCurvePublicKey.from_encoded_point(
+                ec.SECP256R1(), ephemeral_public_key_bytes
+            )
 
-    async def stream(self, label: str, data: dict, stx: Optional[str] = None, retry_delay: int = 3):
-        context = ssl.create_default_context()
-        context.check_hostname = True
-        context.verify_mode = ssl.CERT_REQUIRED
+            shared_secret = self._private_key.exchange(ec.ECDH(), ephemeral_public_key)
+            
+            derived_key = HKDF(
+                algorithm=hashes.SHA256(),
+                length=32,
+                salt=None,
+                info=b'handshake data'
+            ).derive(shared_secret)
 
-        while True:
-            try:
-                reader, writer = await asyncio.open_connection(self.network, 55555, ssl=context, server_hostname=self.network)
-
-                credentials = f"{self.host}\n{self.password}\n{self.synapse}\n{stx}\n"
-                writer.write(credentials.encode("utf-8"))
-                await writer.drain()
-
-                response = await reader.read(1024)
-                response_text = response.decode("utf-8").strip()
-
-                if "Authentication successful" not in response_text:
-                    print("Authentication failed, retrying...")
-                    writer.close()
-                    await writer.wait_closed()
-                    await asyncio.sleep(retry_delay)
-                    continue
-
-                stream_payload = {
-                    "label": label,
-                    "data": data,
-                }
-
-                writer.write(json.dumps(stream_payload).encode("utf-8"))
-                await writer.drain()
-
-                response = await reader.read(1024)
-                response_text = response.decode("utf-8").strip()
-
-                if response_text == "Sent":
-                    print(f"Success: {response_text} - {stream_payload}")
-                    break
-                else:
-                    print(f"Error sending: {stream_payload}")
-
-            except (ssl.SSLError, ConnectionError) as e:
-                print(f"Connection error: {e}, retrying...")
-                await asyncio.sleep(retry_delay)
-
-            except Exception as e:
-                print(f"Unexpected error: {e}, retrying...")
-                await asyncio.sleep(retry_delay)
-
-            finally:
-                if 'writer' in locals():
-                    writer.close()
-                    await writer.wait_closed()
+            aesgcm = AESGCM(derived_key)
+            plaintext_bytes = aesgcm.decrypt(nonce, ciphertext, None)
+            return json.loads(plaintext_bytes.decode())
+            
+        except Exception as e:
+            print(f"Decryption failed: {e}")
+            return None
 
 
-    async def sync(self, stx: Optional[str] = None) -> AsyncGenerator[str, None]:
-        full_url = f"wss://{self.network}/sync/{stx}"
+    async def sync(self, node_id: str) -> AsyncGenerator[str, None]:
+        full_url = f"wss://{self.network}/sync/{node_id}"
         auth_payload = {
             "host": self.host,
             "password": self.password,
             "synapse": self.synapse,
         }
-
         while True:
             try:
                 async with websockets.connect(full_url) as ws:
                     await ws.send(json.dumps(auth_payload))
                     print("Connected to WebSocket.")
-
                     while True:
                         try:
                             raw_operation = await ws.recv()
                             operation = json.loads(raw_operation)
-                            yield operation
+                            
+                            if "encrypted" in operation.get("data", {}):
+                                encrypted_data = operation["data"]["encrypted"]
+                                
+                                ephemeral_public_key_b64 = encrypted_data["ephemeralPublicKey"]
+                                ephemeral_public_key_b64 += '=' * ((4 - len(ephemeral_public_key_b64) % 4) % 4)
+                                ephemeral_public_key_bytes = base64.urlsafe_b64decode(ephemeral_public_key_b64)
 
+                                nonce_b64 = encrypted_data["nonce"]
+                                nonce_b64 += '=' * ((4 - len(nonce_b64) % 4) % 4)
+                                nonce = base64.urlsafe_b64decode(nonce_b64)
+                                
+                                ciphertext_b64 = encrypted_data["ciphertext"]
+                                ciphertext_b64 += '=' * ((4 - len(ciphertext_b64) % 4) % 4)
+                                ciphertext = base64.urlsafe_b64decode(ciphertext_b64)
+                                
+                                decrypted_data = self._decrypt_with_ecdh_aesgcm(
+                                    ephemeral_public_key_bytes, nonce, ciphertext
+                                )
+                                
+                                if decrypted_data:
+                                    operation["data"].update(decrypted_data)
+                                    operation["data"].pop("encrypted")
+                                    yield operation
+                                else:
+                                    print("Failed to decrypt incoming data. Skipping...")
+                            else:
+                                yield operation
                         except asyncio.TimeoutError:
                             print("No data received. Continuing...")
-                        except websockets.exceptions.ConnectionClosedError as e:
-                            print(f"Connection closed with error: {e}. Reconnecting...")
+                        except ConnectionClosed as e:
+                            if e.code == 1000:
+                                print(f"WebSocket closed cleanly (code 1000). Reconnecting...")
+                            else:
+                                print(f"Connection closed with error code {e.code}: {e.reason}. Reconnecting...")
                             break
                         except Exception as e:
                             print(f"Unexpected error in recv loop: {e}")
                             break
-
             except websockets.exceptions.WebSocketException as e:
                 print(f"WebSocket error occurred: {e}. Retrying in 5 seconds...")
             except Exception as e:
                 print(f"General error occurred: {e}. Retrying in 5 seconds...")
-
             await asyncio.sleep(3)
-           
 
-    async def create_tx(self, descr: str, key_values: dict, stx: str, label: str, partners: list):
-        url = f"https://{self.network}/api/create_tx"
 
-        TX = {
-            "descr": descr,
-            "key_values": key_values,
-            "stx": stx,
-            "label": label,
-            "partners": partners,
+    async def list_nodes(self):
+        full_url = f"https://{self.network}/api/list_nodes"
+        list_nodes_payload = {
             "cell": self.to_dict()
         }
-
         async with aiohttp.ClientSession() as session:
             try:
-                async with session.post(url, json=TX) as response:
+                async with session.post(full_url, json=list_nodes_payload) as response:
                     response.raise_for_status()
                     data = await response.json()
-                    return data["txID"]
-
+                    return data.get("Nodes", [])
             except aiohttp.ClientError as e:
                 print(f"Error sending request: {e}")
             except Exception as e:
                 print(f"Unexpected error: {e}")
 
 
-    async def delete_tx(self, txID: str):
-        url = f"https://{self.network}/api/delete_tx"
+    async def activate_tx(self, node_id: str, data: dict):
+        url = f"https://{self.network}/api/activate_tx/{node_id}"
+        
+        nodes = await self.list_nodes()
 
-        TX = {
-            "txID": txID,
-            "cell": self.to_dict()
-        }
+        target_public_key_pem = None
+        target_node = node_id
 
-        async with aiohttp.ClientSession() as session:
-            try:
+        for node in nodes:
+            node_ids = node.get('config', {}).get('data_gateways', [])
+            for node_id_entry in node_ids:
+                if node_id_entry.get('node_id') == target_node:
+                    target_public_key_pem = node.get('config', {}).get('public_key')
+                    break
+            if target_public_key_pem:
+                break
+
+        if not target_public_key_pem:
+            print(f"Target node not found or public key is missing.")
+            return None
+
+        try:
+            print(target_public_key_pem)
+            partner_public_key_jwk = self._load_public_key_from_pem(target_public_key_pem)
+            if not partner_public_key_jwk:
+                print("Failed to convert public key to JWK format. Aborting.")
+                return None
+            
+            partner_public_key = self._load_public_key_from_jwk(partner_public_key_jwk)
+            if not partner_public_key:
+                print("Failed to load partner's public key. Aborting.")
+                return None
+
+            data_to_encrypt = data.copy()
+            data_to_encrypt["publicKey"] = self.get_public_key_jwk()
+
+            encrypted_payload = self._encrypt_with_ecdh_aesgcm(partner_public_key, data_to_encrypt)
+
+            TX = {
+                "data": {
+                "encrypted": encrypted_payload
+                },
+                "cell": self.to_dict()
+            }
+
+            async with aiohttp.ClientSession() as session:
                 async with session.post(url, json=TX) as response:
+                    if response.status == 504:
+                        print(f"Gateway Timeout: No response from transmitter for txID: {node_id}")
+                        return None
+                    
                     response.raise_for_status()
-                    data = await response.json()
-                    print(f"Response from Neuronum: {data}")
-                    return data
+                    
+                    response_data = await response.json()
+                    
+                    if "response" in response_data:
+                        inner_response = response_data["response"]
+                        
+                        if "ciphertext" in inner_response:
+                            ephemeral_public_key_b64 = inner_response["ephemeralPublicKey"]
+                            ephemeral_public_key_b64 += '=' * ((4 - len(ephemeral_public_key_b64) % 4) % 4)
+                            ephemeral_public_key_bytes = base64.urlsafe_b64decode(ephemeral_public_key_b64)
 
-            except aiohttp.ClientError as e:
-                print(f"Error sending request: {e}")
-            except Exception as e:
-                print(f"Unexpected error: {e}")
+                            nonce_b64 = inner_response["nonce"]
+                            nonce_b64 += '=' * ((4 - len(nonce_b64) % 4) % 4)
+                            nonce = base64.urlsafe_b64decode(nonce_b64)
+                            
+                            ciphertext_b64 = inner_response["ciphertext"]
+                            ciphertext_b64 += '=' * ((4 - len(ciphertext_b64) % 4) % 4)
+                            ciphertext = base64.urlsafe_b64decode(ciphertext_b64)
+                            
+                            decrypted_response = self._decrypt_with_ecdh_aesgcm(
+                                ephemeral_public_key_bytes, nonce, ciphertext
+                            )
+                            
+                            if decrypted_response:
+                                return decrypted_response
+                            else:
+                                print("Failed to decrypt server response.")
+                                return None
+                        else:
+                            print("Server response was not encrypted as expected.")
+                            return inner_response
+
+                    else:
+                        print("Unexpected response format.")
+                        return response_data
+
+        except aiohttp.ClientResponseError as e:
+            print(f"HTTP Error: {e.status}, Message: {e.message}, URL: {e.request_info.url}")
+            return None
+
+        except aiohttp.ClientError as e:
+            print(f"Connection Error: {e}")
+            return None
+
+        except Exception as e:
+            print(f"Unexpected error: {e}")
+            return None
+            
+
+    def _load_public_key_from_jwk(self, jwk):
+        try:
+            print(jwk)
+            x = base64.urlsafe_b64decode(jwk['x'] + '==')
+            y = base64.urlsafe_b64decode(jwk['y'] + '==')
+            public_numbers = ec.EllipticCurvePublicNumbers(
+                int.from_bytes(x, 'big'),
+                int.from_bytes(y, 'big'),
+                ec.SECP256R1()
+            )
+            return public_numbers.public_key(default_backend())
+        except (KeyError, ValueError, TypeError) as e:
+            print(f"Error loading public key from JWK string: {e}")
+            return None
+        
+
+    def _load_public_key_from_pem(self, pem_string: str):
+        try:
+            print(pem_string)
+            corrected_pem_string = pem_string.replace("-----BEGINPUBLICKEY-----", "-----BEGIN PUBLIC KEY-----")
+            corrected_pem_string = corrected_pem_string.replace("-----ENDPUBLICKEY-----", "-----END PUBLIC KEY-----")
+
+            public_key = serialization.load_pem_public_key(
+                corrected_pem_string.encode(),
+                backend=default_backend()
+            )
+
+            public_numbers = public_key.public_numbers()
+            x_bytes = public_numbers.x.to_bytes((public_numbers.x.bit_length() + 7) // 8, 'big')
+            y_bytes = public_numbers.y.to_bytes((public_numbers.y.bit_length() + 7) // 8, 'big')
+            return {
+                "kty": "EC",
+                "crv": "P-256",
+                "x": base64.urlsafe_b64encode(x_bytes).rstrip(b'=').decode('utf-8'),
+                "y": base64.urlsafe_b64encode(y_bytes).rstrip(b'=').decode('utf-8')
+            }
+        except Exception as e:
+            print(f"Error loading public key from PEM string: {e}")
+            return None
+
+
+    def _encrypt_with_ecdh_aesgcm(self, public_key, plaintext_dict):
+        ephemeral_private = ec.generate_private_key(ec.SECP256R1())
+        ephemeral_public = ephemeral_private.public_key()
+        shared_secret = ephemeral_private.exchange(ec.ECDH(), public_key)
+        derived_key = HKDF(
+            algorithm=hashes.SHA256(),
+            length=32,
+            salt=None,
+            info=b'handshake data'
+        ).derive(shared_secret)
+        aesgcm = AESGCM(derived_key)
+        nonce = os.urandom(12)
+        plaintext_bytes = json.dumps(plaintext_dict).encode()
+        ciphertext = aesgcm.encrypt(nonce, plaintext_bytes, None)
+        ephemeral_public_bytes = ephemeral_public.public_bytes(
+            serialization.Encoding.X962,
+            serialization.PublicFormat.UncompressedPoint
+        )
+        return {
+            'ciphertext': base64.b64encode(ciphertext).decode(),
+            'nonce': base64.b64encode(nonce).decode(),
+            'ephemeralPublicKey': base64.b64encode(ephemeral_public_bytes).decode()
+        }
     
 
-    async def activate_tx(self, txID: str, data: dict):
-        url = f"https://{self.network}/api/activate_tx/{txID}"
-        TX = {
-            "data": data,
-            "cell": self.to_dict()
-        }
-
-        async with aiohttp.ClientSession() as session:
+    async def tx_response(self, transmitter_id: str, data: dict, client_public_key_str):
+        if isinstance(client_public_key_str, str):
             try:
-                async with session.post(url, json=TX) as response:
-                    response.raise_for_status()
-                    data = await response.json()
-                    if data.get("success") == True:
-                                if "json" in data.get("response"):
-                                    return data.get("response").get("json")
-                                elif "html" in data.get("response"):
-                                    return "Info: HTML response available. Please activate TX in browser."
-                                else:
-                                    return "Info: Response received but contains no usable content."
-                    else:
-                        print(data["success"], data["message"])
-
-            except aiohttp.ClientError as e:
-                print(f"Error sending request: {e}")
-            except Exception as e:
-                print(f"Unexpected error: {e}")
-
-
-    async def tx_response(self, txID: str, client: str, data: dict):
-        url = f"https://{self.network}/api/tx_response/{txID}"
-
+                client_public_key_jwk = json.loads(client_public_key_str)
+            except json.JSONDecodeError:
+                print("Failed to decode client public key from string. Aborting response.")
+                return
+        elif isinstance(client_public_key_str, dict):
+            client_public_key_jwk = client_public_key_str
+        else:
+            print("Invalid type for client public key. Expected str or dict. Aborting response.")
+            return
+        public_key = self._load_public_key_from_jwk(client_public_key_jwk)
+        if not public_key:
+            print("Failed to load public key. Aborting response.")
+            return
+        encrypted_payload = self._encrypt_with_ecdh_aesgcm(public_key, data)
+        url = f"https://{self.network}/api/tx_response/{transmitter_id}"
         tx_response = {
-            "client": client,
-            "data": data,
+            "data": encrypted_payload,
             "cell": self.to_dict()
         }
-
         async with aiohttp.ClientSession() as session:
             try:
                 for _ in range(2):
@@ -208,312 +459,9 @@ class Cell:
                         response.raise_for_status()
                         data = await response.json()
                 print(data["message"])
-
             except aiohttp.ClientError as e:
                 print(f"Error sending request: {e}")
             except Exception as e:
                 print(f"Unexpected error: {e}")
-
-
-    async def create_ctx(self, descr: str, partners: list):
-        url = f"https://{self.network}/api/create_ctx"
-
-        CTX = {
-            "descr": descr,
-            "partners": partners,
-            "cell": self.to_dict()
-        }
-
-        async with aiohttp.ClientSession() as session:
-            try:
-                async with session.post(url, json=CTX) as response:
-                    response.raise_for_status()
-                    data = await response.json()
-                    return data["ctxID"]
-
-            except aiohttp.ClientError as e:
-                print(f"Error sending request: {e}")
-            except Exception as e:
-                print(f"Unexpected error: {e}")
-
-
-    async def delete_ctx(self, ctxID: str):
-        url = f"https://{self.network}/api/delete_ctx"
-
-        CTX = {
-            "ctxID": ctxID,
-            "cell": self.to_dict()
-        }
-
-        async with aiohttp.ClientSession() as session:
-            try:
-                async with session.post(url, json=CTX) as response:
-                    response.raise_for_status()
-                    data = await response.json()
-                    print(f"Response from Neuronum: {data}")
-                    return data
-
-            except aiohttp.ClientError as e:
-                print(f"Error sending request: {e}")
-            except Exception as e:
-                print(f"Unexpected error: {e}")
-
-
-    async def create_stx(self, descr: str, partners: list):
-        url = f"https://{self.network}/api/create_stx"
-
-        STX = {
-            "descr": descr,
-            "partners": partners,
-            "cell": self.to_dict()
-        }
-
-        async with aiohttp.ClientSession() as session:
-            try:
-                async with session.post(url, json=STX) as response:
-                    response.raise_for_status()
-                    data = await response.json()
-                    return data["stxID"]
-
-            except aiohttp.ClientError as e:
-                print(f"Error sending request: {e}")
-            except Exception as e:
-                print(f"Unexpected error: {e}")
-
-
-    async def delete_stx(self, stxID: str):
-        url = f"https://{self.network}/api/delete_stx"
-
-        STX = {
-            "stxID": stxID,
-            "cell": self.to_dict()
-        }
-
-        async with aiohttp.ClientSession() as session:
-            try:
-                async with session.post(url, json=STX) as response:
-                    response.raise_for_status()
-                    data = await response.json()
-                    print(f"Response from Neuronum: {data}")
-                    return data
-
-            except aiohttp.ClientError as e:
-                print(f"Error sending request: {e}")
-            except Exception as e:
-                print(f"Unexpected error: {e}")
-
-
-    async def list_cells(self):
-        full_url = f"https://{self.network}/api/list_cells"
-
-        list_cells_payload = {
-            "cell": self.to_dict()
-        }
-
-        async with aiohttp.ClientSession() as session:
-            try:
-                async with session.get(full_url, json=list_cells_payload) as response:
-                    response.raise_for_status()
-                    data = await response.json()
-                    return data.get("Cells", [])
-
-            except aiohttp.ClientError as e:
-                print(f"Error sending request: {e}")
-            except Exception as e:
-                print(f"Unexpected error: {e}")
-
-
-    async def list_tx(self):
-        full_url = f"https://{self.network}/api/list_tx"
-
-        list_tx_payload = {
-            "cell": self.to_dict()
-        }
-
-        async with aiohttp.ClientSession() as session:
-            try:
-                async with session.get(full_url, json=list_tx_payload) as response:
-                    response.raise_for_status()
-                    data = await response.json()
-                    return data.get("Transmitters", [])
-
-            except aiohttp.ClientError as e:
-                print(f"Error sending request: {e}")
-            except Exception as e:
-                print(f"Unexpected error: {e}")
-
-
-    async def list_ctx(self):
-        full_url = f"https://{self.network}/api/list_ctx"
-
-        list_ctx_payload = {
-            "cell": self.to_dict()
-        }
-
-        async with aiohttp.ClientSession() as session:
-            try:
-                async with session.get(full_url, json=list_ctx_payload) as response:
-                    response.raise_for_status()
-                    data = await response.json()
-                    return data.get("Circuits", [])
-
-            except aiohttp.ClientError as e:
-                print(f"Error sending request: {e}")
-            except Exception as e:
-                print(f"Unexpected error: {e}")
-
-
-    async def list_stx(self):
-        full_url = f"https://{self.network}/api/list_stx"
-
-        list_stx_payload = {
-            "cell": self.to_dict()
-        }
-
-        async with aiohttp.ClientSession() as session:
-            try:
-                async with session.get(full_url, json=list_stx_payload) as response:
-                    response.raise_for_status()
-                    data = await response.json()
-                    return data.get("Streams", [])
-
-            except aiohttp.ClientError as e:
-                print(f"Error sending request: {e}")
-            except Exception as e:
-                print(f"Unexpected error: {e}")
-
-
-    async def list_nodes(self):
-        full_url = f"https://{self.network}/api/list_nodes"
-
-        list_nodes_payload = {
-            "cell": self.to_dict()
-        }
-
-        async with aiohttp.ClientSession() as session:
-            try:
-                async with session.get(full_url, json=list_nodes_payload) as response:
-                    response.raise_for_status()
-                    data = await response.json()
-                    return data.get("Nodes", [])
-
-            except aiohttp.ClientError as e:
-                print(f"Error sending request: {e}")
-            except Exception as e:
-                print(f"Unexpected error: {e}")
-
-        
-    async def store(self, label: str, data: dict, ctx: Optional[str] = None):
-        full_url = f"https://{self.network}/api/store_in_ctx/{ctx}" if ctx else f"https://{self.network}/api/store"
-
-        store_payload = {
-            "label": label,
-            "data": data,
-            "cell": self.to_dict()
-        }
-
-        async with aiohttp.ClientSession() as session:
-            try:
-                async with session.post(full_url, json=store_payload) as response:
-                    response.raise_for_status()
-                    data = await response.json()
-                    print(f"Response from Neuronum: {data}")
-                    return data
-
-            except aiohttp.ClientError as e:
-                print(f"Error sending request: {e}")
-            except Exception as e:
-                print(f"Unexpected error: {e}")
-
-
-    async def load(self, label: str, ctx: Optional[str] = None):
-        full_url = f"https://{self.network}/api/load_from_ctx/{ctx}" if ctx else f"https://{self.network}/api/load"
-
-        load_payload = {
-            "label": label,
-            "cell": self.to_dict()
-        }
-
-        async with aiohttp.ClientSession() as session:
-            try:
-                async with session.post(full_url, json=load_payload) as response:
-                    response.raise_for_status()
-                    data = await response.json()
-                    return data
-
-            except aiohttp.ClientError as e:
-                print(f"Error sending request: {e}")
-            except Exception as e:
-                print(f"Unexpected error: {e}")
-
-
-    async def delete(self, label: str, ctx: Optional[str] = None):
-        full_url = f"https://{self.network}/api/delete_from_ctx/{ctx}" if ctx else f"https://{self.network}/api/delete"
-
-        delete_payload = {
-            "label": label,
-            "cell": self.to_dict()
-        }
-
-        async with aiohttp.ClientSession() as session:
-            try:
-                async with session.post(full_url, json=delete_payload) as response:
-                    response.raise_for_status()
-                    data = await response.json()
-                    print(f"Response from Neuronum: {data}")
-                    return data
-
-            except aiohttp.ClientError as e:
-                print(f"Error sending request: {e}")
-            except Exception as e:
-                print(f"Unexpected error: {e}")
-
-
-    async def clear(self, ctx: Optional[str] = None):
-        full_url = f"https://{self.network}/api/clear_ctx/{ctx}" if ctx else f"https://{self.network}/api/clear"
-
-        clear_payload = {
-            "cell": self.to_dict()
-        }
-
-        async with aiohttp.ClientSession() as session:
-            try:
-                async with session.post(full_url, json=clear_payload) as response:
-                    response.raise_for_status()
-                    data = await response.json()
-                    print(f"Response from Neuronum: {data}")
-                    return data
-
-            except aiohttp.ClientError as e:
-                print(f"Error sending request: {e}")
-            except Exception as e:
-                print(f"Unexpected error: {e}")
-
-
-    async def notify(self, receiver: str, title: str, message: str):
-        full_url = f"https://{self.network}/api/notify"
-
-        notify_payload = {
-            "receiver": receiver,
-            "notification": {
-                "title": title,
-                "message": message
-            },
-            "cell": self.to_dict()
-        }
-
-        async with aiohttp.ClientSession() as session:
-            try:
-                async with session.post(full_url, json=notify_payload) as response:
-                    response.raise_for_status()
-                    data = await response.json()
-                    print(f"Notification sent successfully: {data}")
-                    return data
-
-            except aiohttp.ClientError as e:
-                print(f"HTTP error while sending notification: {e}")
-            except Exception as e:
-                print(f"Unexpected error: {e}")
-
-
+           
 __all__ = ['Cell']
