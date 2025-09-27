@@ -35,6 +35,7 @@ class Node:
             "synapse": self.synapse
         }
 
+
     def _load_private_key(self):
         try:
             with open(self.private_key_path, "rb") as f:
@@ -43,12 +44,12 @@ class Node:
                     password=None,
                     backend=default_backend()
                 )
-                print("Private key loaded successfully.")
                 return private_key
         except FileNotFoundError:
             print(f"Private key file not found at {self.private_key_path}.")
             return None
         
+
     def _load_host(self):
         credentials_folder_path = Path.home() / ".neuronum"
         env_path = credentials_folder_path / ".env"
@@ -130,8 +131,6 @@ class Node:
                     f.read(),
                     backend=default_backend()
                 )
-                print("Public key loaded successfully.")
-                print(public_key)
                 return public_key
         except FileNotFoundError:
             print(f"Public key file not found at {self.public_key_path}. Deriving from private key.")
@@ -147,7 +146,6 @@ class Node:
             print("Public key not loaded. Cannot generate JWK.")
             return None
         
-        print("Public key loaded successfully.")
         public_numbers = public_key.public_numbers()
         
         x_bytes = public_numbers.x.to_bytes((public_numbers.x.bit_length() + 7) // 8, 'big')
@@ -196,7 +194,7 @@ class Node:
             try:
                 async with websockets.connect(full_url) as ws:
                     await ws.send(json.dumps(auth_payload))
-                    print("Connected to WebSocket.")
+                    print("Node syncing...")
                     while True:
                         try:
                             raw_operation = await ws.recv()

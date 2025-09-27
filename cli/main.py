@@ -534,7 +534,8 @@ f"""{{
   "app_metadata": {{
     "name": "{descr}",
     "version": "1.0.0",
-    "author": "{host}"
+    "author": "{host}",
+    "audience": "private"
   }},
   "data_gateways": [
     {{
@@ -815,107 +816,72 @@ async def async_stop_node():
 @click.command()
 def update_node():
     click.echo("Update your Node")
-    credentials_folder_path = Path.home() / ".neuronum"
-    env_path = credentials_folder_path / ".env"
-    env_data = {}
-
     try:
+        env_path = Path.home() / ".neuronum" / ".env"
+        env_data = {}
         with open(env_path, "r") as f:
             for line in f:
-                key, value = line.strip().split("=")
-                env_data[key] = value
+                if "=" in line:
+                    key, value = line.strip().split("=", 1)
+                    env_data[key] = value
 
         host = env_data.get("HOST", "")
 
-    except FileNotFoundError:
-        click.echo("Error: .env with credentials not found")
+        with open("config.json", "r") as f:
+            config_data = json.load(f)
+
+        audience = config_data.get("app_metadata", {}).get("audience", "")
+        descr = config_data.get("app_metadata", {}).get("name", "")
+
+        if host.startswith("CMTY_") and audience != "private":
+            raise click.ClickException(
+                'Community Cells can only create private Nodes. Set audience to "private".'
+            )
+        if descr and len(descr) > 25:
+            raise click.ClickException(
+                'Description too long. Max 25 characters allowed.'
+            )
+
+    except FileNotFoundError as e:
+        click.echo(f"Error: File not found - {e.filename}")
+        return
+    except click.ClickException as e:
+        click.echo(e.format_message())
         return
     except Exception as e:
-        click.echo(f"Error reading .env file: {e}")
+        click.echo(f"Error reading files: {e}")
         return
-    
-    if host.startswith("CMTY_"):
-        node_type = questionary.select(
-            "Community Cells can only create private Nodes",
-            choices=["private"]
-        ).ask()
-    else:
-        node_type = questionary.select(
-            "Who can view your Node?:",
-            choices=["public", "private", "partners"]
-        ).ask()
-    partners = "None"
-    if node_type == "partners":
-        prompt_msg = (
-            "Enter the list of partners who can view this Node.\n"
-            "Format: partner::cell, partner::cell, partner::cell\n"
-            "Press Enter to leave the list unchanged"
-        )
-        partners = click.prompt(
-            prompt_msg,
-            default="None",
-            show_default=False
-        ).strip()
-    descr = click.prompt(
-        "Update Node description: Type up to 25 characters, or press Enter to leave it unchanged",
-        default="None",
-        show_default=False
-    ).strip()
-    if descr and len(descr) > 25:
-        click.echo("Description too long. Max 25 characters allowed.")
-        return
-    asyncio.run(async_update_node(node_type, descr, partners))
 
-async def async_update_node(node_type: str, descr: str, partners:str) -> None:
-    credentials_folder_path = Path.home() / ".neuronum"
-    env_path = credentials_folder_path / ".env"
-    env_data = {}
+    asyncio.run(async_update_node(env_data, config_data, audience, descr))
 
+
+async def async_update_node(env_data, config_data, audience: str, descr: str):
     try:
-        with open(env_path, "r") as f:
-            for line in f:
-                key, value = line.strip().split("=")
-                env_data[key] = value
-
         host = env_data.get("HOST", "")
         password = env_data.get("PASSWORD", "")
         network = env_data.get("NETWORK", "")
         synapse = env_data.get("SYNAPSE", "")
 
-        with open('config.json', 'r') as f:
-            data = json.load(f)
+        node_id = config_data.get("data_gateways", [{}])[0].get("node_id", "")
 
-        nodeID = data['data_gateways'][0]['node_id']
-
-    except FileNotFoundError:
-        click.echo("Error: .env with credentials not found")
-        return
-    except Exception as e:
-        click.echo(f"Error reading .env file: {e}")
-        return
-
-    try:
         with open("config.json", "r") as f:
-            config_file = f.read()
+            config_file_content = f.read()
 
     except FileNotFoundError:
-        click.echo("Error: Config File not found")
+        click.echo("Error: config.json or .env not found")
         return
     except Exception as e:
-        click.echo(f"Error reading Config file: {e}")
+        click.echo(f"Error reading files: {e}")
         return
-    
-    if node_type == "partners":
-        node_type = partners
 
     url = f"https://{network}/api/update_node"
     node = {
-        "nodeID": nodeID,
+        "nodeID": node_id,
         "host": host,
         "password": password,
         "synapse": synapse,
-        "node_type": node_type,
-        "config_file": config_file,
+        "node_type": audience,
+        "config_file": config_file_content,
         "descr": descr,
     }
 
@@ -924,120 +890,73 @@ async def async_update_node(node_type: str, descr: str, partners:str) -> None:
             async with session.post(url, json=node) as response:
                 response.raise_for_status()
                 data = await response.json()
-                nodeID = data["nodeID"]
+                updated_node_id = data.get("nodeID", node_id)
+                click.echo(f"Neuronum Node '{updated_node_id}' updated!")
         except aiohttp.ClientError as e:
             click.echo(f"Error sending request: {e}")
-            return
 
-    if node_type == "public":
-        click.echo(f"Neuronum Node '{nodeID}' updated!")
-    else:
-        click.echo(f"Neuronum Node '{nodeID}' updated!")
 
 
 def update_node_at_start():
     click.echo("Update your Node")
-    credentials_folder_path = Path.home() / ".neuronum"
-    env_path = credentials_folder_path / ".env"
-    env_data = {}
-
     try:
+        env_path = Path.home() / ".neuronum" / ".env"
+        env_data = {}
         with open(env_path, "r") as f:
             for line in f:
-                key, value = line.strip().split("=")
-                env_data[key] = value
+                if "=" in line:
+                    key, value = line.strip().split("=", 1)
+                    env_data[key] = value
+
+        with open("config.json", "r") as f:
+            config_data = json.load(f)
 
         host = env_data.get("HOST", "")
+        audience = config_data.get("app_metadata", {}).get("audience", "")
+        descr = config_data.get("app_metadata", {}).get("name", "")
 
-    except FileNotFoundError:
-        click.echo("Error: .env with credentials not found")
-        return
+        if host.startswith("CMTY_") and audience != "private":
+            raise click.ClickException(
+                'Community Cells can only start private Nodes. Node starting "privately".'
+            )
+        if descr and len(descr) > 25:
+            raise click.ClickException(
+                'Description too long. Max 25 characters allowed.'
+            )
+
+        asyncio.run(_async_update_node_at_start(env_data, config_data, audience, descr))
+
+    except FileNotFoundError as e:
+        click.echo(f"Error: File not found - {e.filename}")
+    except click.ClickException as e:
+        click.echo(e.format_message())
     except Exception as e:
-        click.echo(f"Error reading .env file: {e}")
-        return
-    
-    if host.startswith("CMTY_"):
-        node_type = questionary.select(
-            "Community Cells can only create private Nodes",
-            choices=["private"]
-        ).ask()
-    else:
-        node_type = questionary.select(
-            "Who can view your Node?:",
-            choices=["public", "private", "partners"]
-        ).ask()
-    partners = "None"
-    if node_type == "partners":
-        prompt_msg = (
-            "Enter the list of partners who can view this Node.\n"
-            "Format: partner::cell, partner::cell, partner::cell\n"
-            "Press Enter to leave the list unchanged"
-        )
-        partners = click.prompt(
-            prompt_msg,
-            default="None",
-            show_default=False
-        ).strip()
-    descr = click.prompt(
-        "Update Node description: Type up to 25 characters, or press Enter to leave it unchanged",
-        default="None",
-        show_default=False
-    ).strip()
-    if descr and len(descr) > 25:
-        click.echo("Description too long. Max 25 characters allowed.")
-        return
-    asyncio.run(async_update_node_at_start(node_type, descr, partners))
+        click.echo(f"Unexpected error: {e}")
 
-async def async_update_node_at_start(node_type: str, descr: str, partners:str) -> None:
-    credentials_folder_path = Path.home() / ".neuronum"
-    env_path = credentials_folder_path / ".env"
-    env_data = {}
 
-    try:
-        with open(env_path, "r") as f:
-            for line in f:
-                key, value = line.strip().split("=")
-                env_data[key] = value
+async def _async_update_node_at_start(env_data, config_data, audience, descr):
+    host = env_data.get("HOST", "")
+    password = env_data.get("PASSWORD", "")
+    network = env_data.get("NETWORK", "")
+    synapse = env_data.get("SYNAPSE", "")
 
-        host = env_data.get("HOST", "")
-        password = env_data.get("PASSWORD", "")
-        network = env_data.get("NETWORK", "")
-        synapse = env_data.get("SYNAPSE", "")
-
-        with open('config.json', 'r') as f:
-            data = json.load(f)
-
-        nodeID = data['data_gateways'][0]['node_id']
-
-    except FileNotFoundError:
-        click.echo("Error: .env with credentials not found")
-        return
-    except Exception as e:
-        click.echo(f"Error reading .env file: {e}")
-        return
+    node_id = config_data.get("data_gateways", [{}])[0].get("node_id", "")
 
     try:
         with open("config.json", "r") as f:
-            config_file = f.read()
-
-    except FileNotFoundError:
-        click.echo("Error: File not found")
-        return
+            config_file_content = f.read()
     except Exception as e:
-        click.echo(f"Error reading file: {e}")
+        click.echo(f"Error reading config.json content: {e}")
         return
-    
-    if node_type == "partners":
-        node_type = partners
 
     url = f"https://{network}/api/update_node"
     node = {
-        "nodeID": nodeID,
+        "nodeID": node_id,
         "host": host,
         "password": password,
         "synapse": synapse,
-        "node_type": node_type,
-        "config_file": config_file,
+        "node_type": audience,
+        "config_file": config_file_content,
         "descr": descr,
     }
 
@@ -1046,15 +965,10 @@ async def async_update_node_at_start(node_type: str, descr: str, partners:str) -
             async with session.post(url, json=node) as response:
                 response.raise_for_status()
                 data = await response.json()
-                nodeID = data["nodeID"]
+                updated_node_id = data.get("nodeID", node_id)
+                click.echo(f"Neuronum Node '{updated_node_id}' updated!")
         except aiohttp.ClientError as e:
             click.echo(f"Error sending request: {e}")
-            return
-
-    if node_type == "public":
-        click.echo(f"Neuronum Node '{nodeID}' updated!")
-    else:
-        click.echo(f"Neuronum Node '{nodeID}' updated!")
 
 
 @click.command()
