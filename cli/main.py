@@ -535,7 +535,8 @@ f"""{{
     "name": "{descr}",
     "version": "1.0.0",
     "author": "{host}",
-    "audience": "private"
+    "audience": "private",
+    "logo": "https://neuronum.net/static/logo.png"
   }},
   "data_gateways": [
     {{
