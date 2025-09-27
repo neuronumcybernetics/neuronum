@@ -364,7 +364,7 @@ async def main():
 
         response_data = {{}}
               
-        if action == "ping_node":
+        if action == "ping_node" or action == "start_app":
         
             html_content = template.render(client=client, ts=ts, data=action, transmitter_id=transmitter_id)
 
@@ -516,7 +516,6 @@ asyncio.run(main())
                 data: {{ "action": "ping_node" }},
                 nodePublicKey: '{pem_public_oneline}',
             }};
-
             if (window.parent) {{
                 window.parent.postMessage(messagePayload, '*');
             }}
@@ -536,19 +535,9 @@ f"""{{
     "version": "1.0.0",
     "author": "{host}",
     "audience": "private",
-    "logo": "https://neuronum.net/static/logo.png"
+    "logo": "https://neuronum.net/static/logo.png",
+    "node_id": "{node_id}"
   }},
-  "data_gateways": [
-    {{
-      "node_id": "{node_id}",
-      "actions": [
-        {{
-          "action": "ping_node",
-          "info": "Ping Node"
-        }}
-      ]
-    }}
-  ],
   "legals": {{
     "terms": "https://url_to_your/terms",
     "privacy_policy": "https://url_to_your/privacy_policy"
@@ -635,7 +624,7 @@ def check_node():
         with open('config.json', 'r') as f:
             data = json.load(f)
 
-        nodeID = data['data_gateways'][0]['node_id']
+        nodeID = data['app_metadata']['node_id']
 
     except FileNotFoundError:
         click.echo("Error: .env with credentials not found")
@@ -699,7 +688,7 @@ def restart_node(d):
         with open('config.json', 'r') as f:
             data = json.load(f)
 
-        nodeID = data['data_gateways'][0]['node_id']
+        nodeID = data['app_metadata']['node_id']
 
     except FileNotFoundError:
         print("Error: .env with credentials not found")
@@ -781,7 +770,7 @@ async def async_stop_node():
         with open('config.json', 'r') as f:
             data = json.load(f)
 
-        nodeID = data['data_gateways'][0]['node_id']
+        nodeID = data['app_metadata']['node_id']
 
     except FileNotFoundError:
         print("Error: .env with credentials not found")
@@ -863,7 +852,7 @@ async def async_update_node(env_data, config_data, audience: str, descr: str):
         network = env_data.get("NETWORK", "")
         synapse = env_data.get("SYNAPSE", "")
 
-        node_id = config_data.get("data_gateways", [{}])[0].get("node_id", "")
+        node_id = config_data.get("app_metadata", [{}]).get("node_id", "")
 
         with open("config.json", "r") as f:
             config_file_content = f.read()
@@ -941,7 +930,7 @@ async def _async_update_node_at_start(env_data, config_data, audience, descr):
     network = env_data.get("NETWORK", "")
     synapse = env_data.get("SYNAPSE", "")
 
-    node_id = config_data.get("data_gateways", [{}])[0].get("node_id", "")
+    node_id = config_data.get("app_metadata", [{}]).get("node_id", "")
 
     try:
         with open("config.json", "r") as f:
@@ -995,7 +984,7 @@ async def async_delete_node():
         with open('config.json', 'r') as f:
             data = json.load(f)
 
-        nodeID = data['data_gateways'][0]['node_id']
+        nodeID = data['app_metadata']['node_id']
 
     except FileNotFoundError:
         click.echo("Error: .env with credentials not found")
