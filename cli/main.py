@@ -359,7 +359,7 @@ async def main():
         data = transmitter.get("data")
         transmitter_id = transmitter.get("transmitter_id")   
         client = transmitter.get("operator")
-        client_public_key = data.get("publicKey")  
+        client_public_key = data.get("publicKey", {{}})  
         action = data.get("action")
 
         response_data = {{}}
@@ -373,7 +373,10 @@ async def main():
                 "html": html_content
             }}
             
-            await node.tx_response(transmitter_id, response_data, client_public_key)
+            if not client_public_key:
+                await node.tx_response(transmitter_id, response_data, encrypted=False)
+            else:
+                await node.tx_response(transmitter_id, response_data, client_public_key)
 
 asyncio.run(main())
 """)
