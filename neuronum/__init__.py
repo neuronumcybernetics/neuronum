@@ -1,1 +1,1 @@
-from .neuronum import Node
+from .neuronum import Cell

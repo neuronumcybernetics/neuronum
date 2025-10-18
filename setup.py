@@ -2,10 +2,10 @@ from setuptools import setup, find_packages
 
 setup(
     name='neuronum',
-    version='9.0.0',
+    version='10.0.1',
     author='Neuronum Cybernetics',
     author_email='welcome@neuronum.net',
-    description='The E2E Web Engine',
+    description='An E2EE Data Engine',
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
     url="https://neuronum.net",
@@ -20,14 +20,14 @@ setup(
     ],
     install_requires=[
         'aiohttp',
+        'aiofiles',
         'websockets',
         'click',
         'questionary',
         'python-dotenv',
         'requests',
-        'psutil',
-        'jinja2',
         'cryptography',
+        'bip_utils'
     ],
     entry_points={
         "console_scripts": [

@@ -1,7 +1,7 @@
 <h1 align="center">
   <img src="https://neuronum.net/static/neuronum.svg" alt="Neuronum" width="80">
 </h1>
-<h4 align="center">Neuronum: The E2E Web Engine</h4>
+<h4 align="center">Neuronum: An E2EE Data Engine</h4>
 
 <p align="center">
   <a href="https://neuronum.net">
@@ -21,22 +21,17 @@
 
 ------------------
 
-### **A Getting Started into the Neuronum Network**
+### **Getting Started into the Neuronum Network**
 In this brief getting started guide, you will:
 - [Learn about Neuronum](#about-neuronum)
 - [Connect to the Network](#connect-to-neuronum)
-- [Build a Neuronum Node](#build-on-neuronum)
-- [Interact with your Node](#interact-with-your-node)
+- [Transmit Data Securely](#transmit-data-securely)
+- [Receive Data Securely](#receive-data-securely)
 
 ------------------
 
 ### **About Neuronum**
-Neuronum is a real-time web engine designed for developers to build E2E-native apps and services in minutes using high-level Python
-
-### **Tools & Features**
-- Cell: Account to interact with Neuronum
-- Nodes: Apps & Services built on Neuronum
-- Browser: Web Browser built on Neuronum -> [build from source](https://github.com/neuronumcybernetics/neuronum_browser)
+Neuronum is a real-time, end-to-end encrypted data engine built in Python. It enables secure communication between devices and services by encrypting data client-side using the recipient's public key. Encrypted messages are transmitted through a passive relay server and decrypted on the recipient’s device using its private key. The relay server facilitates connectivity but cannot access or alter the content of messages.
 
 ### Requirements
 - Python >= 3.8
@@ -49,14 +44,14 @@ Installation (optional but recommended: create a virtual environment)
 pip install neuronum
 ```
 
-Create your Cell:
+Create your Cell (your secure identity):
 ```sh
 neuronum create-cell
 ```
 
 or
 
-Connect your Cell:
+Connect an existing Cell (your secure identity):
 ```sh
 neuronum connect-cell
 ```
@@ -64,26 +59,66 @@ neuronum connect-cell
 ------------------
 
 
-### **Build On Neuronum** 
-To get started, initialize a new Node with the command below. 
-```sh
-neuronum init-node
+### **Transmit Data Securely** 
+```python
+import asyncio
+from neuronum import Cell
+
+async def main():
+    
+    async with Cell() as cell: 
+
+        data = {
+            "some": "data"  # Replace with your actual payload
+        }
+
+        # Use activate_tx() if you expect a response from the other cell
+        # Replace id with the actual Cell ID
+        tx_response = await cell.activate_tx("id::cell", data)
+        print(tx_response)
+
+        # Stream data to another cell (no response expected)
+        # Replace id with the actual Cell ID
+        await cell.stream("id::cell", data)
+
+if __name__ == '__main__':
+    asyncio.run(main())
 ```
 
-This command will prompt you for a description (e.g. App) and will create a new directory named "App_<your_node_id>" with the necessary files to run your Node
 
-Change into Node folder
-```sh
-cd  App_<your_node_id>
+### **Receive Data Securely** 
+```python
+import asyncio
+from neuronum import Cell
+
+async def main():
+    async with Cell() as cell: 
+        
+        async for transmitter in cell.sync():
+            ts_str = transmitter.get("time")
+            data = transmitter.get("data")
+            transmitter_id = transmitter.get("transmitter_id")   
+            client_public_key = data.get("public_key", {})  
+
+            response_data = {
+                "json": "Data Received Securely - Your request was processed successfully",
+                "html": """
+                    <!DOCTYPE html>
+                    <html lang="en">
+                    <head>
+                        <meta charset="UTF-8">
+                        <title>Secure Data Response</title>
+                    </head>
+                    <body>
+                        <h3>Data Received Securely</h3>
+                        <p>Your request was processed successfully.</p>
+                    </body>
+                    </html>
+                """
+            }
+            await cell.tx_response(transmitter_id, response_data, client_public_key)
+
+if __name__ == '__main__':
+    asyncio.run(main())
 ```
 
-Start your Node:
-```sh
-neuronum start-node
-```
-
-------------------
-
-### **Interact with your Node**
-
-The **Neuronum Browser** is an open source E2E web browser that allows you to interact with your nodes -> [build from source](https://github.com/neuronumcybernetics/neuronum_browser)
