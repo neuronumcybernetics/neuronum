@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='neuronum',
-    version='10.0.1',
+    version='10.1.0',
     author='Neuronum Cybernetics',
     author_email='welcome@neuronum.net',
     description='An E2EE Data Engine',

@@ -64,6 +64,25 @@ def derive_keys_from_mnemonic(mnemonic: str):
         click.echo(f"❌ Error generating keys from mnemonic: {e}")
         return None, None, None, None
 
+def base64url_encode(data: bytes) -> str:
+    """Base64url encodes bytes (no padding, URL-safe characters)."""
+    return base64.urlsafe_b64encode(data).rstrip(b'=').decode('utf-8')
+
+def create_dns_challenge_value(public_key_pem: bytes) -> str:
+    """
+    Creates a DNS TXT challenge value from the public key.
+    
+    This simulates creating an ACME-style key authorization by hashing 
+    the public key (a proxy for account key) and then base64url encoding it.
+    """
+    try:
+        # A simple, secure challenge value: SHA256(PublicKey_PEM) base64url encoded
+        key_hash = hashlib.sha256(public_key_pem).digest()
+        challenge_value = base64url_encode(key_hash)
+        return challenge_value
+    except Exception as e:
+        click.echo(f"❌ Error creating DNS challenge value: {e}")
+        return ""
 
 def save_credentials(host: str, mnemonic: str, pem_public: bytes, pem_private: bytes):
     """Saves host, mnemonic, and keys to the .neuronum directory."""
@@ -131,52 +150,152 @@ def cli():
 
 # --- CLI Commands ---
 
+# ... (existing CLI Group and Commands)
+
 @click.command()
 def create_cell():
-    """Creates a new Community Cell with a randomly generated key pair."""
-    
-    # 1. Generate Mnemonic and Keys
+    """Creates a new Cell with a randomly generated key pair."""
+    cell_type = questionary.select(
+        "Choose Cell type:",
+        choices=["business", "community"]
+    ).ask()
+
+    if not cell_type:
+        click.echo("Cell creation canceled.")
+        return
+
+    # 1. Generate Mnemonic and Keys for both types
     mnemonic = Bip39MnemonicGenerator().FromWordsNumber(12)
     private_key, public_key, pem_private, pem_public = derive_keys_from_mnemonic(mnemonic)
 
     if not private_key:
         return
 
-    # 2. Call API to Create Cell
-    click.echo("🔗 Requesting new cell creation from server...")
-    url = f"{API_BASE_URL}/create_cell"
-    create_data = {"public_key": pem_public.decode("utf-8")}
+    public_key_pem_str = pem_public.decode("utf-8")
+    
+    # --- Business Cell Logic (DNS Challenge) ---
+    if cell_type == "business":
+        company_name = questionary.text("Enter your full Company Name e.g., Neuronum Cybernetics UG").ask()
+        domain = questionary.text("Enter your FQDN (e.g., mycompany.com):").ask()
+        if not domain:
+            click.echo("Business cell creation canceled. Host is required.")
+            return
 
-    try:
-        response = requests.post(url, json=create_data, timeout=10)
-        response.raise_for_status()
-        host = response.json().get("host")
+        # Generate the DNS challenge value
+        challenge_value = create_dns_challenge_value(pem_public)
+        
+        if not challenge_value:
+            return
 
-    except requests.exceptions.RequestException as e:
-        click.echo(f"❌ Error communicating with the server: {e}")
-        return
+        # 2. Instruct User on DNS TXT Record
+        click.echo("\n" + "=" * 60)
+        click.echo("⚠️ DNS TXT Challenge Required")
+        click.echo("=" * 60)
+        click.echo(f"To prove ownership of '{domain}', please create a **DNS TXT record**.")
+        click.echo(f"This record must be placed on the subdomain **_neuronum.{domain}**.")
+        click.echo(f"\nName: **_neuronum.{domain}**")
+        click.echo(f"Type:      **TXT**")
+        click.echo(f"Value:     **{challenge_value}**")
+        click.echo("-" * 60)
+        
+        # Pause for user action
+        questionary.press_any_key_to_continue("Press any key to continue once the DNS record is published...").ask()
+        click.echo("Attempting verification...")
 
-    # 3. Save Credentials
-    if host:
-        if save_credentials(host, mnemonic, pem_public, pem_private):
-            click.echo("\n" + "=" * 50)
-            click.echo("  ✅ WELCOME TO NEURONUM! Cell Created Successfully.")
-            click.echo("=" * 50)
-            click.echo(f"  Host: {host}")
-            click.echo(f"  Mnemonic (CRITICAL! Back this up!):")
-            click.echo(f"  {mnemonic}")
-            click.echo("-" * 50)
-            click.echo(f"Credentials saved to: {NEURONUM_PATH}")
+        # 3. Call API to Create/Verify Cell (Pass public_key, host, and challenge)
+        url = f"{API_BASE_URL}/create_business_cell"
+        create_data = {
+            "public_key": public_key_pem_str,
+            "domain": domain,
+            "challenge_value": challenge_value,
+            "company_name": company_name # Optional: Server might re-calculate but good to send
+        }
+        
+        try:
+            # Server will check DNS for the TXT record, then create the cell
+            response = requests.post(url, json=create_data, timeout=30) # Increased timeout for DNS propagation
+            response.raise_for_status()
+            response_data = response.json()
+            
+            # Check if server confirmed verification and creation
+            if response_data.get("status") == "verified" and response_data.get("host"):
+                # 4. Save Credentials
+                host = response_data.get("host")
+                if host:
+                    if save_credentials(host, mnemonic, pem_public, pem_private):
+                        click.echo("\n" + "=" * 50)
+                        click.echo("  ✅ BUSINESS CELL CREATED! DNS verified and keys saved.")
+                        click.echo(f"  Host: {host}")
+                        click.echo(f"  Mnemonic (CRITICAL! Back this up!):")
+                        click.echo(f"  {mnemonic}")
+                        click.echo("-" * 50)
+                        click.echo(f"Credentials saved to: {NEURONUM_PATH}")
+                    # else: Error saving already echoed in helper
+            else:
+                click.echo(f"❌ Verification failed. Server response: {response_data.get('detail', 'Unknown failure.')}")
+                return
+
+        except requests.exceptions.HTTPError as e:
+        # This catches all 4xx and 5xx errors.
+            try:
+                # Attempt to parse the server's detailed JSON error body (FastAPI format)
+                error_data = e.response.json()
+                error_detail = error_data.get("detail", "Unknown server error.")
+                
+                # Print the specific detail message provided by the server
+                click.echo(f"❌ Verification failed. HTTP {e.response.status_code} Error: {error_detail}")
+
+                # Specific handling for the DNS verification failure (403)
+                if e.response.status_code == 403:
+                    click.echo("\n👉 Please double-check that the TXT record is published and correctly set.")
+
+            except:
+                # If the response isn't JSON or doesn't have a 'detail' field
+                click.echo(f"❌ Server Error ({e.response.status_code}): {e.response.text}")
+            return
+
+        except requests.exceptions.RequestException as e:
+            # This catches network issues (DNS failure, connection refused, timeout, etc.)
+            click.echo(f"❌ Network Error: Could not communicate with the server. Details: {e}")
+            return
+
+    # --- Community Cell Logic (Existing Logic) ---
+    if cell_type == "community":
+        # 2. Call API to Create Cell
+        click.echo("🔗 Requesting new cell creation from server...")
+        url = f"{API_BASE_URL}/create_cell"
+        create_data = {"public_key": public_key_pem_str}
+
+        try:
+            response = requests.post(url, json=create_data, timeout=10)
+            response.raise_for_status()
+            host = response.json().get("host")
+
+        except requests.exceptions.RequestException as e:
+            click.echo(f"❌ Error communicating with the server: {e}")
+            return
+
+        # 3. Save Credentials
+        if host:
+            if save_credentials(host, mnemonic, pem_public, pem_private):
+                click.echo("\n" + "=" * 50)
+                click.echo("  ✅ WELCOME TO NEURONUM! Cell Created Successfully.")
+                click.echo("=" * 50)
+                click.echo(f"  Host: {host}")
+                click.echo(f"  Mnemonic (CRITICAL! Back this up!):")
+                click.echo(f"  {mnemonic}")
+                click.echo("-" * 50)
+                click.echo(f"Credentials saved to: {NEURONUM_PATH}")
+            else:
+                # Error saving credentials already echoed in helper
+                pass
         else:
-            # Error saving credentials already echoed in helper
-            pass
-    else:
-        click.echo("❌ Error: Server did not return a host. Cell creation failed.")
+            click.echo("❌ Error: Server did not return a host. Cell creation failed.")
 
 
 @click.command()
 def connect_cell():
-    """Connects to an existing Community Cell using a 12-word mnemonic."""
+    """Connects to an existing Cell using a 12-word mnemonic."""
 
     # 1. Get and Validate Mnemonic
     mnemonic = questionary.text("Enter your 12-word BIP-39 mnemonic (space separated):").ask()
