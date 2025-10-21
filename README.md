@@ -75,7 +75,8 @@ async def main():
         # Use activate_tx() if you expect a response from the other cell
         # Replace id with the actual Cell ID
         tx_response = await cell.activate_tx("id::cell", data)
-        print(tx_response)
+        print(f"Json Response: {tx_response['json']}")
+        print(f"HTML Response: {tx_response['html']}")
 
         # Stream data to another cell (no response expected)
         # Replace id with the actual Cell ID
@@ -101,7 +102,10 @@ async def main():
             client_public_key = data.get("public_key", {})  
 
             response_data = {
-                "json": "Data Received Securely - Your request was processed successfully",
+                "json": {
+                    "status": "success",
+                    "message": "Data Received Securely - Your request was processed successfully"
+                },
                 "html": """
                     <!DOCTYPE html>
                     <html lang="en">
