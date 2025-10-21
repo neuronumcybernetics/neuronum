@@ -1,7 +1,7 @@
 <h1 align="center">
   <img src="https://neuronum.net/static/neuronum.svg" alt="Neuronum" width="80">
 </h1>
-<h4 align="center">Neuronum: An E2EE Data Engine</h4>
+<h4 align="center">Neuronum: An E2EE Data/Web Engine</h4>
 
 <p align="center">
   <a href="https://neuronum.net">
@@ -31,7 +31,7 @@ In this brief getting started guide, you will:
 ------------------
 
 ### **About Neuronum**
-Neuronum is a real-time, end-to-end encrypted data engine built in Python. It enables secure communication between devices and services by encrypting data client-side using the recipient's public key. Encrypted messages are transmitted through a passive relay server and decrypted on the recipient’s device using its private key. The relay server facilitates connectivity but cannot access or alter the content of messages.
+Neuronum is a real-time, end-to-end encrypted data/web engine built in Python. It enables secure communication between devices and services by encrypting data client-side using the recipient's public key. Encrypted messages are transmitted through a passive relay server and decrypted on the recipient’s device using its private key. The relay server facilitates connectivity but cannot access or alter the content of messages.
 
 ### Requirements
 - Python >= 3.8
