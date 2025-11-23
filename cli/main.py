@@ -2,6 +2,7 @@ import click
 import questionary
 from pathlib import Path
 import requests
+import asyncio
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives import serialization
@@ -12,6 +13,7 @@ import time
 import hashlib
 from bip_utils import Bip39MnemonicGenerator, Bip39SeedGenerator
 from bip_utils import Bip39MnemonicValidator, Bip39Languages 
+import json 
 
 # --- Configuration Constants ---
 NEURONUM_PATH = Path.home() / ".neuronum"
@@ -84,13 +86,13 @@ def create_dns_challenge_value(public_key_pem: bytes) -> str:
         click.echo(f"❌ Error creating DNS challenge value: {e}")
         return ""
 
-def save_credentials(host: str, mnemonic: str, pem_public: bytes, pem_private: bytes):
+def save_credentials(host: str, mnemonic: str, pem_public: bytes, pem_private: bytes, cell_type: str):
     """Saves host, mnemonic, and keys to the .neuronum directory."""
     try:
         NEURONUM_PATH.mkdir(parents=True, exist_ok=True)
         
         # Save .env with host and mnemonic (Sensitive data)
-        env_content = f"HOST={host}\nMNEMONIC=\"{mnemonic}\""
+        env_content = f"HOST={host}\nMNEMONIC=\"{mnemonic}\"\nTYPE={cell_type}\n"
         ENV_FILE.write_text(env_content)
         
         # Save PEM files
@@ -157,12 +159,87 @@ def create_cell():
     """Creates a new Cell with a randomly generated key pair."""
     cell_type = questionary.select(
         "Choose Cell type:",
-        choices=["business", "community"]
+        choices=["business", "employee"]
     ).ask()
 
     if not cell_type:
         click.echo("Cell creation canceled.")
         return
+    
+    if cell_type == "employee":
+        # Load all credentials to check for the required Business key
+        credentials = load_credentials()
+        if not credentials:
+            # Error already echoed in helper
+            return
+
+        host = credentials['host']
+        private_key = credentials['private_key']
+        
+        # 1. Check if the user is connected to a Business Cell (must be the Business owner to register)
+        if not host:
+            click.echo("\n❌ This action is restricted to **Business Cells** only and requires a connected Business Cell.")
+            click.echo("Please run `create-cell` and select 'business', or run `connect-cell` first.")
+            return
+
+        # 2. Get the unique identifier and generate new keys for the employee
+        employee_name = questionary.text("Enter the unique **Work ID** (Employee Username, e.g., 'jane.doe'):").ask()
+        if not employee_name:
+            click.echo("Work ID registration canceled.")
+            return
+        
+        employee_mnemonic = Bip39MnemonicGenerator().FromWordsNumber(12)
+        _, _, _, employee_pem_public = derive_keys_from_mnemonic(employee_mnemonic)
+        
+        if not employee_pem_public:
+            return
+
+        employee_public_key = employee_pem_public.decode("utf-8")
+
+        # 3. Prepare the signed message (Business Cell signs the new Work ID key)
+        timestamp = str(int(time.time()))
+        message = f"host={host};timestamp={timestamp}"
+        signature_b64 = sign_message(private_key, message.encode())
+
+        if not signature_b64:
+            return
+
+        # 4. Call API to Associate
+        click.echo(f"🔗 Requesting registration of Employee '{employee_name}' with Business Cell '{host}'...")
+        url = f"{API_BASE_URL}/create_employee_cell"
+        register_data = {
+            "host": host,
+            "signed_message": signature_b64,
+            "message": message,
+            "employee_public_key": employee_public_key,
+            "employee_name": employee_name
+        }
+
+        try:
+            response = requests.post(url, json=register_data, timeout=10)
+            response.raise_for_status()
+            response_data = response.json()
+            
+            if response_data.get("status") == "verified" and response_data.get("host"):
+                work_cell_id = response_data.get("host")
+                if work_cell_id:
+                    click.echo("\n" + "=" * 60)
+                    click.echo(f"  ✅ WORK ID REGISTERED on Server.")
+                    click.echo(f"  Work ID Host: {work_cell_id}")
+                    click.echo("\n  >>> INSTRUCT THE EMPLOYEE TO RUN `python neuronum_cli.py connect-cell`")
+                    click.echo(f"  >>> and enter the following MNEMONIC:")
+                    click.echo("-" * 60)
+                    click.echo(f"  {employee_mnemonic}")
+                    click.echo("-" * 60)
+            else:
+                click.echo(f"❌ Registration failed. Server detail: {response_data.get('detail', 'Unknown failure.')}")
+                return
+                
+        except requests.exceptions.RequestException as e:
+            click.echo(f"❌ Error communicating with the server: {e}")
+            return
+        
+        return # Exit the functio
 
     # 1. Generate Mnemonic and Keys for both types
     mnemonic = Bip39MnemonicGenerator().FromWordsNumber(12)
@@ -221,8 +298,9 @@ def create_cell():
             if response_data.get("status") == "verified" and response_data.get("host"):
                 # 4. Save Credentials
                 host = response_data.get("host")
-                if host:
-                    if save_credentials(host, mnemonic, pem_public, pem_private):
+                cell_type = response_data.get("cell_type")
+                if host and cell_type:
+                    if save_credentials(host, mnemonic, pem_public, pem_private, cell_type):
                         click.echo("\n" + "=" * 50)
                         click.echo("  ✅ BUSINESS CELL CREATED! DNS verified and keys saved.")
                         click.echo(f"  Host: {host}")
@@ -258,39 +336,6 @@ def create_cell():
             # This catches network issues (DNS failure, connection refused, timeout, etc.)
             click.echo(f"❌ Network Error: Could not communicate with the server. Details: {e}")
             return
-
-    # --- Community Cell Logic (Existing Logic) ---
-    if cell_type == "community":
-        # 2. Call API to Create Cell
-        click.echo("🔗 Requesting new cell creation from server...")
-        url = f"{API_BASE_URL}/create_cell"
-        create_data = {"public_key": public_key_pem_str}
-
-        try:
-            response = requests.post(url, json=create_data, timeout=10)
-            response.raise_for_status()
-            host = response.json().get("host")
-
-        except requests.exceptions.RequestException as e:
-            click.echo(f"❌ Error communicating with the server: {e}")
-            return
-
-        # 3. Save Credentials
-        if host:
-            if save_credentials(host, mnemonic, pem_public, pem_private):
-                click.echo("\n" + "=" * 50)
-                click.echo("  ✅ WELCOME TO NEURONUM! Cell Created Successfully.")
-                click.echo("=" * 50)
-                click.echo(f"  Host: {host}")
-                click.echo(f"  Mnemonic (CRITICAL! Back this up!):")
-                click.echo(f"  {mnemonic}")
-                click.echo("-" * 50)
-                click.echo(f"Credentials saved to: {NEURONUM_PATH}")
-            else:
-                # Error saving credentials already echoed in helper
-                pass
-        else:
-            click.echo("❌ Error: Server did not return a host. Cell creation failed.")
 
 
 @click.command()
@@ -342,13 +387,14 @@ def connect_cell():
         response = requests.post(url, json=connect_data, timeout=10)
         response.raise_for_status()
         host = response.json().get("host")
+        cell_type = response.json().get("cell_type")
     except requests.exceptions.RequestException as e:
         click.echo(f"❌ Error connecting to cell: {e}")
         return
 
     # 5. Save Credentials
-    if host:
-        if save_credentials(host, mnemonic, pem_public, pem_private):
+    if host and cell_type:
+        if save_credentials(host, mnemonic, pem_public, pem_private, cell_type):
             click.echo(f"🔗 Successfully connected to Community Cell '{host}'.")
         # Error saving credentials already echoed in helper
     else:
@@ -428,11 +474,315 @@ def delete_cell():
         click.echo(f"❌ Neuronum Cell '{host}' deletion failed on server.")
 
 
+@click.command()
+def disconnect_cell():
+    """Removes local credentials without deleting the cell on the server."""
+    
+    # Check if any files exist to avoid unnecessary actions
+    if not ENV_FILE.exists() and not PRIVATE_KEY_FILE.exists() and not PUBLIC_KEY_FILE.exists():
+        click.echo("ℹ️ No local Neuronum credentials found to disconnect.")
+        return
+
+    # 1. Confirmation
+    confirm = click.confirm("Are you sure you want to disconnect? This will remove all local key files and the mnemonic, but your cell will remain active on the server.", default=False)
+    if not confirm:
+        click.echo("Disconnection canceled.")
+        return
+
+    # 2. Cleanup Local Files
+    click.echo(f"🗑️ Removing local credentials from: {NEURONUM_PATH}")
+    
+    files_removed = 0
+    
+    try:
+        if ENV_FILE.exists():
+            ENV_FILE.unlink()
+            files_removed += 1
+        
+        if PRIVATE_KEY_FILE.exists():
+            PRIVATE_KEY_FILE.unlink()
+            files_removed += 1
+            
+        if PUBLIC_KEY_FILE.exists():
+            PUBLIC_KEY_FILE.unlink()
+            files_removed += 1
+            
+        if files_removed > 0:
+            click.echo(f"✅ Successfully disconnected. Your credentials are now removed locally.")
+            click.echo("You can reconnect later using your 12-word mnemonic (via `connect-cell`).")
+        else:
+            click.echo("ℹ️ No credentials were found to remove.")
+            
+    except Exception as e:
+        click.echo(f"❌ Error during local file cleanup: {e}")
+
+
+@click.command()
+def init_tool():
+    name = click.prompt("Enter a Tool Name").strip()
+    descr = click.prompt("Enter a brief Tool description").strip()
+    asyncio.run(async_init_tool(descr, name))
+
+async def async_init_tool(descr, name):
+    credentials = load_credentials()
+    if not credentials:
+        return
+
+    host = credentials['host']
+    private_key = credentials['private_key']
+
+    # 3. Prepare Signed Message
+    timestamp = str(int(time.time()))
+    message = f"host={host};timestamp={timestamp}"
+    signature_b64 = sign_message(private_key, message.encode())
+
+    if not signature_b64:
+        return
+
+    url = f"{API_BASE_URL}/init_tool"
+    payload = {
+        "host": host,
+        "signed_message": signature_b64,
+        "message": message,
+        "name": name,
+        "descr": descr
+    }
+
+    try:
+        response = requests.post(url, json=payload, timeout=10)
+        response.raise_for_status()
+        tool_id = response.json().get("tool_id", False)
+    except requests.exceptions.RequestException as e:
+        click.echo(f"❌ Error communicating with the server during deletion: {e}")
+        return
+    
+    tool_folder = name + "_" + tool_id
+    project_path = Path(tool_folder)
+    project_path.mkdir(exist_ok=True)
+                                                                                                           
+    tool_path = project_path / "tool.py"
+    tool_path.write_text('''\
+"""
+Simple Standardized MCP Server Example
+Demonstrates the official MCP protocol with stdio transport.
+"""
+
+import asyncio
+import json
+from mcp.server import Server
+from mcp.server.stdio import stdio_server
+from mcp.types import Tool, TextContent
+
+# Create server instance
+app = Server("simple-example")
+
+
+@app.list_tools()
+async def list_tools() -> list[Tool]:
+    """List available tools using standard MCP protocol."""
+    return [
+        Tool(
+            name="echo",
+            description="Echo back a message",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "message": {
+                        "type": "string",
+                        "description": "Message to echo back"
+                    }
+                },
+                "required": ["message"]
+            }
+        )
+    ]
+
+
+@app.call_tool()
+async def call_tool(name: str, arguments: dict) -> list[TextContent]:
+    """Handle tool calls using standard MCP protocol."""
+
+    if name == "echo":
+        message = arguments.get("message", "")
+        return [TextContent(
+            type="text",
+            text=f"Echo: {message}"
+        )]
+
+    else:
+        raise ValueError(f"Unknown tool: {name}")
+
+
+async def main():
+    """Run the MCP server with stdio transport."""
+    async with stdio_server() as (read_stream, write_stream):
+        await app.run(
+            read_stream,
+            write_stream,
+            app.create_initialization_options()
+        )
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
+''')
+    
+    config_path = project_path / "tool.config"
+    await asyncio.to_thread(
+    config_path.write_text,
+f"""{{
+  "tool_meta": {{
+    "tool_id": "{tool_id}",
+    "version": "1.0.0",
+    "name": "{name}",
+    "description": "{descr}",
+    "audience": "private",
+    "logo": "https://neuronum.net/static/logo.png"
+  }},
+  "legals": {{
+    "terms": "https://url_to_your/terms",
+    "privacy_policy": "https://url_to_your/privacy_policy"
+  }},
+  "requirements": []
+}}"""
+
+)
+    click.echo(f"Neuronum Tool '{tool_id}' initialized!")
+
+
+@click.command()
+def update_tool():
+    try:
+        with open("tool.config", "r") as f:
+            config_data = json.load(f)
+
+        with open("tool.py", "r") as f:
+            tool_script = f.read()
+
+        audience = config_data.get("tool_meta", {}).get("audience", "")
+        tool_id = config_data.get("tool_meta", {}).get("tool_id", "")
+
+    except FileNotFoundError as e:
+        click.echo(f"Error: File not found - {e.filename}")
+        return
+    except click.ClickException as e:
+        click.echo(e.format_message())
+        return
+    except Exception as e:
+        click.echo(f"Error reading files: {e}")
+        return
+
+    asyncio.run(async_update_tool(config_data, tool_script, tool_id, audience))
+
+
+async def async_update_tool(config_data, tool_script: str, tool_id: str, audience: str):
+        credentials = load_credentials()
+        if not credentials:
+            return
+
+        host = credentials['host']
+        private_key = credentials['private_key']
+
+        # 3. Prepare Signed Message
+        timestamp = str(int(time.time()))
+        message = f"host={host};timestamp={timestamp}"
+        signature_b64 = sign_message(private_key, message.encode())
+
+        if not signature_b64:
+            return
+
+        url = f"{API_BASE_URL}/update_tool"
+        payload = {
+            "host": host,
+            "signed_message": signature_b64,
+            "message": message,
+            "tool_id": tool_id,
+            "config": config_data,
+            "script": tool_script,
+            "audience": audience
+        }
+
+        try:
+            response = requests.post(url, json=payload, timeout=10)
+            response.raise_for_status()
+            tool_id = response.json().get("tool_id", False)
+            click.echo(f"Neuronum Tool '{tool_id}' updated!")
+        except requests.exceptions.RequestException as e:
+            click.echo(f"❌ Error communicating with the server during deletion: {e}")
+            return
+                   
+
+@click.command()
+def delete_tool():
+    try:
+        with open("tool.config", "r") as f:
+            config_data = json.load(f)
+
+        tool_id = config_data.get("tool_meta", {}).get("tool_id", "")
+
+    except FileNotFoundError as e:
+        click.echo(f"Error: File not found - {e.filename}")
+        return
+    except click.ClickException as e:
+        click.echo(e.format_message())
+        return
+    except Exception as e:
+        click.echo(f"Error reading files: {e}")
+        return
+
+    # 1. Load Credentials
+    credentials = load_credentials()
+    if not credentials:
+        # Error already echoed in helper
+        return
+
+    host = credentials['host']
+    private_key = credentials['private_key']
+
+    # 2. Confirmation
+    confirm = click.confirm(f"Are you sure you want to permanently delete your Neuronu Tool '{tool_id}'?", default=False)
+    if not confirm:
+        click.echo("Deletion canceled.")
+        return
+
+    # 3. Prepare Signed Message
+    timestamp = str(int(time.time()))
+    message = f"host={host};timestamp={timestamp}"
+    signature_b64 = sign_message(private_key, message.encode())
+
+    if not signature_b64:
+        return
+
+    # 4. Call API to Delete
+    click.echo(f"🗑️ Requesting deletion of cell '{host}'...")
+    url = f"{API_BASE_URL}/delete_tool"
+    payload = {
+        "host": host,
+        "signed_message": signature_b64,
+        "message": message,
+        "tool_id": tool_id
+    }
+
+    try:
+        response = requests.delete(url, json=payload, timeout=10)
+        response.raise_for_status()
+        status = response.json().get("status", False)
+        if status:
+            click.echo(f"✅ Neuronum Tool '{tool_id}' has been deleted!")
+    except requests.exceptions.RequestException as e:
+        click.echo(f"❌ Error communicating with the server during deletion: {e}")
+        return
+
+
 # --- CLI Registration ---
 cli.add_command(create_cell)
-cli.add_command(view_cell)
 cli.add_command(connect_cell)
+cli.add_command(view_cell)
 cli.add_command(delete_cell)
+cli.add_command(disconnect_cell)
+cli.add_command(init_tool)
+cli.add_command(update_tool)
+cli.add_command(delete_tool)
 
 if __name__ == "__main__":
     cli()

@@ -2,10 +2,10 @@ from setuptools import setup, find_packages
 
 setup(
     name='neuronum',
-    version='10.1.0',
+    version='11.0.0',
     author='Neuronum Cybernetics',
     author_email='welcome@neuronum.net',
-    description='An E2EE Data Engine',
+    description='Official Neuronum Library',
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
     url="https://neuronum.net",

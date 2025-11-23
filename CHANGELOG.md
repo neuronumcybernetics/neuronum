@@ -21,7 +21,7 @@
 
 ---
 
-**The versions 0.1.0–10.1.0 are part of the Neuronum MVP ecosystem. As these builds are evolving rapidly, detailed changelogs are not yet provided**
+**The versions 0.1.0–11.0.0 are part of the Neuronum MVP ecosystem. As these builds are evolving rapidly, detailed changelogs are not yet provided**
 
 ! The first stable release will follow CalVer semantics and receive periodic updates guided by transparent changelogs !
 
