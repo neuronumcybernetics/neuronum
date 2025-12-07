@@ -92,68 +92,18 @@ This folder will contain 2 files:
 
 **Example tool.py:**
 ```python
-"""
-Simple Standardized MCP Server Example
-Demonstrates the official MCP protocol with stdio transport.
-"""
-
-import asyncio
-import json
-from mcp.server import Server
-from mcp.server.stdio import stdio_server
-from mcp.types import Tool, TextContent
+from mcp.server.fastmcp import FastMCP
 
 # Create server instance
-app = Server("simple-example")
+mcp = FastMCP("simple-example")
 
-
-@app.list_tools()
-async def list_tools() -> list[Tool]:
-    """List available tools using standard MCP protocol."""
-    return [
-        Tool(
-            name="echo",
-            description="Echo back a message",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "message": {
-                        "type": "string",
-                        "description": "Message to echo back"
-                    }
-                },
-                "required": ["message"]
-            }
-        )
-    ]
-
-
-@app.call_tool()
-async def call_tool(name: str, arguments: dict) -> list[TextContent]:
-    """Handle tool calls using standard MCP protocol."""
-
-    if name == "echo":
-        message = arguments.get("message", "")
-        return [TextContent(
-            type="text",
-            text=f"Echo: {message}"
-        )]
-
-    else:
-        raise ValueError(f"Unknown tool: {name}")
-
-
-async def main():
-    """Run the MCP server with stdio transport."""
-    async with stdio_server() as (read_stream, write_stream):
-        await app.run(
-            read_stream,
-            write_stream,
-            app.create_initialization_options()
-        )
-
+@mcp.tool()
+def echo(message: str) -> str:
+    """Echo back a message"""
+    return f"Echo: {message}"
 
 if __name__ == "__main__":
+    mcp.run()
     asyncio.run(main())
 ```
 

@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='neuronum',
-    version='12.0.0',
+    version='12.0.1',
     author='Neuronum Cybernetics',
     author_email='welcome@neuronum.net',
     description='Official Neuronum Tools Library',
