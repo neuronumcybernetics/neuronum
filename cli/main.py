@@ -643,7 +643,8 @@ f"""{{
     "terms": "https://url_to_your/terms",
     "privacy_policy": "https://url_to_your/privacy_policy"
   }},
-  "requirements": []
+  "requirements": [],
+  "variables": []
 }}"""
 
 )

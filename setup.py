@@ -2,17 +2,17 @@ from setuptools import setup, find_packages
 
 setup(
     name='neuronum',
-    version='11.0.0',
+    version='12.0.0',
     author='Neuronum Cybernetics',
     author_email='welcome@neuronum.net',
-    description='Official Neuronum Library',
+    description='Official Neuronum Tools Library',
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
     url="https://neuronum.net",
     project_urls={
         "GitHub": "https://github.com/neuronumcybernetics/neuronum",
     },
-    packages=find_packages(include=["neuronum", "cli"]),
+    packages=find_packages(include=["cli"]),
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",

@@ -1,7 +1,7 @@
 <h1 align="center">
   <img src="https://neuronum.net/static/neuronum.svg" alt="Neuronum" width="80">
 </h1>
-<h4 align="center">Neuronum: An E2EE Data/Web Engine</h4>
+<h4 align="center">Neuronum Tools Library</h4>
 
 <p align="center">
   <a href="https://neuronum.net">
@@ -21,17 +21,18 @@
 
 ------------------
 
-### **Getting Started into the Neuronum Network**
+### **Getting Started**
 In this brief getting started guide, you will:
-- [Learn about Neuronum](#about-neuronum)
-- [Connect to the Network](#connect-to-neuronum)
-- [Transmit Data Securely](#transmit-data-securely)
-- [Receive Data Securely](#receive-data-securely)
+- [Learn about Neuronum Tools](#about-neuronum-tools)
+- [Connect to Neuronum](#connect-to-neuronum)
+- [Initialize a Tool](#initialize-a-tool)
+- [Update a Tool](#update-a-tool)
+- [Delete a Tool](#delete-a-tool)
 
 ------------------
 
-### **About Neuronum**
-Neuronum is a real-time, end-to-end encrypted data/web engine built in Python. It enables secure communication between devices and services by encrypting data client-side using the recipient's public key. Encrypted messages are transmitted through a passive relay server and decrypted on the recipient’s device using its private key. The relay server facilitates connectivity but cannot access or alter the content of messages.
+### **About Neuronum Tools**
+Neuronum Tools serve as plug and play Servers/Applications that allow ceLLai to connect to external data sources and systems. Neuronum Tools follow standardized MCP (Model Context Protocol) guidelines. 
 
 ### Requirements
 - Python >= 3.8
@@ -39,7 +40,7 @@ Neuronum is a real-time, end-to-end encrypted data/web engine built in Python. I
 ------------------
 
 ### **Connect To Neuronum**
-Installation (optional but recommended: create a virtual environment)
+**Installation** (optional but recommended: create a virtual environment)
 ```sh
 pip install neuronum
 ```
@@ -59,70 +60,112 @@ neuronum connect-cell
 ------------------
 
 
-### **Transmit Data Securely** 
-```python
-import asyncio
-from neuronum import Cell
+### **Initialize a Tool** 
+```sh
+neuronum init-tool
+```
+You will be prompted to enter a tool name and description (e.g., "Test Tool" and "A simple test tool"). This will create a new folder named using the format: `Tool Name_ToolID` (e.g., `Test Tool_019ac60e-cccc-7af5-b087-f6fcf1ba1299`)
 
-async def main():
-    
-    async with Cell() as cell: 
+This folder will contain 2 files:
+1. **tool.config** - Configuration and metadata for your tool
+2. **tool.py** - Your Tool/MCP server implementation
 
-        data = {
-            "some": "data"  # Replace with your actual payload
-        }
-
-        # Use activate_tx() if you expect a response from the other cell
-        # Replace id with the actual Cell ID
-        tx_response = await cell.activate_tx("id::cell", data)
-        print(f"Json Response: {tx_response['json']}")
-        print(f"HTML Response: {tx_response['html']}")
-
-        # Stream data to another cell (no response expected)
-        # Replace id with the actual Cell ID
-        await cell.stream("id::cell", data)
-
-if __name__ == '__main__':
-    asyncio.run(main())
+**Example tool.config:**
+```config
+{
+  "tool_meta": {
+    "tool_id": "019ac60e-cccc-7af5-b087-f6fcf1ba1299",
+    "version": "1.0.0",
+    "name": "Test Tool",
+    "description": "A simple test tool",
+    "audience": "private",
+    "logo": "https://neuronum.net/static/logo_new.png"
+  },
+  "legals": {
+    "terms": "https://url_to_your/terms",
+    "privacy_policy": "https://url_to_your/privacy_policy"
+  },
+  "requirements": [],
+  "variables": []
+}
 ```
 
-
-### **Receive Data Securely** 
+**Example tool.py:**
 ```python
+"""
+Simple Standardized MCP Server Example
+Demonstrates the official MCP protocol with stdio transport.
+"""
+
 import asyncio
-from neuronum import Cell
+import json
+from mcp.server import Server
+from mcp.server.stdio import stdio_server
+from mcp.types import Tool, TextContent
 
-async def main():
-    async with Cell() as cell: 
-        
-        async for transmitter in cell.sync():
-            ts_str = transmitter.get("time")
-            data = transmitter.get("data")
-            transmitter_id = transmitter.get("transmitter_id")   
-            client_public_key = data.get("public_key", {})  
+# Create server instance
+app = Server("simple-example")
 
-            response_data = {
-                "json": {
-                    "status": "success",
-                    "message": "Data Received Securely - Your request was processed successfully"
+
+@app.list_tools()
+async def list_tools() -> list[Tool]:
+    """List available tools using standard MCP protocol."""
+    return [
+        Tool(
+            name="echo",
+            description="Echo back a message",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "message": {
+                        "type": "string",
+                        "description": "Message to echo back"
+                    }
                 },
-                "html": """
-                    <!DOCTYPE html>
-                    <html lang="en">
-                    <head>
-                        <meta charset="UTF-8">
-                        <title>Secure Data Response</title>
-                    </head>
-                    <body>
-                        <h3>Data Received Securely</h3>
-                        <p>Your request was processed successfully.</p>
-                    </body>
-                    </html>
-                """
+                "required": ["message"]
             }
-            await cell.tx_response(transmitter_id, response_data, client_public_key)
+        )
+    ]
 
-if __name__ == '__main__':
+
+@app.call_tool()
+async def call_tool(name: str, arguments: dict) -> list[TextContent]:
+    """Handle tool calls using standard MCP protocol."""
+
+    if name == "echo":
+        message = arguments.get("message", "")
+        return [TextContent(
+            type="text",
+            text=f"Echo: {message}"
+        )]
+
+    else:
+        raise ValueError(f"Unknown tool: {name}")
+
+
+async def main():
+    """Run the MCP server with stdio transport."""
+    async with stdio_server() as (read_stream, write_stream):
+        await app.run(
+            read_stream,
+            write_stream,
+            app.create_initialization_options()
+        )
+
+
+if __name__ == "__main__":
     asyncio.run(main())
 ```
 
+
+### **Update a Tool**
+After modifying your `tool.config` or `tool.py` files, submit the updates using:
+```sh
+neuronum update-tool
+```
+
+### **Delete a Tool**
+To remove a tool from Neuronum:
+```sh
+neuronum delete-tool
+```
