@@ -2,17 +2,17 @@ from setuptools import setup, find_packages
 
 setup(
     name='neuronum',
-    version='12.0.1',
+    version='12.1.0',
     author='Neuronum Cybernetics',
     author_email='welcome@neuronum.net',
-    description='Official Neuronum Tools Library',
+    description='Neuronum ceLL SDK',
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
     url="https://neuronum.net",
     project_urls={
-        "GitHub": "https://github.com/neuronumcybernetics/neuronum",
+        "GitHub": "https://github.com/neuronumcybernetics/cell-sdk-python",
     },
-    packages=find_packages(include=["cli"]),
+    packages=find_packages(include=["neuronum", "cli"]),
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
