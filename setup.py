@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='neuronum',
-    version='12.1.0',
+    version='12.2.0',
     author='Neuronum Cybernetics',
     author_email='welcome@neuronum.net',
     description='Neuronum ceLL SDK',

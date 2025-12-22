@@ -24,7 +24,7 @@
 ### **A Getting Started into the Neuronum ceLL SDK**
 In this brief getting started guide, you will:
 - [Learn about the Neuronum ceLL SDK](#about-cell-sdk)
-- [Create an ID & Connect to Neuronum](#connect-to-neuronum)
+- [Connect your ID to Neuronum](#connect-to-neuronum)
 - [Create & Manage A custom ceLL Tool](#create-a-tool)
 - [Integrate the ceLL API to call your Server](#integrate-cell-api)
 
@@ -45,12 +45,6 @@ The ceLL SDK is the official Python ecosystem to develop and publish custom Tool
 pip install neuronum
 ```
 
-**Create your Cell (your secure identity)**
-```sh
-neuronum create-cell
-```
-
-or
 
 **Connect an existing Cell (your secure identity)**
 ```sh
@@ -117,7 +111,6 @@ neuronum update-tool
 ```
 
 ### **Delete a Tool**
-To remove a tool from Neuronum:
 ```sh
 neuronum delete-tool
 ```

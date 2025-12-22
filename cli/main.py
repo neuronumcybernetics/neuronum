@@ -153,191 +153,6 @@ def cli():
 # --- CLI Commands ---
 
 # ... (existing CLI Group and Commands)
-
-@click.command()
-def create_cell():
-    """Creates a new Cell with a randomly generated key pair."""
-    cell_type = questionary.select(
-        "Choose Cell type:",
-        choices=["business", "employee"]
-    ).ask()
-
-    if not cell_type:
-        click.echo("Cell creation canceled.")
-        return
-    
-    if cell_type == "employee":
-        # Load all credentials to check for the required Business key
-        credentials = load_credentials()
-        if not credentials:
-            # Error already echoed in helper
-            return
-
-        host = credentials['host']
-        private_key = credentials['private_key']
-        
-        # 1. Check if the user is connected to a Business Cell (must be the Business owner to register)
-        if not host:
-            click.echo("\n❌ This action is restricted to **Business Cells** only and requires a connected Business Cell.")
-            click.echo("Please run `create-cell` and select 'business', or run `connect-cell` first.")
-            return
-
-        # 2. Get the unique identifier and generate new keys for the employee
-        employee_name = questionary.text("Enter the unique **Work ID** (Employee Username, e.g., 'jane.doe'):").ask()
-        if not employee_name:
-            click.echo("Work ID registration canceled.")
-            return
-        
-        employee_mnemonic = Bip39MnemonicGenerator().FromWordsNumber(12)
-        _, _, _, employee_pem_public = derive_keys_from_mnemonic(employee_mnemonic)
-        
-        if not employee_pem_public:
-            return
-
-        employee_public_key = employee_pem_public.decode("utf-8")
-
-        # 3. Prepare the signed message (Business Cell signs the new Work ID key)
-        timestamp = str(int(time.time()))
-        message = f"host={host};timestamp={timestamp}"
-        signature_b64 = sign_message(private_key, message.encode())
-
-        if not signature_b64:
-            return
-
-        # 4. Call API to Associate
-        click.echo(f"🔗 Requesting registration of Employee '{employee_name}' with Business Cell '{host}'...")
-        url = f"{API_BASE_URL}/create_employee_cell"
-        register_data = {
-            "host": host,
-            "signed_message": signature_b64,
-            "message": message,
-            "employee_public_key": employee_public_key,
-            "employee_name": employee_name
-        }
-
-        try:
-            response = requests.post(url, json=register_data, timeout=10)
-            response.raise_for_status()
-            response_data = response.json()
-            
-            if response_data.get("status") == "verified" and response_data.get("host"):
-                work_cell_id = response_data.get("host")
-                if work_cell_id:
-                    click.echo("\n" + "=" * 60)
-                    click.echo(f"  ✅ WORK ID REGISTERED on Server.")
-                    click.echo(f"  Work ID Host: {work_cell_id}")
-                    click.echo("\n  >>> INSTRUCT THE EMPLOYEE TO RUN `python neuronum_cli.py connect-cell`")
-                    click.echo(f"  >>> and enter the following MNEMONIC:")
-                    click.echo("-" * 60)
-                    click.echo(f"  {employee_mnemonic}")
-                    click.echo("-" * 60)
-            else:
-                click.echo(f"❌ Registration failed. Server detail: {response_data.get('detail', 'Unknown failure.')}")
-                return
-                
-        except requests.exceptions.RequestException as e:
-            click.echo(f"❌ Error communicating with the server: {e}")
-            return
-        
-        return # Exit the functio
-
-    # 1. Generate Mnemonic and Keys for both types
-    mnemonic = Bip39MnemonicGenerator().FromWordsNumber(12)
-    private_key, public_key, pem_private, pem_public = derive_keys_from_mnemonic(mnemonic)
-
-    if not private_key:
-        return
-
-    public_key_pem_str = pem_public.decode("utf-8")
-    
-    # --- Business Cell Logic (DNS Challenge) ---
-    if cell_type == "business":
-        company_name = questionary.text("Enter your full Company Name e.g., Neuronum Cybernetics UG").ask()
-        domain = questionary.text("Enter your FQDN (e.g., mycompany.com):").ask()
-        if not domain:
-            click.echo("Business cell creation canceled. Host is required.")
-            return
-
-        # Generate the DNS challenge value
-        challenge_value = create_dns_challenge_value(pem_public)
-        
-        if not challenge_value:
-            return
-
-        # 2. Instruct User on DNS TXT Record
-        click.echo("\n" + "=" * 60)
-        click.echo("⚠️ DNS TXT Challenge Required")
-        click.echo("=" * 60)
-        click.echo(f"To prove ownership of '{domain}', please create a **DNS TXT record**.")
-        click.echo(f"This record must be placed on the subdomain **_neuronum.{domain}**.")
-        click.echo(f"\nName: **_neuronum.{domain}**")
-        click.echo(f"Type:      **TXT**")
-        click.echo(f"Value:     **{challenge_value}**")
-        click.echo("-" * 60)
-        
-        # Pause for user action
-        questionary.press_any_key_to_continue("Press any key to continue once the DNS record is published...").ask()
-        click.echo("Attempting verification...")
-
-        # 3. Call API to Create/Verify Cell (Pass public_key, host, and challenge)
-        url = f"{API_BASE_URL}/create_business_cell"
-        create_data = {
-            "public_key": public_key_pem_str,
-            "domain": domain,
-            "challenge_value": challenge_value,
-            "company_name": company_name # Optional: Server might re-calculate but good to send
-        }
-        
-        try:
-            # Server will check DNS for the TXT record, then create the cell
-            response = requests.post(url, json=create_data, timeout=30) # Increased timeout for DNS propagation
-            response.raise_for_status()
-            response_data = response.json()
-            
-            # Check if server confirmed verification and creation
-            if response_data.get("status") == "verified" and response_data.get("host"):
-                # 4. Save Credentials
-                host = response_data.get("host")
-                cell_type = response_data.get("cell_type")
-                if host and cell_type:
-                    if save_credentials(host, mnemonic, pem_public, pem_private, cell_type):
-                        click.echo("\n" + "=" * 50)
-                        click.echo("  ✅ BUSINESS CELL CREATED! DNS verified and keys saved.")
-                        click.echo(f"  Host: {host}")
-                        click.echo(f"  Mnemonic (CRITICAL! Back this up!):")
-                        click.echo(f"  {mnemonic}")
-                        click.echo("-" * 50)
-                        click.echo(f"Credentials saved to: {NEURONUM_PATH}")
-                    # else: Error saving already echoed in helper
-            else:
-                click.echo(f"❌ Verification failed. Server response: {response_data.get('detail', 'Unknown failure.')}")
-                return
-
-        except requests.exceptions.HTTPError as e:
-        # This catches all 4xx and 5xx errors.
-            try:
-                # Attempt to parse the server's detailed JSON error body (FastAPI format)
-                error_data = e.response.json()
-                error_detail = error_data.get("detail", "Unknown server error.")
-                
-                # Print the specific detail message provided by the server
-                click.echo(f"❌ Verification failed. HTTP {e.response.status_code} Error: {error_detail}")
-
-                # Specific handling for the DNS verification failure (403)
-                if e.response.status_code == 403:
-                    click.echo("\n👉 Please double-check that the TXT record is published and correctly set.")
-
-            except:
-                # If the response isn't JSON or doesn't have a 'detail' field
-                click.echo(f"❌ Server Error ({e.response.status_code}): {e.response.text}")
-            return
-
-        except requests.exceptions.RequestException as e:
-            # This catches network issues (DNS failure, connection refused, timeout, etc.)
-            click.echo(f"❌ Network Error: Could not communicate with the server. Details: {e}")
-            return
-
-
 @click.command()
 def connect_cell():
     """Connects to an existing Cell using a 12-word mnemonic."""
@@ -627,40 +442,61 @@ def update_tool():
 
 
 async def async_update_tool(config_data, tool_script: str, tool_id: str, audience: str):
-        credentials = load_credentials()
-        if not credentials:
-            return
+    credentials = load_credentials()
+    if not credentials:
+        return
 
-        host = credentials['host']
-        private_key = credentials['private_key']
+    host = credentials['host']
+    private_key = credentials['private_key']
 
-        # 3. Prepare Signed Message
-        timestamp = str(int(time.time()))
-        message = f"host={host};timestamp={timestamp}"
-        signature_b64 = sign_message(private_key, message.encode())
+    # 3. Prepare Signed Message
+    timestamp = str(int(time.time()))
+    message = f"host={host};timestamp={timestamp}"
+    signature_b64 = sign_message(private_key, message.encode())
 
-        if not signature_b64:
-            return
+    if not signature_b64:
+        return
 
-        url = f"{API_BASE_URL}/update_tool"
-        payload = {
-            "host": host,
-            "signed_message": signature_b64,
-            "message": message,
-            "tool_id": tool_id,
-            "config": config_data,
-            "script": tool_script,
-            "audience": audience
-        }
+    url = f"{API_BASE_URL}/update_tool"
+    payload = {
+        "host": host,
+        "signed_message": signature_b64,
+        "message": message,
+        "tool_id": tool_id,
+        "config": config_data,
+        "script": tool_script,
+        "audience": audience
+    }
 
-        try:
-            response = requests.post(url, json=payload, timeout=10)
-            response.raise_for_status()
-            tool_id = response.json().get("tool_id", False)
-            click.echo(f"Neuronum Tool '{tool_id}' updated!")
-        except requests.exceptions.RequestException as e:
-            click.echo(f"❌ Error communicating with the server during deletion: {e}")
-            return
+    try:
+        response = requests.post(url, json=payload, timeout=10)
+        response.raise_for_status()
+        
+        response_data = response.json()
+        
+        if response_data.get("success"):
+            tool_id = response_data.get("tool_id")
+            message = response_data.get("message", "Tool updated!")
+            
+            # Check if DNS verification is needed
+            if "verify Ownership" in message:
+                click.echo(f"Tool '{tool_id}' updated as private.")
+                click.echo(f"{message}")
+                click.echo(f"Please use the ceLL Client (ceLLai) software to verify ownership over your domain and publish tools")
+            else:
+                click.echo(f"✅ Tool '{tool_id}' updated successfully!")
+                if audience == "public":
+                    click.echo(f"Audience: Public")
+                else:
+                    click.echo(f"Audience: Private")
+        else:
+            error_message = response_data.get("message", "Unknown error")
+            click.echo(f"❌ Failed to update tool: {error_message}")
+            
+    except requests.exceptions.RequestException as e:
+        click.echo(f"❌ Error communicating with the server: {e}")
+        return
+
                    
 
 @click.command()
@@ -726,7 +562,6 @@ def delete_tool():
 
 
 # --- CLI Registration ---
-cli.add_command(create_cell)
 cli.add_command(connect_cell)
 cli.add_command(view_cell)
 cli.add_command(delete_cell)
