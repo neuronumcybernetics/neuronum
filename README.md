@@ -1,7 +1,7 @@
 <h1 align="center">
   <img src="https://neuronum.net/static/logo_new.png" alt="Neuronum" width="80">
 </h1>
-<h4 align="center">Neuronum ceLL SDK</h4>
+<h4 align="center">Neuronum SDK</h4>
 
 <p align="center">
   <a href="https://neuronum.net">
@@ -21,21 +21,20 @@
 
 ------------------
 
-### **A Getting Started into the Neuronum ceLL SDK**
+### **A Getting Started into the Neuronum SDK**
 In this brief getting started guide, you will:
-- [Learn about the Neuronum ceLL SDK](#about-cell-sdk)
+- [Learn about the Neuronum SDK](#about-neuronum-sdk)
 - [Connect your ID to Neuronum](#connect-to-neuronum)
-- [Create & Manage A custom ceLL Tool](#create-a-tool)
-- [Integrate the ceLL API to call your Server](#integrate-cell-api)
+- [Create & Manage A custom Tool](#create-a-tool)
+- [Integrate the API to call your Agent](#integrate-neuronum-api)
 
 ------------------
 
-### **About ceLL SDK**
-The ceLL SDK is the official Python ecosystem to develop and publish custom Tools for the [Neuronum ceLL Server](https://neuronum.net/) and lets you integrate the ceLL API to interact with your Agent from existing projects
+### **About Neuronum SDK**
+The Neuronum SDK is the official Python ecosystem to develop and publish custom Tools and lets you integrate the Neuronum API to interact with your Agent from existing projects
 
 ### Requirements
 - Python >= 3.8
-- [Neuronum ceLL Server (Hardware)](https://neuronum.net/) 
 
 ------------------
 
@@ -54,7 +53,7 @@ neuronum connect-cell
 ------------------
 
 ### **Create A Tool**
-Neuronum ceLL Tools are MCP-compliant (Model Context Protocol ) plugins that extend your Agent's (Neuronum ceLL) functionality, enabling it to interact with external data sources and systems.
+Neuronum Tools are MCP-compliant (Model Context Protocol ) plugins that extend your Agent's functionality, enabling it to interact with external data sources and systems.
 
 ### **Initialize a Tool** 
 ```sh
@@ -117,8 +116,8 @@ neuronum delete-tool
 
 
 
-### **Integrate ceLL API** 
-**Send a simple prompt to your ceLL Server using Neuronum Transmitters (TX)**
+### **Integrate Neuronum API** 
+**Send a simple prompt to your Agent**
 ```python
 import asyncio
 from neuronum import Cell
@@ -133,12 +132,9 @@ async def main():
           "prompt": "Explain what a black hole is in one sentence"
         }
 
-        # Use activate_tx() if you expect a response from your ceLL Server
+        # Use activate_tx() if you expect a response from your Agent
         tx_response = await cell.activate_tx(data)
         print(tx_response)
-
-        # Stream data to your ceLL Server (no response expected)
-        await cell.stream(data)
 
 if __name__ == '__main__':
     asyncio.run(main())

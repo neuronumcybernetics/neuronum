@@ -2,10 +2,10 @@ from setuptools import setup, find_packages
 
 setup(
     name='neuronum',
-    version='12.2.0',
+    version='12.3.0',
     author='Neuronum Cybernetics',
     author_email='welcome@neuronum.net',
-    description='Neuronum ceLL SDK',
+    description='Neuronum SDK',
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
     url="https://neuronum.net",

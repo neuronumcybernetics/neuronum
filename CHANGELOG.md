@@ -1,7 +1,7 @@
 <h1 align="center">
   <img src="https://neuronum.net/static/neuronum.svg" alt="Neuronum" width="80">
 </h1>
-<h4 align="center">CHANGELOG of the Neuronum cell SDK</h4>
+<h4 align="center">CHANGELOG of the Neuronum SDK</h4>
 
 <p align="center">
   <a href="https://neuronum.net">
