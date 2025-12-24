@@ -10,7 +10,7 @@ setup(
     long_description_content_type="text/markdown",
     url="https://neuronum.net",
     project_urls={
-        "GitHub": "https://github.com/neuronumcybernetics/cell-sdk-python",
+        "GitHub": "https://github.com/neuronumcybernetics/neuronum-sdk-python",
     },
     packages=find_packages(include=["neuronum", "cli"]),
     classifiers=[
