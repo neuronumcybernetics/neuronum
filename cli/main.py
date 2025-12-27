@@ -633,12 +633,12 @@ def delete_tool():
 
 @click.command()
 def run_agent():
-    """Downloads, configures, and starts the Neuronum Agent."""
+    """Downloads, configures, and starts the Neuronum Server."""
     import os
     import subprocess
     import shutil
 
-    click.echo("🤖 Neuronum Agent Setup\n")
+    click.echo("🤖 Neuronum Server Setup\n")
 
     # Check if git is installed
     if not shutil.which("git"):
@@ -785,9 +785,9 @@ def run_agent():
     click.echo("\n📝 Writing configuration...")
 
     config_content = f"""# ============================================================================
-# NEURONUM AGENT CONFIGURATION
+# Neuronum Server CONFIGURATION
 # ============================================================================
-# This file contains all configuration parameters for the Neuronum Agent.
+# This file contains all configuration parameters for the Neuronum Server.
 # Modify these values to customize the agent's behavior.
 
 # --- Cell ---
@@ -886,12 +886,12 @@ FTS5_STOPWORDS = {{"what","is","the","of","and","how","do","does","a","an","to",
 
 @click.command()
 def stop_agent():
-    """Stops the running Neuronum Agent and vLLM server."""
+    """Stops the running Neuronum Server and vLLM server."""
     import os
     import signal
     import psutil
 
-    click.echo("🛑 Stopping Neuronum Agent\n")
+    click.echo("🛑 Stopping Neuronum Server\n")
 
     # Check default installation path
     default_path = Path.home() / "neuronum-agent"

@@ -24,7 +24,7 @@
 ### **Getting Started with the Neuronum SDK**
 In this brief getting started guide, you will:
 - [Connect to Neuronum](#connect-to-neuronum)
-- [Deploy with Neuronum Agent](#deploy-with-neuronum-agent)
+- [Deploy with Neuronum Server](#deploy-with-neuronum-server)
 - [Call your Agent / Client APIs](#call-your-agent)
 - [Create & Manage a Custom Tool](#create-a-tool)
 
@@ -58,8 +58,8 @@ neuronum connect-cell
 
 ------------------
 
-### **Deploy with Neuronum Agent**
-Neuronum Agent is an agent-wrapper that transforms your model into an agentic backend server that can interact with the Neuronum Client ([download kybercell](https://neuronum.net)) and your custom clients
+### **Deploy with Neuronum Server**
+Neuronum Server is an agent-wrapper that transforms your model into an agentic backend server that can interact with the Neuronum Client ([download kybercell](https://neuronum.net)) and your custom clients
 
 **Requirements**
 - Python 3.8+

@@ -1,8 +1,8 @@
 #!/bin/bash
 # ============================================================================
-# Neuronum Agent Setup Script
+# Neuronum Server Setup Script
 # ============================================================================
-# This script automates the setup and launch of the Neuronum Agent.
+# This script automates the setup and launch of the Neuronum Server.
 # It will:
 # 1. Create a Python virtual environment
 # 2. Install all dependencies
@@ -173,7 +173,7 @@ start_vllm() {
 
 # Start agent
 start_agent() {
-    print_header "Starting Neuronum Agent"
+    print_header "Starting Neuronum Server"
 
     print_info "Launching agent.py..."
     print_info "Press Ctrl+C to stop the agent"
@@ -204,7 +204,7 @@ trap cleanup EXIT
 
 # Main execution
 main() {
-    print_header "Neuronum Agent Setup"
+    print_header "Neuronum Server Setup"
 
     check_python
     create_venv

@@ -1,5 +1,5 @@
 """
-Configuration loader for Neuronum Agent.
+Configuration loader for Neuronum Server.
 Loads configuration from agent.config file.
 """
 
