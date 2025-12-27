@@ -21,20 +21,21 @@
 
 ------------------
 
-### **A Getting Started into the Neuronum SDK**
+### **Getting Started with the Neuronum SDK**
 In this brief getting started guide, you will:
-- [Learn about the Neuronum SDK](#about-neuronum-sdk)
-- [Connect your ID to Neuronum](#connect-to-neuronum)
-- [Create & Manage A custom Tool](#create-a-tool)
-- [Integrate the API to call your Agent](#integrate-neuronum-api)
+- [Connect to Neuronum](#connect-to-neuronum)
+- [Deploy with Neuronum Agent](#deploy-with-neuronum-agent)
+- [Call your Agent / Client APIs](#call-your-agent)
+- [Create & Manage a Custom Tool](#create-a-tool)
 
 ------------------
 
-### **About Neuronum SDK**
-The Neuronum SDK is the official Python ecosystem to develop and publish custom Tools and lets you integrate the Neuronum API to interact with your Agent from existing projects
+### **About the Neuronum SDK**
+The Neuronum SDK is a ready-to-use E2EE data infrastructure to self-host your favorite AI model as agentic backend for the Neuronum client (kybercell) and your own custom clients
 
 ### Requirements
 - Python >= 3.8
+- A Community or Business Cell (secure identity)
 
 ------------------
 
@@ -44,16 +45,266 @@ The Neuronum SDK is the official Python ecosystem to develop and publish custom 
 pip install neuronum
 ```
 
+**Create a Neuronum Cell**
+<br>The Neuronum Cell is your secure identity to interact with the Network
+```sh
+neuronum create-cell
+```
 
-**Connect an existing Cell (your secure identity)**
+**Connect your Cell**
 ```sh
 neuronum connect-cell
 ```
 
 ------------------
 
-### **Create A Tool**
-Neuronum Tools are MCP-compliant (Model Context Protocol ) plugins that extend your Agent's functionality, enabling it to interact with external data sources and systems.
+### **Deploy with Neuronum Agent**
+Neuronum Agent is an agent-wrapper that transforms your model into an agentic backend server that can interact with the Neuronum Client ([download kybercell](https://neuronum.net)) and your custom clients
+
+**Requirements**
+- Python 3.8+
+- CUDA-compatible GPU (required for vLLM)
+- CUDA Toolkit installed
+
+**Quick Start (Recommended)**
+
+The easiest way to set up and run the agent is using the CLI:
+```sh
+neuronum run-agent
+```
+
+This interactive command will:
+- Clone the neuronum-agent repository
+- Configure the agent with your Cell mnemonic
+- Let you choose the LLM model
+- Optionally configure advanced settings
+- Create a virtual environment
+- Install all dependencies
+- Start the vLLM server in the background
+- Launch the agent
+
+**Manual Setup**
+
+Alternatively, you can set up the agent manually:
+
+1. **Clone the Agent Repository**
+```sh
+git clone https://github.com/neuronumcybernetics/neuronum-agent.git
+cd neuronum-agent
+```
+
+2. **Configure the Agent**
+
+Edit the `agent.config` file and set your Cell mnemonic:
+```config
+MNEMONIC = "your twelve word mnemonic phrase here"
+```
+
+You can also customize other settings like:
+- `VLLM_MODEL_NAME` - LLM model to use (default: Qwen/Qwen2.5-3B-Instruct)
+- `MODEL_MAX_TOKENS`, `MODEL_TEMPERATURE`, `MODEL_TOP_P` - LLM parameters
+- `DB_PATH` - SQLite database location for memory and knowledge storage
+
+3. **Choose Your Setup Method**
+
+**Option A: Automated Setup Script (Recommended)**
+
+Run the automated setup script:
+```sh
+./setup.sh
+```
+
+This script will automatically:
+- Create a Python virtual environment
+- Install all dependencies
+- Start the vLLM server in the background
+- Launch the agent
+
+**Option B: Step-by-Step Manual Setup**
+
+If you prefer to run each step manually:
+
+1. Create and activate a virtual environment:
+```sh
+python3 -m venv venv
+source venv/bin/activate
+```
+
+2. Install dependencies:
+```sh
+pip install -r requirements.txt
+```
+
+3. Start the vLLM server (in a separate terminal):
+```sh
+python start_vllm_server.py
+```
+
+4. Run the agent:
+```sh
+python agent.py
+```
+
+**What the Agent Does**
+
+Once running, the agent will:
+- Connect to the Neuronum network using your Cell credentials
+- Initialize a local SQLite database for conversation memory and knowledge storage
+- Auto-discover and launch any MCP servers placed in the `tools/` directory
+- Start processing messages from the network
+- Execute scheduled tasks defined in the `tasks/` directory
+
+**Stopping the Agent**
+
+To gracefully stop the agent and vLLM server:
+```sh
+neuronum stop-agent
+```
+
+This command will:
+- Find and stop the running agent.py process
+- Stop the vLLM server running in the background
+- Clean up PID files
+- Allow you to confirm before stopping each process
+
+
+------------------
+
+
+### **Call your Agent**
+**Communicate with your Agent using Neuronum Transmitters (TX) with different message types**
+```python
+import asyncio
+from neuronum import Cell
+
+async def main():
+
+    async with Cell() as cell:
+
+        # ============================================
+        # Example 1: Send a prompt to your Agent
+        # ============================================
+        prompt_data = {
+            "type": "prompt",
+            "prompt": "Explain what a black hole is in one sentence"
+        }
+        tx_response = await cell.activate_tx(prompt_data)
+        print(tx_response)
+
+        # ============================================
+        # Example 2: Call a Tool with natural language
+        # ============================================
+        tool_call_data = {
+            "type": "call_tool",
+            "tool_id": "your-tool-id",  # The tool you want to use
+            "prompt": "Send an email to john@example.com with subject 'Meeting' and body 'See you at 3pm'"
+        }
+        tx_response = await cell.activate_tx(tool_call_data)
+        print(tx_response)
+
+        # ============================================
+        # Example 3: Knowledge Management
+        # ============================================
+
+        # Add knowledge to agent's database
+        add_knowledge_data = {
+            "type": "add_knowledge",
+            "knowledge_topic": "Company Policy",
+            "knowledge_data": "Our company operates from 9 AM to 5 PM Monday through Friday."
+        }
+        tx_response = await cell.activate_tx(add_knowledge_data)
+
+        # Update existing knowledge
+        update_knowledge_data = {
+            "type": "update_knowledge",
+            "knowledge_id": "12345",  # ID from previous add
+            "knowledge_data": "Updated: Company operates 8 AM to 6 PM Monday through Friday."
+        }
+        tx_response = await cell.activate_tx(update_knowledge_data)
+
+        # Fetch all knowledge
+        fetch_data = {"type": "fetch_all_knowledge"}
+        knowledge_list = await cell.activate_tx(fetch_data)
+        print(knowledge_list)
+
+        # Delete knowledge
+        delete_knowledge_data = {
+            "type": "delete_knowledge",
+            "knowledge_id": "12345"
+        }
+        tx_response = await cell.activate_tx(delete_knowledge_data)
+
+        # ============================================
+        # Example 4: Tool Management
+        # ============================================
+
+        # Get all installed tools and tasks
+        get_tools_data = {"type": "get_tools"}
+        tools_info = await cell.activate_tx(get_tools_data)
+        print(tools_info)
+
+        # Add a tool (requires tool to be published)
+        # Use stream() instead of activate_tx() to listen for agent restart
+        add_tool_data = {
+            "type": "add_tool",
+            "tool_id": "019ac60e-cccc-7af5-b087-f6fcf1ba1299"
+        }
+        await cell.stream(cell.host, add_tool_data)
+        # Agent will restart and send "ping" when ready
+
+        # Delete a tool
+        delete_tool_data = {
+            "type": "delete_tool",
+            "tool_id": "019ac60e-cccc-7af5-b087-f6fcf1ba1299"
+        }
+        await cell.stream(cell.host, delete_tool_data)
+
+        # ============================================
+        # Example 5: Task Scheduling (Automated Workflows)
+        # ============================================
+
+        # Add a scheduled task
+        add_task_data = {
+            "type": "add_task",
+            "name": "Daily Report",
+            "description": "Send daily summary email",
+            "tool_id": "email-tool-id",
+            "function_name": "send_email",
+            "input_type": "prompt",  # or "static"
+            "input_data": "Send daily summary to manager@company.com",
+            "schedule": "weekdays@1704067200,1704153600"  # Days@Unix timestamps
+        }
+        await cell.stream(cell.host, add_task_data)
+
+        # Delete a task
+        delete_task_data = {
+            "type": "delete_task",
+            "task_id": "task-uuid-here"
+        }
+        await cell.stream(cell.host, delete_task_data)
+
+        # ============================================
+        # Example 6: Agent Status & Logs
+        # ============================================
+
+        # Check if agent is running
+        status_data = {"type": "get_agent_status"}
+        status = await cell.activate_tx(status_data)
+        print(status)  # Returns: {"json": "agent running"}
+
+        # Download agent logs
+        log_data = {"type": "download_log"}
+        logs = await cell.activate_tx(log_data)
+        print(logs["json"]["log"])  # Full log content
+
+if __name__ == '__main__':
+    asyncio.run(main())
+```
+
+----------------------
+
+### **Create a Tool**
+Neuronum Tools are MCP-compliant (Model Context Protocol) plugins that extend your Agent's functionality, enabling it to interact with external data sources and systems.
 
 ### **Initialize a Tool** 
 ```sh
@@ -99,7 +350,6 @@ def echo(message: str) -> str:
 
 if __name__ == "__main__":
     mcp.run()
-    asyncio.run(main())
 ```
 
 
@@ -115,27 +365,3 @@ neuronum delete-tool
 ```
 
 
-
-### **Integrate Neuronum API** 
-**Send a simple prompt to your Agent**
-```python
-import asyncio
-from neuronum import Cell
-
-async def main():
-    
-    async with Cell() as cell: 
-
-        # Build the data payload
-        data = {
-          "type": "prompt",
-          "prompt": "Explain what a black hole is in one sentence"
-        }
-
-        # Use activate_tx() if you expect a response from your Agent
-        tx_response = await cell.activate_tx(data)
-        print(tx_response)
-
-if __name__ == '__main__':
-    asyncio.run(main())
-```

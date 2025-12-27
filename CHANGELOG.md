@@ -1,5 +1,5 @@
 <h1 align="center">
-  <img src="https://neuronum.net/static/neuronum.svg" alt="Neuronum" width="80">
+  <img src="https://neuronum.net/static/logo_new.png" alt="Neuronum" width="80">
 </h1>
 <h4 align="center">CHANGELOG of the Neuronum SDK</h4>
 
@@ -21,9 +21,79 @@
 
 ---
 
-**The versions 0.1.0–12.2.0 are part of the Neuronum MVP ecosystem. As these builds are evolving rapidly, detailed changelogs are not yet provided**
+### 2025.12.0.dev1 / Development Release
+
+**Core Features:**
+
+#### SDK & API
+- **Python SDK** for building on the Neuronum network
+- **Cell Management** - Connect, create, and manage secure identities (Cells)
+- **BIP-39 Mnemonic Support** - 12-word seed phrases for Cell identity
+- **ECDSA SECP256R1 Cryptography** - Secure message signing and verification
+- **ECDH + AES-GCM Encryption** - End-to-end encrypted communication
+- **WebSocket Communication** - Real-time bidirectional messaging via `activate_tx()` and `stream()`
+- **Async/Await Support** - Full asyncio integration for non-blocking operations
+
+#### Agent (Autonomous AI)
+- **Local LLM Integration** - Self-hosted AI agent with vLLM support
+- **MCP Protocol Support** - Model Context Protocol for extensible tool integration
+- **Knowledge Database** - SQLite-based FTS5 full-text search with BM25 ranking for agent memory
+- **Conversation History** - Persistent message storage and retrieval
+- **Task Scheduler** - Cron-like automated workflows with tool execution
+- **Tool Registry** - Auto-discovery and management of MCP servers
+- **AI-Assisted Tool Calling** - Natural language to function parameter extraction
+
+#### CLI Tools
+- `neuronum connect-cell` - Connect existing Cell identity
+- `neuronum init-tool` - Initialize new MCP-compliant tools
+- `neuronum update-tool` - Update tool configurations and code
+- `neuronum delete-tool` - Remove published tools
+- `neuronum run-agent` - Interactive agent setup and deployment
+- `neuronum stop-agent` - Graceful agent and vLLM shutdown
+
+#### Security Features
+- **Automatic Permission Enforcement** - Auto-fixes insecure private key permissions (0600)
+- **Timestamp Validation** - Prevents replay attacks with time-based authentication
+- **SQL Injection Protection** - Parameterized queries and FTS5 operator sanitization
+- **Shell Injection Protection** - Safe subprocess execution without shell=True
+- **Resource Leak Prevention** - Proper cleanup of connections and sessions
+- **Secure Credential Storage** - Credentials stored in `~/.neuronum/` (home directory)
+
+#### Developer Experience
+- **Comprehensive API Examples** - 6 categories of usage examples in README
+- **Type Hints** - Full type annotations for better IDE support
+- **Error Handling** - Graceful error messages and automatic recovery
+- **Logging** - Structured logging with configurable levels
+- **Hot Reload Support** - Agent automatically restarts when tools are added/removed
+
+**Bug Fixes:**
+- Fixed stale timestamp issue in agent reconnection causing authentication failures
+- Fixed blocking `time.sleep()` in async contexts (replaced with `asyncio.sleep()`)
+- Fixed resource leaks from unclosed Cell instances
+- Fixed mnemonic exposure in logs
+- Removed duplicate imports and unused code
+
+**Improvements:**
+- Unified credentials path across all `neuronum.py` files to `~/.neuronum/`
+- Added `_extract_agent_id()` helper function to eliminate duplicate code
+- Enhanced tool parameter validation with JSON schema support
+- Improved FTS5 search with stopwords and keyword limits
+- Better error messages with actionable guidance
+- Optimized agent reconnection logic with fresh timestamps
+
+**Documentation:**
+- Added comprehensive API integration examples
+- Added agent deployment guide
+- Added tool creation guide
+- Added security best practices
+
+
+**The versions 0.1.0–12.3.0 are part of the Neuronum MVP ecosystem. As these builds are evolving rapidly, detailed changelogs are not yet provided**
 
 ! The first stable release will follow CalVer semantics and receive periodic updates guided by transparent changelogs !
+
+
+
 
 
 

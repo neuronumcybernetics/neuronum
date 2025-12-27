@@ -18,6 +18,10 @@ from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 from cryptography.hazmat.backends import default_backend
 from abc import ABC, abstractmethod
+from bip_utils import Bip39MnemonicValidator, Bip39Languages, Bip39SeedGenerator, Bip39MnemonicGenerator
+from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePrivateKey
+import hashlib
+import asyncio
 
 # Configure logging
 logging.basicConfig(
@@ -64,6 +68,8 @@ class ClientConfig:
     max_retries: int = 3
     retry_delay: float = 1.0
     max_retry_delay: float = 60.0
+    websocket_ping_interval: int = 20
+    websocket_ping_timeout: int = 10
 
 
 class CryptoManager:
@@ -257,11 +263,12 @@ class CacheManager:
 
 
 class NetworkClient:
-    """Handles all network operations with retry logic"""
+    """Handles all network operations with proper session management"""
 
     def __init__(self, config: ClientConfig):
         self.config = config
         self._session: Optional[aiohttp.ClientSession] = None
+        self._session_lock = asyncio.Lock()
 
     def __del__(self):
         """Cleanup: warn if session wasn't properly closed"""
@@ -271,37 +278,50 @@ class NetworkClient:
                 "Use 'async with NetworkClient(...)' or call close() explicitly."
             )
     
+    async def _ensure_session(self):
+        """Ensure session exists, create if needed"""
+        if self._session is None or self._session.closed:
+            async with self._session_lock:
+                if self._session is None or self._session.closed:
+                    connector = aiohttp.TCPConnector(
+                        limit=100,  # Connection pool limit
+                        limit_per_host=30,
+                        ttl_dns_cache=300,
+                        force_close=False  # Allow connection reuse
+                    )
+                    timeout = aiohttp.ClientTimeout(
+                        total=self.config.timeout,
+                        connect=10,
+                        sock_read=self.config.timeout
+                    )
+                    self._session = aiohttp.ClientSession(
+                        connector=connector,
+                        timeout=timeout
+                    )
+                    logger.debug("Created new HTTP session")
+    
+    async def close(self):
+        """Explicitly close the session"""
+        if self._session and not self._session.closed:
+            await self._session.close()
+            logger.debug("Closed HTTP session")
+            self._session = None
+    
     async def __aenter__(self):
-        self._session = aiohttp.ClientSession(
-            timeout=aiohttp.ClientTimeout(total=self.config.timeout)
-        )
+        await self._ensure_session()
         return self
     
     async def __aexit__(self, *args):
-        if self._session:
-            await self._session.close()
-            self._session = None
-
-    async def close(self):
-        """Explicitly close the session"""
-        if self._session:
-            await self._session.close()
-            self._session = None
-
+        await self.close()
+    
     async def post_request(
-        self,
-        url: str,
+        self, 
+        url: str, 
         payload: Dict[str, Any],
         retry_count: int = 0
     ) -> Optional[Dict[str, Any]]:
         """Make POST request with retry logic"""
-        # Create session if needed, but ensure it's tracked for cleanup
-        session_created_here = False
-        if not self._session:
-            self._session = aiohttp.ClientSession(
-                timeout=aiohttp.ClientTimeout(total=self.config.timeout)
-            )
-            session_created_here = True
+        await self._ensure_session()
         
         try:
             async with self._session.post(url, json=payload) as response:
@@ -321,20 +341,62 @@ class NetworkClient:
             logger.error(f"Unexpected error for URL {url}: {e}")
             raise NetworkError(f"Unexpected error: {e}")
     
+    async def delete_request(
+        self,
+        url: str,
+        payload: Dict[str, Any],
+        retry_count: int = 0
+    ) -> Optional[Dict[str, Any]]:
+        """Make DELETE request with retry logic"""
+        await self._ensure_session()
+        
+        try:
+            async with self._session.delete(url, json=payload) as response:
+                response.raise_for_status()
+                return await response.json()
+        except aiohttp.ClientResponseError as e:
+            logger.error(f"HTTP error {e.status} for URL: {url}")
+            if retry_count < self.config.max_retries and e.status >= 500:
+                return await self._retry_delete_request(url, payload, retry_count)
+            raise NetworkError(f"HTTP {e.status} error")
+        except aiohttp.ClientError as e:
+            logger.error(f"Client error for URL {url}: {e}")
+            if retry_count < self.config.max_retries:
+                return await self._retry_delete_request(url, payload, retry_count)
+            raise NetworkError(f"Client error: {e}")
+        except Exception as e:
+            logger.error(f"Unexpected error for URL {url}: {e}")
+            raise NetworkError(f"Unexpected error: {e}")
+    
     async def _retry_request(
         self, 
         url: str, 
         payload: Dict[str, Any], 
         retry_count: int
     ) -> Optional[Dict[str, Any]]:
-        """Retry request with exponential backoff"""
+        """Retry POST request with exponential backoff"""
         delay = min(
             self.config.retry_delay * (2 ** retry_count),
             self.config.max_retry_delay
         )
-        logger.info(f"Retrying request in {delay}s (attempt {retry_count + 1})")
+        logger.info(f"Retrying POST request in {delay}s (attempt {retry_count + 1})")
         await asyncio.sleep(delay)
         return await self.post_request(url, payload, retry_count + 1)
+    
+    async def _retry_delete_request(
+        self,
+        url: str,
+        payload: Dict[str, Any],
+        retry_count: int
+    ) -> Optional[Dict[str, Any]]:
+        """Retry DELETE request with exponential backoff"""
+        delay = min(
+            self.config.retry_delay * (2 ** retry_count),
+            self.config.max_retry_delay
+        )
+        logger.info(f"Retrying DELETE request in {delay}s (attempt {retry_count + 1})")
+        await asyncio.sleep(delay)
+        return await self.delete_request(url, payload, retry_count + 1)
 
 
 class BaseClient(ABC):
@@ -434,9 +496,56 @@ class BaseClient(ABC):
         except NetworkError as e:
             logger.error(f"Failed to fetch cells: {e}")
             return []
+        
+    async def list_tools(self) -> List[Dict[str, Any]]:
+        # Fetch Tasks from API
+        full_url = f"https://{self.network}/api/list_tools"
+        payload = {"cell": self.to_dict()}
+        
+        try:
+            data = await self._network_client.post_request(full_url, payload)
+            tools = data.get("Tools", []) if data else []
+            return tools
+        except NetworkError as e:
+            logger.error(f"Failed to fetch cells: {e}")
+            return []
+    
+    async def tx_response(
+        self, 
+        transmitter_id: str, 
+        data: Dict[str, Any], 
+        client_public_key_str: str
+    ) -> None:
+        """
+        Send an encrypted response to a transmitter.
+        
+        Args:
+            transmitter_id: ID of the transmitter
+            data: Response data to encrypt
+            client_public_key_str: Client's public key in PEM format
+            
+        Raises:
+            EncryptionError: If encryption fails
+            NetworkError: If network request fails
+        """
+        if not self._crypto:
+            raise EncryptionError("Crypto manager not initialized")
+        
+        if not client_public_key_str:
+            raise ValueError("client_public_key_str is required")
+        
+        url = f"https://{self.network}/api/tx_response/{transmitter_id}"
+        
+        public_key = self._crypto.load_public_key_from_pem(client_public_key_str)
+        encrypted_payload = self._crypto.encrypt_with_ecdh_aesgcm(public_key, data)
+        payload = {"data": encrypted_payload, "cell": self.to_dict()}
+        
+        await self._network_client.post_request(url, payload)
+        logger.info(f"Response sent to transmitter {transmitter_id}")
     
     async def activate_tx(
         self, 
+        cell_id: str, 
         data: Dict[str, Any]
     ) -> Optional[Dict[str, Any]]:
         """
@@ -456,8 +565,6 @@ class BaseClient(ABC):
         """
         if not self._crypto:
             raise EncryptionError("Crypto manager not initialized")
-        
-        cell_id = self.host.split("@", 1)[-1]
         
         url = f"https://{self.network}/api/activate_tx/{cell_id}"
         payload = {"cell": self.to_dict()}
@@ -502,7 +609,102 @@ class BaseClient(ABC):
             logger.debug("Received unencrypted response")
             return inner_response
     
-    async def stream(self, data: Dict[str, Any]) -> bool:
+    async def sync(self) -> AsyncGenerator[Dict[str, Any], None]:
+        """
+        Sync with the network and yield operations as they arrive.
+
+        Yields:
+            Operation dictionaries with decrypted data
+
+        Raises:
+            ValueError: If not called from Cell instance or host not set
+        """
+        if not isinstance(self, Cell):
+            raise ValueError("sync must be called from a Cell instance")
+
+        cell = getattr(self, 'host', None)
+        if not cell:
+            raise ValueError("host is required for Cell sync")
+
+        full_url = f"wss://{self.network}/sync/{cell}"
+
+        logger.info(f"Starting sync with {cell}")
+
+        retry_count = 0
+        while True:
+            try:
+                # Generate fresh auth payload with current timestamp for each connection attempt
+                auth_payload = self.to_dict()
+
+                ssl_context = ssl.create_default_context()
+
+                async with websockets.connect(
+                    full_url,
+                    ssl=ssl_context,
+                    ping_interval=self.config.websocket_ping_interval,
+                    ping_timeout=self.config.websocket_ping_timeout,
+                    close_timeout=10
+                ) as ws:
+                    await ws.send(json.dumps(auth_payload))
+                    logger.info(f"Connected and authenticated to {cell}")
+                    retry_count = 0  # Reset on successful connection
+
+                    while True:
+                        try:
+                            raw_operation = await asyncio.wait_for(
+                                ws.recv(),
+                                timeout=self.config.timeout
+                            )
+                            operation = json.loads(raw_operation)
+
+                            if "encrypted" in operation.get("data", {}):
+                                encrypted_data = operation["data"]["encrypted"]
+
+                                try:
+                                    ephemeral_public_key_bytes = CryptoManager.safe_b64decode(
+                                        encrypted_data["ephemeralPublicKey"]
+                                    )
+                                    nonce = CryptoManager.safe_b64decode(
+                                        encrypted_data["nonce"]
+                                    )
+                                    ciphertext = CryptoManager.safe_b64decode(
+                                        encrypted_data["ciphertext"]
+                                    )
+
+                                    decrypted_data = self._crypto.decrypt_with_ecdh_aesgcm(
+                                        ephemeral_public_key_bytes, nonce, ciphertext
+                                    )
+
+                                    operation["data"].update(decrypted_data)
+                                    operation["data"].pop("encrypted")
+                                    yield operation
+                                except EncryptionError:
+                                    logger.error("Failed to decrypt operation")
+                            else:
+                                logger.warning("Received unencrypted data")
+
+                        except asyncio.TimeoutError:
+                            # Ping is handled automatically by websockets library
+                            continue
+                        except ConnectionClosed as e:
+                            logger.warning(f"Connection closed: {e.code} - {e.reason}")
+                            break
+                        except Exception as e:
+                            logger.error(f"Error in receive loop: {e}")
+                            break
+
+            except WebSocketException as e:
+                logger.error(f"WebSocket error: {e}")
+            except Exception as e:
+                logger.error(f"General error in sync: {e}")
+
+            # Fixed 5-second retry interval for reconnection
+            retry_count += 1
+            delay = 5.0
+            logger.info(f"Reconnecting in {delay}s (attempt {retry_count})")
+            await asyncio.sleep(delay)
+    
+    async def stream(self, cell_id: str, data: Dict[str, Any]) -> bool:
         """
         Stream data to a target cell.
         
@@ -527,8 +729,6 @@ class BaseClient(ABC):
         if not self._crypto:
             raise EncryptionError("Crypto manager not initialized")
         
-        cell_id = self.host.split("@", 1)[-1]
-        
         # Get target cell's public key
         public_key_pem_str = await self._get_target_cell_public_key(cell_id)
         public_key_object = self._crypto.load_public_key_from_pem(public_key_pem_str)
@@ -549,7 +749,13 @@ class BaseClient(ABC):
         
         try:
             ssl_context = ssl.create_default_context()
-            async with websockets.connect(full_url, ssl=ssl_context) as ws:
+            async with websockets.connect(
+                full_url,
+                ssl=ssl_context,
+                ping_interval=self.config.websocket_ping_interval,
+                ping_timeout=self.config.websocket_ping_timeout,
+                close_timeout=10
+            ) as ws:
                 await ws.send(json.dumps(send_payload))
                 logger.info(f"Data streamed to {cell_id}")
                 
@@ -568,6 +774,291 @@ class BaseClient(ABC):
         except Exception as e:
             logger.error(f"Error during stream: {e}")
             return False
+        
+    def sign_connect_message(self, private_key: EllipticCurvePrivateKey, message: bytes) -> str:
+        """Signs a message using the given private key and returns a base64 encoded signature."""
+        try:
+            signature = private_key.sign(
+                message,
+                ec.ECDSA(hashes.SHA256())
+            )
+            return base64.b64encode(signature).decode()
+        except Exception as e:
+            print(f"❌ Error signing message: {e}")
+            return ""
+        
+    async def connect_cell(self, mnemonic):
+        if len(mnemonic.split()) != 12:
+            print("false lenght")
+            return
+
+        print(mnemonic)
+        if not Bip39MnemonicValidator(Bip39Languages.ENGLISH).IsValid(mnemonic):
+            print("❌ Invalid mnemonic. Please ensure it is 12 valid BIP-39 words.")
+            return
+
+        try:
+            seed = Bip39SeedGenerator(mnemonic).Generate()
+            digest = hashlib.sha256(seed).digest()
+            int_key = int.from_bytes(digest, "big")
+            private_key = ec.derive_private_key(int_key, ec.SECP256R1(), default_backend())
+            public_key = private_key.public_key()
+
+            pem_private = private_key.private_bytes(
+                encoding=serialization.Encoding.PEM,
+                format=serialization.PrivateFormat.PKCS8,
+                encryption_algorithm=serialization.NoEncryption()
+            )
+
+            pem_public = public_key.public_bytes(
+                encoding=serialization.Encoding.PEM,
+                format=serialization.PublicFormat.SubjectPublicKeyInfo
+            )
+
+        except Exception as e:
+            print(f"❌ Error generating keys from mnemonic: {e}")
+            return
+        
+        timestamp = str(int(time.time()))
+        message = f"public_key={pem_public.decode('utf-8')};timestamp={timestamp}"
+        signature_b64 = self.sign_connect_message(private_key, message.encode())
+
+        url = "https://neuronum.net/api/connect_cell"
+        connect_data = {
+            "public_key": pem_public.decode("utf-8"),
+            "signed_message": signature_b64,
+            "message": message
+        }
+
+        try:
+            response_data = await self._network_client.post_request(url, connect_data)
+
+            print(response_data)
+            if response_data:
+                host = response_data.get("host", False)
+                cell_type = response_data.get("cell_type", False)
+                operator = response_data.get("operator", False)
+                print(host)
+            
+        except NetworkError as e:
+            print(f"Error connecting cell: {e}")
+            return
+        except Exception as e:
+            print(f"Unexpected error during API call: {e}")
+            return
+
+        if host:
+            neuronum_folder_path = Path.home() / ".neuronum"
+            neuronum_folder_path.mkdir(parents=True, exist_ok=True)
+
+            env_path = neuronum_folder_path / ".env"
+            env_content = f"HOST={host}\nMNEMONIC=\"{mnemonic}\"\nTYPE={cell_type}\nOPERATOR={operator}\n"
+
+            env_path.write_text(env_content)
+
+            public_key_pem_file = neuronum_folder_path / "public_key.pem"
+            with open(public_key_pem_file, "wb") as key_file:
+                    key_file.write(pem_public)
+
+            private_key_pem_file = neuronum_folder_path / "private_key.pem"
+            with open(private_key_pem_file, "wb") as key_file:
+                    key_file.write(pem_private)
+
+            return host
+        else:
+            print("❌ Failed to retrieve host from server.")
+
+    async def disconnect_cell(self):
+        if self.host:
+            neuronum_folder_path = Path.home() / ".neuronum"
+            files_to_delete = [
+                neuronum_folder_path / ".env",
+                neuronum_folder_path / "private_key.pem",
+                neuronum_folder_path / "public_key.pem",
+                neuronum_folder_path / "cells.json",
+                neuronum_folder_path / "nodes.json",
+            ]
+            
+            for file_path in files_to_delete:
+                try:
+                    if file_path.exists(): 
+                        await asyncio.to_thread(os.unlink, file_path)
+                except Exception as e:
+                    print(f"Warning: Failed to delete {file_path.name}: {e}")
+        else:
+            print(f"❌ Neuronum Cell '{self.host}' deletion failed on server. (Status was not True)")
+
+    async def delete_cell(self):
+        if not self.host:
+            print("Error: Cell host is not loaded. Cannot delete.")
+            return
+
+        url = f"https://{self.network}/api/delete_cell"
+
+        cell_data = self.to_dict()
+    
+        payload = {
+            "host": cell_data.get("host"),
+            "signed_message": cell_data.get("signed_message"),
+            "message": cell_data.get("message")
+        }
+
+        status = False
+        try:
+            response_data = await self._network_client.delete_request(url, payload)
+
+            print(response_data)
+            if response_data:
+                status = response_data.get("status", False)
+            
+        except NetworkError as e:
+            print(f"Error deleting cell: {e}")
+            return
+        except Exception as e:
+            print(f"Unexpected error during API call: {e}")
+            return
+
+        if status:
+            print(f"✅ Neuronum Cell '{self.host}' successfully deleted from server. Removing local files...")
+
+            neuronum_folder_path = Path.home() / ".neuronum"
+            files_to_delete = [
+                neuronum_folder_path / ".env",
+                neuronum_folder_path / "private_key.pem",
+                neuronum_folder_path / "public_key.pem",
+                neuronum_folder_path / "cells.json",
+                neuronum_folder_path / "nodes.json",
+            ]
+            
+            for file_path in files_to_delete:
+                try:
+                    if file_path.exists(): 
+                        await asyncio.to_thread(os.unlink, file_path)
+                except Exception as e:
+                    print(f"Warning: Failed to delete {file_path.name}: {e}")
+        else:
+            print(f"❌ Neuronum Cell '{self.host}' deletion failed on server. (Status was not True)")
+
+    def derive_keys_from_mnemonic(self, mnemonic: str):
+        """Derives EC-SECP256R1 keys from a BIP-39 mnemonic's seed."""
+        try:
+            seed = Bip39SeedGenerator(mnemonic).Generate()
+            digest = hashlib.sha256(seed).digest()
+            int_key = int.from_bytes(digest, "big")
+            
+            private_key = ec.derive_private_key(int_key, ec.SECP256R1(), default_backend())
+            public_key = private_key.public_key()
+
+            pem_private = private_key.private_bytes(
+                encoding=serialization.Encoding.PEM,
+                format=serialization.PrivateFormat.PKCS8,
+                encryption_algorithm=serialization.NoEncryption()
+            )
+
+            pem_public = public_key.public_bytes(
+                encoding=serialization.Encoding.PEM,
+                format=serialization.PublicFormat.SubjectPublicKeyInfo
+            )
+            
+            return private_key, public_key, pem_private, pem_public
+        
+        except Exception as e:
+            return None, None, None, None
+
+    async def add_employee(self, employee_name):
+        employee_mnemonic = Bip39MnemonicGenerator().FromWordsNumber(12)
+        _, _, _, employee_pem_public = self.derive_keys_from_mnemonic(employee_mnemonic)
+        
+        if not employee_pem_public:
+            return
+
+        employee_public_key = employee_pem_public.decode("utf-8")
+
+        url = f"https://{self.network}/api/create_employee_cell"
+        cell_data = self.to_dict()
+
+        payload = {
+            "host": cell_data.get("host"),
+            "signed_message": cell_data.get("signed_message"),
+            "message": cell_data.get("message"),
+            "employee_public_key": employee_public_key,
+            "employee_name": employee_name
+        }
+
+        try:
+            response_data = await self._network_client.post_request(url, payload)
+
+            print(response_data)
+            if response_data:
+                employee_cell = response_data.get("host", False)
+                return employee_mnemonic, employee_cell 
+            
+        except NetworkError as e:
+            print(f"Error adding employee: {e}")
+            return
+        except Exception as e:
+            print(f"Unexpected error during API call: {e}")
+            return
+        
+    def base64url_encode(self, data: bytes) -> str:
+        return base64.urlsafe_b64encode(data).rstrip(b'=').decode('utf-8')
+
+    def create_dns_challenge_value(self, public_key_pem: bytes) -> str:
+        try:
+            key_hash = hashlib.sha256(public_key_pem).digest()
+            challenge_value = self.base64url_encode(key_hash)
+            return challenge_value
+        except Exception as e:
+            print(f"❌ Error creating DNS challenge value: {e}")
+            return ""
+        
+    async def confirm_business(self):
+        business_mnemonic = Bip39MnemonicGenerator().FromWordsNumber(12)
+        _, _, _, business_pem_public = self.derive_keys_from_mnemonic(business_mnemonic)
+        
+        if not business_pem_public:
+            return
+
+        business_public_key = business_pem_public.decode("utf-8")
+        challenge_value = self.create_dns_challenge_value(business_pem_public)
+
+        if not challenge_value:
+            return
+
+        return business_mnemonic, challenge_value, business_public_key
+    
+    async def validate_cell(self, business_mnemonic, business_name, business_domain, challenge_value):
+        url = f"https://{self.network}/api/create_business_cell"
+
+        _, _, _, business_pem_public = self.derive_keys_from_mnemonic(business_mnemonic)
+
+        business_public_key = business_pem_public.decode("utf-8")
+
+        payload = {
+            "public_key": business_public_key,
+            "domain": business_domain,
+            "challenge_value": challenge_value,
+            "company_name": business_name
+        }
+
+        try:
+            response_data = await self._network_client.post_request(url, payload)
+
+            print(response_data)
+            if response_data:
+                if response_data.get("status") == "verified" and response_data.get("host"):
+                    return "success"
+                else:
+                    return "failed"
+            else:
+                return "failed"
+            
+        except NetworkError as e:
+            print(f"Error validating cell: {e}")
+            return "failed"
+        except Exception as e:
+            print(f"Unexpected error during API call: {e}")
+            return "failed"
 
 
 class Cell(BaseClient):
@@ -580,7 +1071,8 @@ class Cell(BaseClient):
         self._init_crypto(private_key)
         
         self.host = self.env.get("HOST", "")
-        if not self.host:
+        self.cell_type = self.env.get("TYPE", "")
+        if not self.host or self.cell_type:
             logger.warning("HOST not set in environment")
     
     def _load_private_key(self) -> Optional[ec.EllipticCurvePrivateKey]:
@@ -647,10 +1139,14 @@ class Cell(BaseClient):
         except Exception as e:
             logger.error(f"Error loading environment: {e}")
             return {}
-        
+    
+    async def close(self):
+        """Close network client session"""
+        await self._network_client.close()
+    
     async def __aenter__(self):
-        await self._network_client.__aenter__()
         return self
     
     async def __aexit__(self, *args):
-        await self._network_client.__aexit__(*args)
+        await self.close()
+

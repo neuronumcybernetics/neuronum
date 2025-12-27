@@ -1,5 +1,5 @@
 <h1 align="center">
-  <img src="https://neuronum.net/static/neuronum.svg" alt="Neuronum" width="80">
+  <img src="https://neuronum.net/static/logo_new.png" alt="Neuronum" width="80">
 </h1>
 <h4 align="center">SECURITY of the Neuronum SDK</h4>
 

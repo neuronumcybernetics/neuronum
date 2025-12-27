@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='neuronum',
-    version='12.3.0',
+    version = '2025.12.0.dev1',
     author='Neuronum Cybernetics',
     author_email='welcome@neuronum.net',
     description='Neuronum SDK',
@@ -27,7 +27,8 @@ setup(
         'python-dotenv',
         'requests',
         'cryptography',
-        'bip_utils'
+        'bip_utils',
+        'psutil'
     ],
     entry_points={
         "console_scripts": [
