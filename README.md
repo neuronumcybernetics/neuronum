@@ -118,7 +118,8 @@ This script will automatically:
 - Create a Python virtual environment
 - Install all dependencies
 - Start the vLLM server in the background
-- Launch the agent
+- Launch the agent in the background
+- Allow you to safely close your terminal session
 
 **Option B: Step-by-Step Manual Setup**
 
@@ -135,14 +136,16 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-3. Start the vLLM server (in a separate terminal):
+3. Start the vLLM server in the background:
 ```sh
-python start_vllm_server.py
+nohup python start_vllm_server.py > vllm_server.log 2>&1 &
+echo $! > .vllm_pid
 ```
 
-4. Run the agent:
+4. Run the agent in the background:
 ```sh
-python server.py
+nohup python server.py > server.log 2>&1 &
+echo $! > .server_pid
 ```
 
 **What the Agent Does**

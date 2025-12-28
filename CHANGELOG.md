@@ -20,6 +20,11 @@
 </p>
 
 ---
+### 2025.12.0.dev3 / Development Release
+**Changes:**
+- Both vLLM and Neuronum server now run in background (survive SSH disconnection)
+- `neuronum serve-agent` now detects and reuses existing installations
+- PID file tracking for reliable server management
 
 ### 2025.12.0.dev1 + 2025.12.0.dev2 / Development Releases
 

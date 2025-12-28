@@ -27,6 +27,8 @@ cd "$SCRIPT_DIR"
 VENV_DIR="venv"
 VLLM_LOG_FILE="vllm_server.log"
 VLLM_PID_FILE=".vllm_pid"
+SERVER_LOG_FILE="server.log"
+SERVER_PID_FILE=".server_pid"
 
 # Helper functions
 print_header() {
@@ -175,32 +177,77 @@ start_vllm() {
 serve_agent() {
     print_header "Starting Neuronum Server"
 
-    print_info "Launching server.py..."
-    print_info "Press Ctrl+C to stop the agent"
-    echo
+    # Check if server is already running
+    if [ -f "$SERVER_PID_FILE" ]; then
+        OLD_PID=$(cat "$SERVER_PID_FILE")
+        if ps -p "$OLD_PID" > /dev/null 2>&1; then
+            print_warning "Neuronum Server is already running (PID: $OLD_PID)"
+            read -p "Do you want to restart it? (y/N): " -n 1 -r
+            echo
+            if [[ $REPLY =~ ^[Yy]$ ]]; then
+                print_info "Stopping existing Neuronum Server..."
+                kill "$OLD_PID" 2>/dev/null || true
+                sleep 2
+            else
+                print_info "Using existing Neuronum Server"
+                return 0
+            fi
+        fi
+    fi
 
-    # Run the agent
-    python server.py
+    print_info "Starting Neuronum Server in background..."
+    print_info "Log file: $SERVER_LOG_FILE"
+
+    # Start server in background
+    nohup python server.py > "$SERVER_LOG_FILE" 2>&1 &
+    SERVER_PID=$!
+    echo "$SERVER_PID" > "$SERVER_PID_FILE"
+
+    print_info "Waiting for Neuronum Server to start (PID: $SERVER_PID)..."
+    sleep 3
+
+    # Check if process is still running
+    if ps -p "$SERVER_PID" > /dev/null 2>&1; then
+        print_success "Neuronum Server started successfully (PID: $SERVER_PID)"
+        print_info "You can now safely close this terminal session"
+        print_info "To view logs: tail -f $SERVER_LOG_FILE"
+        print_info "To stop the server: neuronum stop-agent"
+    else
+        print_error "Neuronum Server failed to start. Check $SERVER_LOG_FILE for details."
+        exit 1
+    fi
 }
 
 # Cleanup function
 cleanup() {
-    print_header "Cleanup"
+    # Only cleanup on error, not on normal exit
+    if [ $? -ne 0 ]; then
+        print_header "Cleanup (Error Occurred)"
 
-    if [ -f "$VLLM_PID_FILE" ]; then
-        VLLM_PID=$(cat "$VLLM_PID_FILE")
-        if ps -p "$VLLM_PID" > /dev/null 2>&1; then
-            print_info "Stopping vLLM server (PID: $VLLM_PID)..."
-            kill "$VLLM_PID" 2>/dev/null || true
+        if [ -f "$SERVER_PID_FILE" ]; then
+            SERVER_PID=$(cat "$SERVER_PID_FILE")
+            if ps -p "$SERVER_PID" > /dev/null 2>&1; then
+                print_info "Stopping Neuronum Server (PID: $SERVER_PID)..."
+                kill "$SERVER_PID" 2>/dev/null || true
+            fi
+            rm -f "$SERVER_PID_FILE"
         fi
-        rm -f "$VLLM_PID_FILE"
-    fi
 
-    print_success "Cleanup complete"
+        if [ -f "$VLLM_PID_FILE" ]; then
+            VLLM_PID=$(cat "$VLLM_PID_FILE")
+            if ps -p "$VLLM_PID" > /dev/null 2>&1; then
+                print_info "Stopping vLLM server (PID: $VLLM_PID)..."
+                kill "$VLLM_PID" 2>/dev/null || true
+            fi
+            rm -f "$VLLM_PID_FILE"
+        fi
+
+        print_success "Cleanup complete"
+    fi
 }
 
-# Trap Ctrl+C to cleanup
-trap cleanup EXIT
+# Trap errors to cleanup
+trap cleanup ERR
 
 # Main execution
 main() {
