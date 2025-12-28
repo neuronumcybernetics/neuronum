@@ -75,20 +75,14 @@ neuronum connect-cell
 ### **Neuronum Server**
 Neuronum Server is an agent-wrapper that transforms your model into an agentic backend server that can interact with the [Neuronum Client API](#neuronum-client-api) and installed tools
 
-**Setup the Server**
+**Start the Server**
 
-Clone the neuronum-server repository:
 ```sh
-git clone https://github.com/neuronumcybernetics/neuronum-server.git
-cd neuronum-server
+neuronum serve-agent
 ```
 
-Run the setup script:
-```sh
-bash start_neuronum_server.sh
-```
-
-The setup script will:
+This command will:
+- Clone the neuronum-server repository (if not already present)
 - Create a Python virtual environment
 - Install all dependencies (vLLM, PyTorch, etc.)
 - Start the vLLM server in the background
@@ -97,14 +91,14 @@ The setup script will:
 **Viewing Logs**
 
 ```sh
-tail -f server.log
-tail -f vllm_server.log
+tail -f neuronum-server/server.log
+tail -f neuronum-server/vllm_server.log
 ```
 
 **Stopping the Server**
 
 ```sh
-bash stop_neuronum_server.sh
+neuronum stop-agent
 ```
 
 **What the Server Does**
@@ -116,6 +110,46 @@ Once running, the server will:
 - Process messages from clients via the Neuronum network
 - Execute scheduled tasks defined in the `tasks/` directory
 
+**Server Configuration**
+
+The server can be customized by editing the `neuronum-server/server.config` file. Here are the available options:
+
+**File Paths:**
+```python
+LOG_FILE = "server.log"              # Server log file location
+DB_PATH = "agent_memory.db"          # SQLite database for conversations and knowledge
+TASKS_DIR = "./tasks"                # Directory for scheduled tasks
+```
+
+**Model Configuration:**
+```python
+MODEL_MAX_TOKENS = 512               # Maximum tokens in responses (higher = longer answers)
+MODEL_TEMPERATURE = 0.3              # Creativity (0.0 = deterministic, 1.0 = creative)
+MODEL_TOP_P = 0.85                   # Nucleus sampling (lower = more predictable)
+```
+
+**vLLM Server:**
+```python
+VLLM_MODEL_NAME = "Qwen/Qwen2.5-3B-Instruct"  # Model to load
+                                               # Examples: "Qwen/Qwen2.5-1.5B-Instruct",
+                                               #           "meta-llama/Llama-3.2-3B-Instruct"
+VLLM_HOST = "127.0.0.1"              # Server host (127.0.0.1 = local only)
+VLLM_PORT = 8000                     # Server port
+VLLM_API_BASE = "http://127.0.0.1:8000/v1"  # Full API URL
+```
+
+**Conversation & Knowledge:**
+```python
+CONVERSATION_HISTORY_LIMIT = 10      # Recent messages to include in context
+KNOWLEDGE_RETRIEVAL_LIMIT = 5        # Max knowledge chunks to retrieve
+FTS5_STOPWORDS = {...}               # Words to exclude from knowledge search
+```
+
+After modifying the configuration, restart the server for changes to take effect:
+```sh
+neuronum stop-agent
+neuronum serve-agent
+```
 
 ------------------
 

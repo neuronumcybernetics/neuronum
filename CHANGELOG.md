@@ -20,17 +20,12 @@
 </p>
 
 ---
-### 2025.12.0.dev6 / Development Release
+### 2025.12.0.dev7 + 2025.12.0.dev6 + 2025.12.0.dev5 + / Development Release
 **Changes:**
-- `neuronum serve-agent` is no longer part of the SDK 
-- `neuronum stop-agent` is no longer part of the SDK 
 - `setup.sh` is now start_neuronum_server.sh
-- use `stop_neuronum_server.sh` to stop the server
+- `stop_neuronum_server.sh` stops neuronum server
 - .env credentials replace MNEMONIC value in server.config 
-
-### 2025.12.0.dev5 / Development Release
-**Changes:**
-- `neuronum serve-agent` now clones the github repo from https://github.com/neuronumcybernetics/neuronum-sdk-python/tree/main/neuronum-server
+- `neuronum serve-agent` now clones the github repo from "https://github.com/neuronumcybernetics/neuronum-server"
 
 ### 2025.12.0.dev4 / Development Release
 **Changes:**

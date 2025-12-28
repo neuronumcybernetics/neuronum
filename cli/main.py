@@ -12,8 +12,12 @@ import base64
 import time
 import hashlib
 from bip_utils import Bip39MnemonicGenerator, Bip39SeedGenerator
-from bip_utils import Bip39MnemonicValidator, Bip39Languages 
-import json 
+from bip_utils import Bip39MnemonicValidator, Bip39Languages
+import json
+import subprocess
+import sys
+import os
+import signal 
 
 # --- Configuration Constants ---
 NEURONUM_PATH = Path.home() / ".neuronum"
@@ -631,6 +635,130 @@ def delete_tool():
         return
 
 
+@click.command()
+@click.option('--server-dir', default=None, help='Path to neuronum-server directory (default: ./neuronum-server)')
+def serve_agent(server_dir):
+    """Sets up and starts the Neuronum Server with vLLM."""
+
+    # Determine server directory
+    if server_dir is None:
+        server_dir = Path.cwd() / "neuronum-server"
+    else:
+        server_dir = Path(server_dir)
+
+    # Check if neuronum-server exists, if not clone it
+    if not server_dir.exists():
+        click.echo("📦 Neuronum Server not found. Cloning repository...")
+        try:
+            subprocess.run([
+                "git", "clone",
+                "https://github.com/neuronumcybernetics/neuronum-server.git",
+                str(server_dir)
+            ], check=True)
+            click.echo("✅ Repository cloned successfully!")
+        except subprocess.CalledProcessError as e:
+            click.echo(f"❌ Failed to clone repository: {e}")
+            return
+        except FileNotFoundError:
+            click.echo("❌ Git is not installed. Please install git first.")
+            return
+
+    # Check if Cell credentials exist
+    if not ENV_FILE.exists():
+        click.echo("❌ No Cell credentials found!")
+        click.echo("Please run 'neuronum create-cell' or 'neuronum connect-cell' first")
+        return
+
+    # Check if server is already running
+    server_pid_file = server_dir / ".server_pid"
+
+    if server_pid_file.exists():
+        try:
+            with open(server_pid_file, 'r') as f:
+                pid = int(f.read().strip())
+            # Check if process is actually running
+            os.kill(pid, 0)  # This will raise an exception if process doesn't exist
+            click.echo("⚠️  Neuronum Server is already running!")
+            click.echo(f"📋 View logs: tail -f {server_dir}/server.log")
+            click.echo(f"🛑 To restart, first run: neuronum stop-agent")
+            return
+        except (OSError, ValueError, ProcessLookupError):
+            # Process is not running, clean up stale PID file
+            click.echo("ℹ️  Cleaning up stale PID file...")
+            server_pid_file.unlink(missing_ok=True)
+
+    # Navigate to server directory and run setup script
+    click.echo(f"🚀 Starting Neuronum Server from {server_dir}...")
+
+    start_script = server_dir / "start_neuronum_server.sh"
+    if not start_script.exists():
+        click.echo(f"❌ Start script not found at {start_script}")
+        return
+
+    try:
+        # Make script executable
+        os.chmod(start_script, 0o755)
+
+        # Run the start script
+        result = subprocess.run(
+            ["bash", str(start_script)],
+            cwd=str(server_dir),
+            check=False
+        )
+
+        if result.returncode == 0:
+            click.echo("\n✅ Neuronum Server started successfully!")
+            click.echo(f"📋 View logs: tail -f {server_dir}/server.log")
+            click.echo(f"📋 View vLLM logs: tail -f {server_dir}/vllm_server.log")
+            click.echo("🛑 Stop server: neuronum stop-agent")
+        else:
+            click.echo(f"\n⚠️ Server start script exited with code {result.returncode}")
+
+    except Exception as e:
+        click.echo(f"❌ Error starting server: {e}")
+
+
+@click.command()
+@click.option('--server-dir', default=None, help='Path to neuronum-server directory (default: ./neuronum-server)')
+def stop_agent(server_dir):
+    """Stops the Neuronum Server and vLLM processes."""
+
+    # Determine server directory
+    if server_dir is None:
+        server_dir = Path.cwd() / "neuronum-server"
+    else:
+        server_dir = Path(server_dir)
+
+    if not server_dir.exists():
+        click.echo(f"❌ Neuronum Server directory not found at {server_dir}")
+        return
+
+    stop_script = server_dir / "stop_neuronum_server.sh"
+    if not stop_script.exists():
+        click.echo(f"❌ Stop script not found at {stop_script}")
+        return
+
+    click.echo("🛑 Stopping Neuronum Server...")
+
+    try:
+        # Make script executable
+        os.chmod(stop_script, 0o755)
+
+        # Run the stop script
+        subprocess.run(
+            ["bash", str(stop_script)],
+            cwd=str(server_dir),
+            check=True
+        )
+
+        click.echo("✅ Neuronum Server stopped successfully!")
+
+    except subprocess.CalledProcessError as e:
+        click.echo(f"❌ Error stopping server: {e}")
+    except Exception as e:
+        click.echo(f"❌ Unexpected error: {e}")
+
+
 # --- CLI Registration ---
 cli.add_command(create_cell)
 cli.add_command(connect_cell)
@@ -640,6 +768,8 @@ cli.add_command(disconnect_cell)
 cli.add_command(init_tool)
 cli.add_command(update_tool)
 cli.add_command(delete_tool)
+cli.add_command(serve_agent)
+cli.add_command(stop_agent)
 
 if __name__ == "__main__":
     cli()
