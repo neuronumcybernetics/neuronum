@@ -74,9 +74,9 @@ neuronum serve-agent
 ```
 
 This interactive command will:
-- Clone the neuronum-server repository
-- Configure the agent with your Cell mnemonic
-- Let you choose the LLM model
+- Clone the neuronum-server repository (or use existing installation)
+- Automatically use your Cell mnemonic from `neuronum connect-cell`
+- Let you choose the LLM model (only on fresh install)
 - Optionally configure advanced settings
 - Create a virtual environment
 - Install all dependencies

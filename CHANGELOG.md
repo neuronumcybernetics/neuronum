@@ -20,6 +20,13 @@
 </p>
 
 ---
+
+### 2025.12.0.dev4 / Development Release
+**Changes:**
+- `neuronum serve-agent` automatically uses Cell mnemonic from `~/.neuronum/.env`
+- `neuronum serve-agent` auto-syncs mnemonic between `.env` and `server.config`
+- `neuronum stop-agent` stops all processes without confirmation prompts
+
 ### 2025.12.0.dev3 / Development Release
 **Changes:**
 - Both vLLM and Neuronum server now run in background (survive SSH disconnection)

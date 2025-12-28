@@ -638,7 +638,7 @@ def serve_agent():
     import subprocess
     import shutil
 
-    click.echo("🤖 Neuronum Server Setup\n")
+    click.echo("🤖 Neuronum Server\n")
 
     # Check if Python 3 is installed
     if not shutil.which("python3"):
@@ -646,55 +646,22 @@ def serve_agent():
         return
 
     # Check if default installation already exists
-    default_path = Path.home() / "neuronum-server"
+    install_path = Path.home() / "neuronum-server"
 
-    if default_path.exists():
-        # Check if it has the required files (setup.sh, server.config)
-        setup_script = default_path / "setup.sh"
-        config_file = default_path / "server.config"
+    if install_path.exists():
+        # Check if it has setup.sh (valid installation)
+        setup_script = install_path / "setup.sh"
 
         if setup_script.exists():
-            click.echo(f"✅ Found existing Neuronum Server installation at {default_path}\n")
-
-            action = questionary.select(
-                "What would you like to do?",
-                choices=[
-                    "Start the existing installation",
-                    "Reinstall (clone fresh copy)",
-                    "Cancel"
-                ]
-            ).ask()
-
-            if action == "Start the existing installation":
-                install_path = default_path
-                skip_installation = True
-            elif action == "Reinstall (clone fresh copy)":
-                click.echo(f"🗑️  Removing existing directory...")
-                shutil.rmtree(default_path)
-                install_path = default_path
-                skip_installation = False
-            else:
-                click.echo("❌ Operation cancelled.")
-                return
+            click.echo(f"✅ Using existing installation at {install_path}\n")
+            skip_installation = True
         else:
             # Directory exists but doesn't look like a proper installation
-            click.echo(f"⚠️  Directory {default_path} exists but doesn't appear to be a valid installation.\n")
-            overwrite = questionary.confirm(
-                f"Do you want to remove it and install fresh?",
-                default=True
-            ).ask()
-
-            if overwrite:
-                click.echo(f"🗑️  Removing existing directory...")
-                shutil.rmtree(default_path)
-                install_path = default_path
-                skip_installation = False
-            else:
-                click.echo("❌ Installation cancelled.")
-                return
+            click.echo(f"⚠️  Directory {install_path} exists but appears invalid")
+            click.echo(f"🗑️  Removing and reinstalling...\n")
+            shutil.rmtree(install_path)
+            skip_installation = False
     else:
-        # No existing installation, proceed with fresh install
-        install_path = default_path
         skip_installation = False
 
     # If we're doing a fresh installation, check for git and clone
@@ -705,7 +672,7 @@ def serve_agent():
             return
 
         # Clone the repository
-        click.echo("\n📥 Cloning neuronum-server repository...")
+        click.echo("📥 Cloning neuronum-server repository...")
         repo_url = "https://github.com/neuronumcybernetics/neuronum-server.git"
 
         try:
@@ -714,51 +681,40 @@ def serve_agent():
                 check=True,
                 capture_output=True
             )
-            click.echo("✅ Repository cloned successfully")
+            click.echo("✅ Repository cloned successfully\n")
         except subprocess.CalledProcessError as e:
             click.echo(f"❌ Failed to clone repository: {e.stderr.decode()}")
             return
-    else:
-        click.echo("ℹ️  Using existing installation, skipping clone...\n")
 
     # Configuration section (skip if using existing installation)
     if not skip_installation:
-        click.echo("\n⚙️  Agent Configuration\n")
+        click.echo("⚙️  Agent Configuration\n")
 
-        # Get mnemonic
-        use_existing = questionary.confirm(
-            "Do you want to use your existing Cell mnemonic from 'neuronum connect-cell'?",
-            default=True
-        ).ask()
+        # Try to auto-detect mnemonic from .neuronum/.env
+        mnemonic = None
+        if ENV_FILE.exists():
+            env_content = ENV_FILE.read_text()
+            for line in env_content.split('\n'):
+                if line.startswith('MNEMONIC='):
+                    mnemonic = line.split('=', 1)[1].strip('"')
+                    click.echo(f"✅ Using Cell mnemonic from ~/.neuronum/.env\n")
+                    break
 
-        if use_existing:
-            # Try to read from .neuronum/.env
-            if ENV_FILE.exists():
-                env_content = ENV_FILE.read_text()
-                for line in env_content.split('\n'):
-                    if line.startswith('MNEMONIC='):
-                        mnemonic = line.split('=', 1)[1].strip('"')
-                        click.echo(f"✅ Using existing Cell mnemonic")
-                        break
-                else:
-                    click.echo("❌ Could not find mnemonic in ~/.neuronum/.env")
-                    mnemonic = questionary.text("Enter your 12-word mnemonic:").ask()
-            else:
-                click.echo("❌ No existing Cell found. Please run 'neuronum connect-cell' first.")
-                mnemonic = questionary.text("Enter your 12-word mnemonic:").ask()
-        else:
+        # If no mnemonic found, prompt user
+        if not mnemonic:
+            click.echo("⚠️  No Cell found. Please run 'neuronum connect-cell' first or enter mnemonic manually.\n")
             mnemonic = questionary.text("Enter your 12-word mnemonic:").ask()
 
-        if not mnemonic:
-            click.echo("❌ Mnemonic is required.")
-            return
+            if not mnemonic:
+                click.echo("❌ Mnemonic is required.")
+                return
 
-        # Validate mnemonic
-        try:
-            Bip39MnemonicValidator(mnemonic).Validate()
-        except Exception:
-            click.echo("❌ Invalid mnemonic. Please check your 12-word phrase.")
-            return
+            # Validate mnemonic
+            try:
+                Bip39MnemonicValidator(mnemonic).Validate()
+            except Exception:
+                click.echo("❌ Invalid mnemonic. Please check your 12-word phrase.")
+                return
 
         # LLM Model selection
         click.echo("\n🧠 LLM Model Configuration\n")
@@ -872,7 +828,41 @@ FTS5_STOPWORDS = {{"what","is","the","of","and","how","do","does","a","an","to",
         click.echo("✅ Configuration saved")
         click.echo("\n🚀 Setup Complete!\n")
     else:
-        click.echo("🚀 Ready to start existing installation!\n")
+        # Using existing installation - check if we should update mnemonic
+        config_file = install_path / "server.config"
+
+        if ENV_FILE.exists() and config_file.exists():
+            # Read mnemonic from .neuronum/.env
+            env_content = ENV_FILE.read_text()
+            env_mnemonic = None
+            for line in env_content.split('\n'):
+                if line.startswith('MNEMONIC='):
+                    env_mnemonic = line.split('=', 1)[1].strip('"')
+                    break
+
+            # Read current mnemonic from server.config
+            config_content = config_file.read_text()
+            config_mnemonic = None
+            for line in config_content.split('\n'):
+                if line.startswith('MNEMONIC ='):
+                    config_mnemonic = line.split('=', 1)[1].strip().strip('"')
+                    break
+
+            # Update server.config if mnemonics differ
+            if env_mnemonic and config_mnemonic and env_mnemonic != config_mnemonic:
+                # Replace mnemonic in config
+                new_config = []
+                for line in config_content.split('\n'):
+                    if line.startswith('MNEMONIC ='):
+                        new_config.append(f'MNEMONIC = "{env_mnemonic}"')
+                    else:
+                        new_config.append(line)
+                config_file.write_text('\n'.join(new_config))
+                click.echo("✅ Updated server.config with current Cell mnemonic\n")
+            elif env_mnemonic:
+                click.echo("✅ Server already configured with current Cell\n")
+
+        click.echo("🚀 Ready to start!\n")
 
     # Ask if user wants to run setup now
     if skip_installation:
@@ -924,26 +914,12 @@ FTS5_STOPWORDS = {{"what","is","the","of","and","how","do","does","a","an","to",
 @click.command()
 def stop_agent():
     """Stops the running Neuronum Server and vLLM server."""
-    import os
-    import signal
     import psutil
 
     click.echo("🛑 Stopping Neuronum Server\n")
 
-    # Check default installation path
-    default_path = Path.home() / "neuronum-server"
-
-    # Ask for agent directory
-    agent_path = questionary.text(
-        "Enter the agent installation directory:",
-        default=str(default_path)
-    ).ask()
-
-    if not agent_path:
-        click.echo("❌ Operation cancelled.")
-        return
-
-    agent_path = Path(agent_path).expanduser()
+    # Use default installation path
+    agent_path = Path.home() / "neuronum-server"
 
     if not agent_path.exists():
         click.echo(f"❌ Directory {agent_path} does not exist.")
@@ -958,81 +934,54 @@ def stop_agent():
         try:
             server_pid = int(server_pid_file.read_text().strip())
 
-            # Check if process exists
             try:
                 process = psutil.Process(server_pid)
-                process_name = process.name()
+                click.echo(f"⏳ Stopping Neuronum Server (PID: {server_pid})...")
+                process.terminate()
 
-                click.echo(f"📍 Found Neuronum Server (PID: {server_pid}, Name: {process_name})")
+                try:
+                    process.wait(timeout=10)
+                    click.echo("✅ Neuronum Server stopped")
+                except psutil.TimeoutExpired:
+                    click.echo("⚠️  Force stopping...")
+                    process.kill()
+                    click.echo("✅ Neuronum Server stopped")
 
-                confirm = questionary.confirm(
-                    f"Stop Neuronum Server?",
-                    default=True
-                ).ask()
-
-                if confirm:
-                    click.echo("⏳ Stopping Neuronum Server...")
-                    process.terminate()
-
-                    # Wait for graceful shutdown
-                    try:
-                        process.wait(timeout=10)
-                        click.echo("✅ Neuronum Server stopped gracefully")
-                    except psutil.TimeoutExpired:
-                        click.echo("⚠️  Neuronum Server didn't stop gracefully, forcing...")
-                        process.kill()
-                        click.echo("✅ Neuronum Server force-stopped")
-
-                    server_pid_file.unlink()
-                    stopped_anything = True
+                server_pid_file.unlink()
+                stopped_anything = True
 
             except psutil.NoSuchProcess:
-                click.echo(f"⚠️  Neuronum Server (PID: {server_pid}) is not running")
+                click.echo(f"ℹ️  Neuronum Server (PID: {server_pid}) not running")
                 server_pid_file.unlink()
 
         except Exception as e:
             click.echo(f"❌ Error stopping Neuronum Server: {e}")
     else:
         # Fallback: Search for server.py process manually
-        click.echo("ℹ️  No server PID file found, searching for server.py process...")
+        click.echo("ℹ️  Searching for server.py process...")
 
-        found_agent = False
         for proc in psutil.process_iter(['pid', 'name', 'cmdline', 'cwd']):
             try:
                 cmdline = proc.info.get('cmdline')
                 if cmdline and 'server.py' in ' '.join(cmdline):
-                    # Check if it's in the correct directory
                     cwd = proc.info.get('cwd', '')
                     if str(agent_path) in cwd or any(str(agent_path) in arg for arg in cmdline):
-                        found_agent = True
                         pid = proc.info['pid']
+                        click.echo(f"⏳ Stopping server.py (PID: {pid})...")
+                        proc.terminate()
 
-                        click.echo(f"📍 Found server.py (PID: {pid})")
+                        try:
+                            proc.wait(timeout=10)
+                            click.echo("✅ Server stopped")
+                        except psutil.TimeoutExpired:
+                            proc.kill()
+                            click.echo("✅ Server stopped")
 
-                        confirm = questionary.confirm(
-                            f"Stop server.py?",
-                            default=True
-                        ).ask()
-
-                        if confirm:
-                            click.echo("⏳ Stopping agent...")
-                            proc.terminate()
-
-                            try:
-                                proc.wait(timeout=10)
-                                click.echo("✅ Agent stopped gracefully")
-                            except psutil.TimeoutExpired:
-                                click.echo("⚠️  Agent didn't stop gracefully, forcing...")
-                                proc.kill()
-                                click.echo("✅ Agent force-stopped")
-
-                            stopped_anything = True
+                        stopped_anything = True
+                        break
 
             except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
                 pass
-
-        if not found_agent:
-            click.echo("ℹ️  No server.py process found")
 
     # Stop vLLM server
     click.echo("\n🔍 Checking for vLLM server...")
@@ -1041,42 +990,30 @@ def stop_agent():
         try:
             vllm_pid = int(vllm_pid_file.read_text().strip())
 
-            # Check if process exists
             try:
                 process = psutil.Process(vllm_pid)
-                process_name = process.name()
+                click.echo(f"⏳ Stopping vLLM server (PID: {vllm_pid})...")
+                process.terminate()
 
-                click.echo(f"📍 Found vLLM server (PID: {vllm_pid}, Name: {process_name})")
+                try:
+                    process.wait(timeout=10)
+                    click.echo("✅ vLLM server stopped")
+                except psutil.TimeoutExpired:
+                    click.echo("⚠️  Force stopping...")
+                    process.kill()
+                    click.echo("✅ vLLM server stopped")
 
-                confirm = questionary.confirm(
-                    f"Stop vLLM server?",
-                    default=True
-                ).ask()
-
-                if confirm:
-                    click.echo("⏳ Stopping vLLM server...")
-                    process.terminate()
-
-                    # Wait for graceful shutdown
-                    try:
-                        process.wait(timeout=10)
-                        click.echo("✅ vLLM server stopped gracefully")
-                    except psutil.TimeoutExpired:
-                        click.echo("⚠️  vLLM server didn't stop gracefully, forcing...")
-                        process.kill()
-                        click.echo("✅ vLLM server force-stopped")
-
-                    vllm_pid_file.unlink()
-                    stopped_anything = True
+                vllm_pid_file.unlink()
+                stopped_anything = True
 
             except psutil.NoSuchProcess:
-                click.echo(f"⚠️  vLLM server (PID: {vllm_pid}) is not running")
+                click.echo(f"ℹ️  vLLM server (PID: {vllm_pid}) not running")
                 vllm_pid_file.unlink()
 
         except Exception as e:
             click.echo(f"❌ Error stopping vLLM server: {e}")
     else:
-        click.echo("ℹ️  No vLLM PID file found")
+        click.echo("ℹ️  No vLLM server running")
 
     if stopped_anything:
         click.echo("\n✅ Shutdown complete!")
