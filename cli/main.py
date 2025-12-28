@@ -632,7 +632,7 @@ def delete_tool():
 
 
 @click.command()
-def run_agent():
+def serve_agent():
     """Downloads, configures, and starts the Neuronum Server."""
     import os
     import subprocess
@@ -651,7 +651,7 @@ def run_agent():
         return
 
     # Prompt for installation directory
-    default_path = str(Path.home() / "neuronum-agent")
+    default_path = str(Path.home() / "neuronum-server")
     install_path = questionary.text(
         "Where should the agent be installed?",
         default=default_path
@@ -678,8 +678,8 @@ def run_agent():
         shutil.rmtree(install_path)
 
     # Clone the repository
-    click.echo("\n📥 Cloning neuronum-agent repository...")
-    repo_url = "https://github.com/neuronumcybernetics/neuronum-agent.git"
+    click.echo("\n📥 Cloning neuronum-server repository...")
+    repo_url = "https://github.com/neuronumcybernetics/neuronum-server.git"
 
     try:
         subprocess.run(
@@ -779,8 +779,8 @@ def run_agent():
         temperature = "0.3"
         top_p = "0.85"
 
-    # Write configuration to agent.config
-    config_file = install_path / "agent.config"
+    # Write configuration to server.config
+    config_file = install_path / "server.config"
 
     click.echo("\n📝 Writing configuration...")
 
@@ -881,7 +881,7 @@ FTS5_STOPWORDS = {{"what","is","the","of","and","how","do","does","a","an","to",
         click.echo(f"  source venv/bin/activate")
         click.echo(f"  pip install -r requirements.txt")
         click.echo(f"  python start_vllm_server.py  # in separate terminal")
-        click.echo(f"  python agent.py")
+        click.echo(f"  python server.py")
 
 
 @click.command()
@@ -894,7 +894,7 @@ def stop_agent():
     click.echo("🛑 Stopping Neuronum Server\n")
 
     # Check default installation path
-    default_path = Path.home() / "neuronum-agent"
+    default_path = Path.home() / "neuronum-server"
 
     # Ask for agent directory
     agent_path = questionary.text(
@@ -957,24 +957,24 @@ def stop_agent():
     else:
         click.echo("ℹ️  No vLLM PID file found")
 
-    # Find and stop agent.py process
-    click.echo("\n🔍 Looking for agent.py process...")
+    # Find and stop server.py process
+    click.echo("\n🔍 Looking for server.py process...")
 
     found_agent = False
     for proc in psutil.process_iter(['pid', 'name', 'cmdline', 'cwd']):
         try:
             cmdline = proc.info.get('cmdline')
-            if cmdline and 'agent.py' in ' '.join(cmdline):
+            if cmdline and 'server.py' in ' '.join(cmdline):
                 # Check if it's in the correct directory
                 cwd = proc.info.get('cwd', '')
                 if str(agent_path) in cwd or any(str(agent_path) in arg for arg in cmdline):
                     found_agent = True
                     pid = proc.info['pid']
 
-                    click.echo(f"📍 Found agent.py (PID: {pid})")
+                    click.echo(f"📍 Found server.py (PID: {pid})")
 
                     confirm = questionary.confirm(
-                        f"Stop agent.py?",
+                        f"Stop server.py?",
                         default=True
                     ).ask()
 
@@ -996,7 +996,7 @@ def stop_agent():
             pass
 
     if not found_agent:
-        click.echo("ℹ️  No agent.py process found")
+        click.echo("ℹ️  No server.py process found")
 
     if stopped_anything:
         click.echo("\n✅ Shutdown complete!")
@@ -1013,7 +1013,7 @@ cli.add_command(disconnect_cell)
 cli.add_command(init_tool)
 cli.add_command(update_tool)
 cli.add_command(delete_tool)
-cli.add_command(run_agent)
+cli.add_command(serve_agent)
 cli.add_command(stop_agent)
 
 if __name__ == "__main__":

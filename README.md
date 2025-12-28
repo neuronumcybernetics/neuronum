@@ -68,13 +68,13 @@ Neuronum Server is an agent-wrapper that transforms your model into an agentic b
 
 **Quick Start (Recommended)**
 
-The easiest way to set up and run the agent is using the CLI:
+The easiest way to set up and run an agent via Neuronum server is using the CLI:
 ```sh
-neuronum run-agent
+neuronum serve-agent
 ```
 
 This interactive command will:
-- Clone the neuronum-agent repository
+- Clone the neuronum-server repository
 - Configure the agent with your Cell mnemonic
 - Let you choose the LLM model
 - Optionally configure advanced settings
@@ -89,13 +89,13 @@ Alternatively, you can set up the agent manually:
 
 1. **Clone the Agent Repository**
 ```sh
-git clone https://github.com/neuronumcybernetics/neuronum-agent.git
-cd neuronum-agent
+git clone https://github.com/neuronumcybernetics/neuronum-server.git
+cd neuronum-server
 ```
 
 2. **Configure the Agent**
 
-Edit the `agent.config` file and set your Cell mnemonic:
+Edit the `server.config` file and set your Cell mnemonic:
 ```config
 MNEMONIC = "your twelve word mnemonic phrase here"
 ```
@@ -142,7 +142,7 @@ python start_vllm_server.py
 
 4. Run the agent:
 ```sh
-python agent.py
+python server.py
 ```
 
 **What the Agent Does**
@@ -162,7 +162,7 @@ neuronum stop-agent
 ```
 
 This command will:
-- Find and stop the running agent.py process
+- Find and stop the running server.py process
 - Stop the vLLM server running in the background
 - Clean up PID files
 - Allow you to confirm before stopping each process

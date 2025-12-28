@@ -45,7 +45,7 @@ class MCPServerClient:
                 "protocolVersion": "2024-11-05",
                 "capabilities": {},
                 "clientInfo": {
-                    "name": "neuronum-agent",
+                    "name": "neuronum-server",
                     "version": "1.0.0"
                 }
             })

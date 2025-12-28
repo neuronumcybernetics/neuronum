@@ -21,7 +21,7 @@
 
 ---
 
-### 2025.12.0.dev1 / Development Release
+### 2025.12.0.dev1 + 2025.12.0.dev2 / Development Releases
 
 **Core Features:**
 
@@ -48,7 +48,7 @@
 - `neuronum init-tool` - Initialize new MCP-compliant tools
 - `neuronum update-tool` - Update tool configurations and code
 - `neuronum delete-tool` - Remove published tools
-- `neuronum run-agent` - Interactive agent setup and deployment
+- `neuronum serve-agent` - Interactive agent setup and deployment
 - `neuronum stop-agent` - Graceful agent and vLLM shutdown
 
 #### Security Features

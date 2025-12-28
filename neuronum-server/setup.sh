@@ -114,15 +114,15 @@ install_dependencies() {
 check_config() {
     print_header "Checking Configuration"
 
-    if [ ! -f "agent.config" ]; then
-        print_error "agent.config not found!"
+    if [ ! -f "server.config" ]; then
+        print_error "server.config not found!"
         exit 1
     fi
 
     # Check if mnemonic is set
-    if grep -q "your_12_word_mnemonic_here" agent.config; then
-        print_warning "MNEMONIC in agent.config is not configured!"
-        print_info "Please edit agent.config and set your Cell mnemonic before running the agent."
+    if grep -q "your_12_word_mnemonic_here" server.config; then
+        print_warning "MNEMONIC in server.config is not configured!"
+        print_info "Please edit server.config and set your Cell mnemonic before running the agent."
         exit 1
     fi
 
@@ -172,15 +172,15 @@ start_vllm() {
 }
 
 # Start agent
-start_agent() {
+serve_agent() {
     print_header "Starting Neuronum Server"
 
-    print_info "Launching agent.py..."
+    print_info "Launching server.py..."
     print_info "Press Ctrl+C to stop the agent"
     echo
 
     # Run the agent
-    python agent.py
+    python server.py
 }
 
 # Cleanup function
@@ -212,7 +212,7 @@ main() {
     install_dependencies
     check_config
     start_vllm
-    start_agent
+    serve_agent
 }
 
 # Run main function

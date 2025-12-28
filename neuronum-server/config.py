@@ -1,14 +1,14 @@
 """
 Configuration loader for Neuronum Server.
-Loads configuration from agent.config file.
+Loads configuration from server.config file.
 """
 
 import os
 import re
 
 
-def load_config(config_file="agent.config"):
-    """Load configuration from agent.config file.
+def load_config(config_file="server.config"):
+    """Load configuration from server.config file.
 
     Args:
         config_file: Path to the configuration file
