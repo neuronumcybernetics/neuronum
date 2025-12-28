@@ -54,7 +54,7 @@ source ~/neuronum-venv/bin/activate
 
 Install the Neuronum SDK:
 ```sh
-pip install neuronum==2025.12.0.dev5
+pip install neuronum==2025.12.0.dev6
 ```
 
 > **Note:** Always activate this virtual environment (`source ~/neuronum-venv/bin/activate`) before running any `neuronum` commands.
@@ -75,30 +75,36 @@ neuronum connect-cell
 ### **Neuronum Server**
 Neuronum Server is an agent-wrapper that transforms your model into an agentic backend server that can interact with the [Neuronum Client API](#neuronum-client-api) and installed tools
 
-**Starting the Server**
+**Setup the Server**
 
+Clone the neuronum-server repository:
 ```sh
-neuronum serve-agent
+git clone https://github.com/neuronumcybernetics/neuronum-server.git
+cd neuronum-server
 ```
 
-This command will:
-- Automatically detect and use your Cell from `neuronum connect-cell`
-- Clone neuronum-server repository (or use existing installation)
-- Configure LLM model and settings (first time only)
-- Install dependencies in virtual environment
-- Start vLLM and Neuronum Server in background
-
-**Stopping the Server**
-
+Run the setup script:
 ```sh
-neuronum stop-agent
+bash start_neuronum_server.sh
 ```
+
+The setup script will:
+- Create a Python virtual environment
+- Install all dependencies (vLLM, PyTorch, etc.)
+- Start the vLLM server in the background
+- Launch the Neuronum Server
 
 **Viewing Logs**
 
 ```sh
-tail -f ~/neuronum-server/server.log
-tail -f ~/neuronum-server/vllm_server.log
+tail -f server.log
+tail -f vllm_server.log
+```
+
+**Stopping the Server**
+
+```sh
+bash stop_neuronum_server.sh
 ```
 
 **What the Server Does**

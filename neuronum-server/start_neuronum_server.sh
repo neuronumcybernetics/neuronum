@@ -121,13 +121,15 @@ check_config() {
         exit 1
     fi
 
-    # Check if mnemonic is set
-    if grep -q "your_12_word_mnemonic_here" server.config; then
-        print_warning "MNEMONIC in server.config is not configured!"
-        print_info "Please edit server.config and set your Cell mnemonic before running the agent."
+    # Check if Cell credentials exist
+    NEURONUM_DIR="$HOME/.neuronum"
+    if [ ! -d "$NEURONUM_DIR" ] || [ ! -f "$NEURONUM_DIR/.env" ] || [ ! -f "$NEURONUM_DIR/private_key.pem" ]; then
+        print_error "No Cell credentials found in $NEURONUM_DIR"
+        print_info "Please run 'neuronum create-cell' or 'neuronum connect-cell' first"
         exit 1
     fi
 
+    print_success "Cell credentials found in $NEURONUM_DIR"
     print_success "Configuration file validated"
 }
 

@@ -1,10 +1,59 @@
 """
 Configuration loader for Neuronum Server.
-Loads configuration from server.config file.
+Loads configuration from server.config file and Cell credentials from ~/.neuronum/
 """
 
 import os
 import re
+from pathlib import Path
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.backends import default_backend
+
+
+def load_cell_credentials():
+    """Load Cell credentials from ~/.neuronum/ directory.
+
+    Returns:
+        dict: Dictionary with 'host', 'private_key', 'public_key'
+    """
+    neuronum_path = Path.home() / ".neuronum"
+    env_file = neuronum_path / ".env"
+    private_key_file = neuronum_path / "private_key.pem"
+
+    if not env_file.exists():
+        raise FileNotFoundError(
+            "No Cell credentials found. Please run 'neuronum create-cell' or 'neuronum connect-cell' first."
+        )
+
+    # Load host from .env
+    host = None
+    with open(env_file, 'r') as f:
+        for line in f:
+            if line.startswith('HOST='):
+                host = line.split('=', 1)[1].strip()
+                break
+
+    if not host:
+        raise ValueError("HOST not found in ~/.neuronum/.env")
+
+    # Load private key
+    if not private_key_file.exists():
+        raise FileNotFoundError("Private key file not found at ~/.neuronum/private_key.pem")
+
+    with open(private_key_file, 'rb') as f:
+        private_key = serialization.load_pem_private_key(
+            f.read(),
+            password=None,
+            backend=default_backend()
+        )
+
+    public_key = private_key.public_key()
+
+    return {
+        'host': host,
+        'private_key': private_key,
+        'public_key': public_key
+    }
 
 
 def load_config(config_file="server.config"):
@@ -93,8 +142,15 @@ def parse_value(value):
 # Load configuration
 _config = load_config()
 
+# Load Cell credentials
+_cell_creds = load_cell_credentials()
+
+# Export Cell credentials
+HOST = _cell_creds['host']
+PRIVATE_KEY = _cell_creds['private_key']
+PUBLIC_KEY = _cell_creds['public_key']
+
 # Export all configuration variables
-MNEMONIC = _config.get("MNEMONIC", "")
 LOG_FILE = _config.get("LOG_FILE", "agent.log")
 DB_PATH = _config.get("DB_PATH", "agent_memory.db")
 TASKS_DIR = _config.get("TASKS_DIR", "./tasks")
