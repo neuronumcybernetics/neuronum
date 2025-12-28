@@ -151,7 +151,7 @@ PRIVATE_KEY = _cell_creds['private_key']
 PUBLIC_KEY = _cell_creds['public_key']
 
 # Export all configuration variables
-LOG_FILE = _config.get("LOG_FILE", "agent.log")
+LOG_FILE = _config.get("LOG_FILE", "server.log")
 DB_PATH = _config.get("DB_PATH", "agent_memory.db")
 TASKS_DIR = _config.get("TASKS_DIR", "./tasks")
 

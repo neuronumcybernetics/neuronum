@@ -742,11 +742,11 @@ async def handle_fetch_knowledge(cell, transmitter: dict):
 async def handle_download_log(cell, transmitter: dict):
     """Handle downloading the agent log file and clear it after download."""
     data = transmitter.get("data", {})
-    logging.info("Fetching log from agent.log...")
+    logging.info("Fetching log from server.log...")
 
     try:
         # Read the log file
-        with open("agent.log", "r") as f:
+        with open("server.log", "r") as f:
             agent_log = f.read()
         logging.info("Agent log fetched successfully")
 
@@ -759,7 +759,7 @@ async def handle_download_log(cell, transmitter: dict):
         )
 
         # Clear the log file after successful download
-        with open("agent.log", "w") as f:
+        with open("server.log", "w") as f:
             f.write('')
         logging.info("Agent log cleared after download")
 
