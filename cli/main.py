@@ -671,19 +671,30 @@ def serve_agent():
             click.echo("❌ Git is not installed. Please install git first.")
             return
 
-        # Clone the repository
-        click.echo("📥 Cloning neuronum-server repository...")
-        repo_url = "https://github.com/neuronumcybernetics/neuronum-server.git"
+        # Clone the repository (neuronum-server is inside neuronum-sdk-python)
+        click.echo("📥 Downloading neuronum-server...")
+        repo_url = "https://github.com/neuronumcybernetics/neuronum-sdk-python.git"
+        temp_clone_path = Path.home() / ".neuronum-temp-clone"
 
         try:
-            subprocess.run(
-                ["git", "clone", repo_url, str(install_path)],
-                check=True,
-                capture_output=True
-            )
-            click.echo("✅ Repository cloned successfully\n")
+            # Use sparse checkout to get only the neuronum-server folder
+            subprocess.run(["git", "clone", "--depth", "1", "--filter=blob:none", "--sparse", repo_url, str(temp_clone_path)], check=True, capture_output=True)
+            subprocess.run(["git", "-C", str(temp_clone_path), "sparse-checkout", "set", "neuronum-server"], check=True, capture_output=True)
+
+            # Move neuronum-server folder to the target location
+            import shutil as shutil_module
+            shutil_module.move(str(temp_clone_path / "neuronum-server"), str(install_path))
+
+            # Clean up temp directory
+            shutil_module.rmtree(temp_clone_path, ignore_errors=True)
+
+            click.echo("✅ neuronum-server downloaded successfully\n")
         except subprocess.CalledProcessError as e:
-            click.echo(f"❌ Failed to clone repository: {e.stderr.decode()}")
+            click.echo(f"❌ Failed to download neuronum-server: {e.stderr.decode()}")
+            # Clean up on failure
+            if temp_clone_path.exists():
+                import shutil as shutil_module
+                shutil_module.rmtree(temp_clone_path, ignore_errors=True)
             return
 
     # Configuration section (skip if using existing installation)

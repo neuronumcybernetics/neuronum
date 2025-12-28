@@ -21,6 +21,10 @@
 
 ---
 
+### 2025.12.0.dev5 / Development Release
+**Changes:**
+- `neuronum serve-agent` now clones the github repo from https://github.com/neuronumcybernetics/neuronum-sdk-python/tree/main/neuronum-server
+
 ### 2025.12.0.dev4 / Development Release
 **Changes:**
 - `neuronum serve-agent` automatically uses Cell mnemonic from `~/.neuronum/.env`

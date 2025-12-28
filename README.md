@@ -45,9 +45,19 @@ In this brief getting started guide, you will:
 
 ### **Connect To Neuronum**
 **Installation**
+
+Create and activate a virtual environment:
 ```sh
-pip install neuronum
+python3 -m venv ~/neuronum-venv
+source ~/neuronum-venv/bin/activate
 ```
+
+Install the Neuronum SDK:
+```sh
+pip install neuronum==2025.12.0.dev5
+```
+
+> **Note:** Always activate this virtual environment (`source ~/neuronum-venv/bin/activate`) before running any `neuronum` commands.
 
 **Create a Neuronum Cell**
 <br>The Neuronum Cell is your secure identity to interact with the Network
