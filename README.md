@@ -21,21 +21,25 @@
 
 ------------------
 
-### **Getting Started with the Neuronum SDK**
-In this brief getting started guide, you will:
-- [Connect to Neuronum](#connect-to-neuronum)
-- [Deploy with Neuronum Server](#deploy-with-neuronum-server)
-- [Call your Agent / Client APIs](#call-your-agent)
-- [Create & Manage a Custom Tool](#create-a-tool)
+
+### **About the Neuronum SDK**
+The Neuronum SDK provides everything you need to setup your favorite AI model as self-hosted agentic backend. It includes the [Neuronum Server](#neuronum-server), an open source agent-wrapper that transforms your model into an executable assistant that can be managed and called with the [Neuronum Client API](#neuronum-client-api) and the [Neuronum Tools CLI](#neuronum-tools-cli) to develop and publish MCP-compliant Tools that can be installed locally on your [Neuronum Server](#neuronum-server)
 
 ------------------
 
-### **About the Neuronum SDK**
-The Neuronum SDK is a ready-to-use E2EE data infrastructure to self-host your favorite AI model as agentic backend for the Neuronum client (kybercell) and your own custom clients
-
-### Requirements
+### **Requirements**
 - Python >= 3.8
-- A Community or Business Cell (secure identity)
+- CUDA-compatible GPU (for Neuronum Server)
+- CUDA Toolkit (for Neuronum Server)
+
+------------------
+
+### **Getting Started with the Neuronum SDK**
+In this brief getting started guide, you will:
+- [Connect to Neuronum](#connect-to-neuronum)
+- [Deploy a Model with Neuronum Server](#neuronum-server)
+- [Call your Agent / Neuronum Client API](#neuronum-client-api)
+- [Create & Manage a Custom Tool](#neuronum-tools-cli)
 
 ------------------
 
@@ -58,124 +62,50 @@ neuronum connect-cell
 
 ------------------
 
-### **Deploy with Neuronum Server**
-Neuronum Server is an agent-wrapper that transforms your model into an agentic backend server that can interact with the Neuronum Client ([download kybercell](https://neuronum.net)) and your custom clients
+### **Neuronum Server**
+Neuronum Server is an agent-wrapper that transforms your model into an agentic backend server that can interact with the [Neuronum Client API](#neuronum-client-api) and installed tools
 
-**Requirements**
-- Python 3.8+
-- CUDA-compatible GPU (required for vLLM)
-- CUDA Toolkit installed
+**Starting the Server**
 
-**Quick Start (Recommended)**
-
-The easiest way to set up and run an agent via Neuronum server is using the CLI:
 ```sh
 neuronum serve-agent
 ```
 
-This interactive command will:
-- Clone the neuronum-server repository (or use existing installation)
-- Automatically use your Cell mnemonic from `neuronum connect-cell`
-- Let you choose the LLM model (only on fresh install)
-- Optionally configure advanced settings
-- Create a virtual environment
-- Install all dependencies
-- Start the vLLM server in the background
-- Launch the agent
+This command will:
+- Automatically detect and use your Cell from `neuronum connect-cell`
+- Clone neuronum-server repository (or use existing installation)
+- Configure LLM model and settings (first time only)
+- Install dependencies in virtual environment
+- Start vLLM and Neuronum Server in background
 
-**Manual Setup**
+**Stopping the Server**
 
-Alternatively, you can set up the agent manually:
-
-1. **Clone the Agent Repository**
-```sh
-git clone https://github.com/neuronumcybernetics/neuronum-server.git
-cd neuronum-server
-```
-
-2. **Configure the Agent**
-
-Edit the `server.config` file and set your Cell mnemonic:
-```config
-MNEMONIC = "your twelve word mnemonic phrase here"
-```
-
-You can also customize other settings like:
-- `VLLM_MODEL_NAME` - LLM model to use (default: Qwen/Qwen2.5-3B-Instruct)
-- `MODEL_MAX_TOKENS`, `MODEL_TEMPERATURE`, `MODEL_TOP_P` - LLM parameters
-- `DB_PATH` - SQLite database location for memory and knowledge storage
-
-3. **Choose Your Setup Method**
-
-**Option A: Automated Setup Script (Recommended)**
-
-Run the automated setup script:
-```sh
-./setup.sh
-```
-
-This script will automatically:
-- Create a Python virtual environment
-- Install all dependencies
-- Start the vLLM server in the background
-- Launch the agent in the background
-- Allow you to safely close your terminal session
-
-**Option B: Step-by-Step Manual Setup**
-
-If you prefer to run each step manually:
-
-1. Create and activate a virtual environment:
-```sh
-python3 -m venv venv
-source venv/bin/activate
-```
-
-2. Install dependencies:
-```sh
-pip install -r requirements.txt
-```
-
-3. Start the vLLM server in the background:
-```sh
-nohup python start_vllm_server.py > vllm_server.log 2>&1 &
-echo $! > .vllm_pid
-```
-
-4. Run the agent in the background:
-```sh
-nohup python server.py > server.log 2>&1 &
-echo $! > .server_pid
-```
-
-**What the Agent Does**
-
-Once running, the agent will:
-- Connect to the Neuronum network using your Cell credentials
-- Initialize a local SQLite database for conversation memory and knowledge storage
-- Auto-discover and launch any MCP servers placed in the `tools/` directory
-- Start processing messages from the network
-- Execute scheduled tasks defined in the `tasks/` directory
-
-**Stopping the Agent**
-
-To gracefully stop the agent and vLLM server:
 ```sh
 neuronum stop-agent
 ```
 
-This command will:
-- Find and stop the running server.py process
-- Stop the vLLM server running in the background
-- Clean up PID files
-- Allow you to confirm before stopping each process
+**Viewing Logs**
+
+```sh
+tail -f ~/neuronum-server/server.log
+tail -f ~/neuronum-server/vllm_server.log
+```
+
+**What the Server Does**
+
+Once running, the server will:
+- Connect to the Neuronum network using your Cell credentials
+- Initialize a local SQLite database for conversation memory and knowledge storage
+- Auto-discover and launch any MCP servers in the `tools/` directory
+- Process messages from clients via the Neuronum network
+- Execute scheduled tasks defined in the `tasks/` directory
 
 
 ------------------
 
 
-### **Call your Agent**
-**Communicate with your Agent using Neuronum Transmitters (TX) with different message types**
+### **Neuronum Client API**
+**Manage and call your Agent with the Neuronum Client API using different message types**
 ```python
 import asyncio
 from neuronum import Cell
@@ -306,8 +236,8 @@ if __name__ == '__main__':
 
 ----------------------
 
-### **Create a Tool**
-Neuronum Tools are MCP-compliant (Model Context Protocol) plugins that extend your Agent's functionality, enabling it to interact with external data sources and systems.
+### **Neuronum Tools CLI**
+Neuronum Tools are MCP-compliant (Model Context Protocol) plugins that can be installed on the Neuronum Server and extend your Agent's functionality, enabling it to interact with external data sources and your system.
 
 ### **Initialize a Tool** 
 ```sh
