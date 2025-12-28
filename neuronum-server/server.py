@@ -19,7 +19,9 @@ import tool_registry
 
 # Import configuration
 from config import (
-    MNEMONIC,
+    HOST,
+    PRIVATE_KEY,
+    PUBLIC_KEY,
     LOG_FILE,
     DB_PATH,
     TASKS_DIR,
@@ -640,18 +642,16 @@ async def install_tool_requirements():
 
 async def setup_cell_connection():
     """Establish connection as a Neuronum Cell and return cell instance."""
+    # Cell credentials are automatically loaded from ~/.neuronum/ by the Cell class
     cell = Cell()
-    host = cell.env.get("HOST", "")
 
-    if not host:
-        # Connect the cell using the mnemonic from config
-        if MNEMONIC:
-            await cell.connect_cell(MNEMONIC)
-        else:
-            logging.error("❌ No HOST environment variable and no MNEMONIC configured")
-            await cell.close()
-            sys.exit(1)
-    cell = Cell()
+    # Verify the cell is properly configured
+    if not cell.env.get("HOST"):
+        logging.error("❌ No HOST found in Cell credentials. Please run 'neuronum create-cell' or 'neuronum connect-cell' first.")
+        await cell.close()
+        sys.exit(1)
+
+    logging.info(f"✅ Connected to Cell: {cell.env.get('HOST')}")
     return cell
 # ============================================================================
 # MESSAGE HANDLERS
