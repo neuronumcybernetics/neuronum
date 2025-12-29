@@ -411,6 +411,17 @@ def call_api(endpoint: str) -> str:
 ```
 
 ✅ **Correct - Use variables (server auto-injects values):**
+
+First, declare the variable in your tool.config:
+```json
+{
+  ...
+  "requirements": ["requests"],
+  "variables": ["API_TOKEN"]
+}
+```
+
+Then use it in your tool.py without defining it:
 ```python
 from mcp.server.fastmcp import FastMCP
 import requests
