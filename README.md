@@ -339,6 +339,24 @@ if __name__ == "__main__":
     mcp.run()
 ```
 
+### **Tool Configuration Fields**
+
+**requirements**
+- List of Python packages your tool needs
+- Automatically installed by the Neuronum Server when the tool is added
+- Use the same format as pip requirements (e.g., `"requests"`, `"pandas>=2.0.0"`)
+
+Example:
+```json
+"requirements": [
+  "requests",
+  "pandas>=2.0.0",
+  "openai==1.12.0"
+]
+```
+
+**variables**
+> **Note:** This feature is not currently implemented and will be available in a future release.
 
 ### **Update a Tool**
 After modifying your `tool.config` or `tool.py` files, submit the updates using:
