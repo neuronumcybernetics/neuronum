@@ -54,7 +54,7 @@ source ~/neuronum-venv/bin/activate
 
 Install the Neuronum SDK:
 ```sh
-pip install neuronum==2025.12.0.dev7
+pip install neuronum==2025.12.0.dev8
 ```
 
 > **Note:** Always activate this virtual environment (`source ~/neuronum-venv/bin/activate`) before running any `neuronum` commands.
@@ -75,10 +75,12 @@ neuronum connect-cell
 ### **Neuronum Server**
 Neuronum Server is an agent-wrapper that transforms your model into an agentic backend server that can interact with the [Neuronum Client API](#neuronum-client-api) and installed tools
 
+------------------
+
 **Start the Server**
 
 ```sh
-neuronum serve-agent
+neuronum start-server
 ```
 
 This command will:
@@ -98,7 +100,7 @@ tail -f neuronum-server/vllm_server.log
 **Stopping the Server**
 
 ```sh
-neuronum stop-agent
+neuronum stop-server
 ```
 
 **What the Server Does**
@@ -147,8 +149,8 @@ FTS5_STOPWORDS = {...}               # Words to exclude from knowledge search
 
 After modifying the configuration, restart the server for changes to take effect:
 ```sh
-neuronum stop-agent
-neuronum serve-agent
+neuronum stop-server
+neuronum start-server
 ```
 
 ------------------

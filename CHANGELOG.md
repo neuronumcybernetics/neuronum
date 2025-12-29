@@ -20,8 +20,10 @@
 </p>
 
 ---
-### 2025.12.0.dev7 + 2025.12.0.dev6 + 2025.12.0.dev5 + / Development Release
+### 2025.12.0.dev8 + 2025.12.0.dev7 + 2025.12.0.dev6 + 2025.12.0.dev5 + / Development Release
 **Changes:**
+- `neuronum serve-agent` is now neuronum start-server
+- `neuronum stop-agent` is now neuronum stop-server
 - `setup.sh` is now start_neuronum_server.sh
 - `stop_neuronum_server.sh` stops neuronum server
 - .env credentials replace MNEMONIC value in server.config 

@@ -637,7 +637,7 @@ def delete_tool():
 
 @click.command()
 @click.option('--server-dir', default=None, help='Path to neuronum-server directory (default: ./neuronum-server)')
-def serve_agent(server_dir):
+def start_server(server_dir):
     """Sets up and starts the Neuronum Server with vLLM."""
 
     # Determine server directory
@@ -720,7 +720,7 @@ def serve_agent(server_dir):
 
 @click.command()
 @click.option('--server-dir', default=None, help='Path to neuronum-server directory (default: ./neuronum-server)')
-def stop_agent(server_dir):
+def stop_server(server_dir):
     """Stops the Neuronum Server and vLLM processes."""
 
     # Determine server directory
@@ -768,8 +768,8 @@ cli.add_command(disconnect_cell)
 cli.add_command(init_tool)
 cli.add_command(update_tool)
 cli.add_command(delete_tool)
-cli.add_command(serve_agent)
-cli.add_command(stop_agent)
+cli.add_command(start_server)
+cli.add_command(stop_server)
 
 if __name__ == "__main__":
     cli()

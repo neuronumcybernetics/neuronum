@@ -176,7 +176,7 @@ start_vllm() {
 }
 
 # Start agent
-serve_agent() {
+start_server() {
     print_header "Starting Neuronum Server"
 
     # Check if server is already running
@@ -261,7 +261,7 @@ main() {
     install_dependencies
     check_config
     start_vllm
-    serve_agent
+    start_server
 }
 
 # Run main function
