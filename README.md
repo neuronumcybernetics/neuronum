@@ -293,6 +293,8 @@ if __name__ == '__main__':
 ### **Neuronum Tools CLI**
 Neuronum Tools are MCP-compliant (Model Context Protocol) plugins that can be installed on the Neuronum Server and extend your Agent's functionality, enabling it to interact with external data sources and your system.
 
+> **Tools Note:** Tools are not stored encrypted on neuronum.net. **Do not include credentials, API keys, secure tokens, passwords, or any sensitive data directly in your tool code.** Use environment variables or the `variables` configuration field (when available) to handle sensitive information securely. 
+
 ### **Initialize a Tool** 
 ```sh
 neuronum init-tool
@@ -341,6 +343,24 @@ if __name__ == "__main__":
 
 ### **Tool Configuration Fields**
 
+**audience**
+- Controls who can install and use your tool
+- Options:
+  - `"private"` - Only you can use this tool
+  - `"public"` - Anyone on the Neuronum network can install this tool
+  - `"id::cell"` - Share with specific cells (comma-separated list)
+
+Examples:
+```json
+"audience": "private"
+```
+```json
+"audience": "public"
+```
+```json
+"audience": "acme::cell, community::cell, business::cell"
+```
+
 **requirements**
 - List of Python packages your tool needs
 - Automatically installed by the Neuronum Server when the tool is added
@@ -356,7 +376,59 @@ Example:
 ```
 
 **variables**
-> **Note:** This feature is not currently implemented and will be available in a future release.
+- List of variable names that users need to provide when installing your tool
+- When installing the tool, users are prompted to manually set each variable one by one
+- Values are sent encrypted to the server and automatically placed into your tool.py code
+- **Important:** You don't need to add lines like `API_TOKEN = "value"` to your tool.py - the server automatically sets these variables based on user inputs
+
+Example in tool.config:
+```json
+"variables": [
+  "API_TOKEN",
+  "DB_PASSWORD",
+  "SERVICE_URL"
+]
+```
+
+**How to use variables in your tool.py:**
+
+❌ **Wrong - Don't hardcode sensitive values:**
+```python
+from mcp.server.fastmcp import FastMCP
+import requests
+
+mcp = FastMCP("api-tool")
+
+# DON'T DO THIS - Never hardcode credentials!
+API_TOKEN = "sk-1234567890abcdef"  # This will be exposed in your tool code!
+
+@mcp.tool()
+def call_api(endpoint: str) -> str:
+    """Call external API"""
+    response = requests.get(f"https://api.example.com/{endpoint}",
+                           headers={"Authorization": f"Bearer {API_TOKEN}"})
+    return response.text
+```
+
+✅ **Correct - Use variables (server auto-injects values):**
+```python
+from mcp.server.fastmcp import FastMCP
+import requests
+
+mcp = FastMCP("api-tool")
+
+# The server automatically sets API_TOKEN based on user input during installation
+# You just use it directly - no need to define it!
+
+@mcp.tool()
+def call_api(endpoint: str) -> str:
+    """Call external API"""
+    response = requests.get(f"https://api.example.com/{endpoint}",
+                           headers={"Authorization": f"Bearer {API_TOKEN}"})
+    return response.text
+```
+
+> **Note:** This feature is only available when using the official Neuronum client.
 
 ### **Update a Tool**
 After modifying your `tool.config` or `tool.py` files, submit the updates using:
