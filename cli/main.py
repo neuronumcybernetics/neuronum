@@ -21,6 +21,7 @@ import signal
 
 # --- Configuration Constants ---
 NEURONUM_PATH = Path.home() / ".neuronum"
+SERVER_DIR = Path.home() / "neuronum-server"
 ENV_FILE = NEURONUM_PATH / ".env"
 PUBLIC_KEY_FILE = NEURONUM_PATH / "public_key.pem"
 PRIVATE_KEY_FILE = NEURONUM_PATH / "private_key.pem"
@@ -636,13 +637,13 @@ def delete_tool():
 
 
 @click.command()
-@click.option('--server-dir', default=None, help='Path to neuronum-server directory (default: ./neuronum-server)')
+@click.option('--server-dir', default=None, help='Path to neuronum-server directory (default: ~/neuronum-server)')
 def start_server(server_dir):
     """Sets up and starts the Neuronum Server with vLLM."""
 
     # Determine server directory
     if server_dir is None:
-        server_dir = Path.cwd() / "neuronum-server"
+        server_dir = SERVER_DIR
     else:
         server_dir = Path(server_dir)
 
@@ -719,13 +720,13 @@ def start_server(server_dir):
 
 
 @click.command()
-@click.option('--server-dir', default=None, help='Path to neuronum-server directory (default: ./neuronum-server)')
+@click.option('--server-dir', default=None, help='Path to neuronum-server directory (default: ~/neuronum-server)')
 def stop_server(server_dir):
     """Stops the Neuronum Server and vLLM processes."""
 
     # Determine server directory
     if server_dir is None:
-        server_dir = Path.cwd() / "neuronum-server"
+        server_dir = SERVER_DIR
     else:
         server_dir = Path(server_dir)
 

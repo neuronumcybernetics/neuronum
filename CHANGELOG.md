@@ -20,6 +20,11 @@
 </p>
 
 ---
+### 2025.12.0.dev9 / Development Release
+**Changes:**
+- `neuronum start-server` always uses Path.home() / "neuronum-server" as SERVER_DIR
+- `neuronum stop-server` always stops the server in the Path.home() / "neuronum-server"
+
 ### 2025.12.0.dev8 + 2025.12.0.dev7 + 2025.12.0.dev6 + 2025.12.0.dev5 + / Development Release
 **Changes:**
 - `neuronum serve-agent` is now neuronum start-server

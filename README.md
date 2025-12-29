@@ -54,7 +54,7 @@ source ~/neuronum-venv/bin/activate
 
 Install the Neuronum SDK:
 ```sh
-pip install neuronum==2025.12.0.dev8
+pip install neuronum==2025.12.0.dev9
 ```
 
 > **Note:** Always activate this virtual environment (`source ~/neuronum-venv/bin/activate`) before running any `neuronum` commands.
@@ -234,7 +234,7 @@ async def main():
             "type": "add_tool",
             "tool_id": "019ac60e-cccc-7af5-b087-f6fcf1ba1299"
         }
-        await cell.stream(cell.host, add_tool_data)
+        await cell.stream(add_tool_data)
         # Agent will restart and send "ping" when ready
 
         # Delete a tool
@@ -242,7 +242,7 @@ async def main():
             "type": "delete_tool",
             "tool_id": "019ac60e-cccc-7af5-b087-f6fcf1ba1299"
         }
-        await cell.stream(cell.host, delete_tool_data)
+        await cell.stream(delete_tool_data)
 
         # ============================================
         # Example 5: Task Scheduling (Automated Workflows)
@@ -259,14 +259,14 @@ async def main():
             "input_data": "Send daily summary to manager@company.com",
             "schedule": "weekdays@1704067200,1704153600"  # Days@Unix timestamps
         }
-        await cell.stream(cell.host, add_task_data)
+        await cell.stream(add_task_data)
 
         # Delete a task
         delete_task_data = {
             "type": "delete_task",
             "task_id": "task-uuid-here"
         }
-        await cell.stream(cell.host, delete_task_data)
+        await cell.stream(delete_task_data)
 
         # ============================================
         # Example 6: Agent Status & Logs
