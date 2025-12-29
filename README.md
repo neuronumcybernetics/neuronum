@@ -36,12 +36,12 @@ The Neuronum SDK provides everything you need to setup your favorite AI model as
 
 ------------------
 
-### **Getting Started with the Neuronum SDK**
-In this brief getting started guide, you will:
-- [Connect to Neuronum](#connect-to-neuronum)
+### **Table of Contents**
+In this programmers guide, you will learn how to:
+- [Connect to the Neuronum Network](#connect-to-neuronum)
 - [Deploy a Model with Neuronum Server](#neuronum-server)
-- [Call your Agent / Neuronum Client API](#neuronum-client-api)
-- [Create & Manage a Custom Tool](#neuronum-tools-cli)
+- [Call your Agent with the Neuronum Client API](#neuronum-client-api)
+- [Create & Manage a Custom Tool with the Neuronum Tools CLI](#neuronum-tools-cli)
 
 ------------------
 
