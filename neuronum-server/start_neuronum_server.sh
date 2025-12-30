@@ -88,9 +88,13 @@ check_config() {
 wait_for_vllm_ready() {
     local max_attempts=60
     local attempt=0
-    local vllm_url="http://127.0.0.1:8000/health"
+
+    local vllm_host=$(python3 -c "from config import VLLM_HOST; print(VLLM_HOST)")
+    local vllm_port=$(python3 -c "from config import VLLM_PORT; print(VLLM_PORT)")
+    local vllm_url="http://${vllm_host}:${vllm_port}/health"
 
     echo "Waiting for vLLM model to load and be ready..."
+    echo "Health check endpoint: $vllm_url"
 
     while [ $attempt -lt $max_attempts ]; do
         if command -v curl &> /dev/null; then
