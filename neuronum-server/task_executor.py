@@ -6,13 +6,12 @@ import logging
 import os
 import time
 from datetime import datetime
-from typing import Dict
+from typing import Dict, Callable
 
 import tool_registry
-from llm_interface import create_chat_completion
 
 
-async def execute_scheduled_task(cell, task_data: dict):
+async def execute_scheduled_task(cell, task_data: dict, create_chat_completion: Callable):
     """Execute single scheduled task by calling its tool function"""
     task_name = task_data.get("name", "Unknown")
     tool_id = task_data.get("tool_id")
@@ -189,7 +188,7 @@ def should_task_run(schedule_info: dict, last_run_timestamp: int, current_timest
     return False
 
 
-async def task_scheduler(cell, tasks_dir: str):
+async def task_scheduler(cell, tasks_dir: str, create_chat_completion: Callable):
     """Background task scheduler that runs tasks based on schedule"""
     logging.info("Task scheduler started")
 
@@ -232,7 +231,7 @@ async def task_scheduler(cell, tasks_dir: str):
                         logging.info(f"Triggering scheduled task: {task_name}")
                         logging.info(f"   Schedule: {schedule_str}")
 
-                        await execute_scheduled_task(cell, task_data)
+                        await execute_scheduled_task(cell, task_data, create_chat_completion)
                         last_execution[task_id] = current_timestamp
 
                 except json.JSONDecodeError as e:

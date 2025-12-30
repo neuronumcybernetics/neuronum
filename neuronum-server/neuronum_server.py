@@ -1402,7 +1402,7 @@ async def server_main():
         logging.info(f"Agent started as Cell: {cell.host}")
         logging.info(f"Agent running with {tool_count} Tools")
 
-        scheduler_task = asyncio.create_task(task_executor.task_scheduler(cell, TASKS_DIR))
+        scheduler_task = asyncio.create_task(task_executor.task_scheduler(cell, TASKS_DIR, create_chat_completion))
         logging.info("Task scheduler started in background")
         
         if not cell.host.startswith("neuronumagent"):
