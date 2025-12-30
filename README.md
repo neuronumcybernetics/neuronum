@@ -58,7 +58,7 @@ source ~/neuronum-venv/bin/activate
 
 Install the Neuronum SDK:
 ```sh
-pip install neuronum==2025.12.0.dev9
+pip install neuronum==2025.12.0.dev10
 ```
 
 > **Note:** Always activate this virtual environment (`source ~/neuronum-venv/bin/activate`) before running any `neuronum` commands.
@@ -227,7 +227,12 @@ async def main():
         # Example 4: Tool Management
         # ============================================
 
-        # Get all installed tools and tasks
+        # List all available tools on Neuronum network
+        available_tools = await cell.list_tools()
+        print(available_tools)
+        # Returns list of tools with metadata: [{"tool_id": "...", "name": "...", "description": "..."}, ...]
+
+        # Get all installed tools and tasks on your agent
         get_tools_data = {"type": "get_tools"}
         tools_info = await cell.activate_tx(get_tools_data)
         print(tools_info)

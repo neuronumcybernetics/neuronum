@@ -19,15 +19,14 @@ from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 from cryptography.hazmat.backends import default_backend
 from abc import ABC, abstractmethod
 
-# Configure logging
+# Logging Configuration
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
 
-
-# Custom Exceptions
+# Exceptions
 class NeuronumError(Exception):
     """Base exception for Neuronum errors"""
     pass
@@ -339,7 +338,7 @@ class NetworkClient:
 
 class BaseClient(ABC):
     """Base client with common functionality"""
-    
+
     def __init__(self, config: Optional[ClientConfig] = None):
         self.config = config or ClientConfig()
         self.env: Dict[str, str] = {}
@@ -348,10 +347,10 @@ class BaseClient(ABC):
         self._network_client = NetworkClient(self.config)
         self.host = ""
         self.network = self.config.network
-    
+
     @abstractmethod
     def _load_private_key(self) -> Optional[ec.EllipticCurvePrivateKey]:
-        """Load private key - to be implemented by subclasses"""
+        """Load private key (must be implemented by subclasses)"""
         pass
     
     def _init_crypto(self, private_key: Optional[ec.EllipticCurvePrivateKey]) -> None:
@@ -386,16 +385,14 @@ class BaseClient(ABC):
     
     async def _get_target_cell_public_key(self, cell_id: str) -> str:
         """Get public key for target cell"""
-        # Try cached cells first
         cells = await self.list_cells(update=False)
-        
+
         for cell in cells:
             if cell.get('cell_id') == cell_id:
                 public_key = cell.get('public_key', {})
                 if public_key:
                     return public_key
-        
-        # Refresh cache and try again
+
         logger.info(f"Cell {cell_id} not in cache, refreshing")
         cells = await self.list_cells(update=True)
         
@@ -408,21 +405,12 @@ class BaseClient(ABC):
         raise CellNotFoundError(f"Cell not found: {cell_id}")
     
     async def list_cells(self, update: bool = False) -> List[Dict[str, Any]]:
-        """
-        List all available cells.
-        
-        Args:
-            update: Force cache refresh if True
-            
-        Returns:
-            List of cell information dictionaries
-        """
+        """List all available cells with optional cache refresh"""
         if not update:
             cached_cells = await self._cache_manager.get_cells()
             if cached_cells is not None:
                 return cached_cells
-        
-        # Fetch from API
+
         full_url = f"https://{self.network}/api/list_cells"
         payload = {"cell": self.to_dict()}
         
@@ -434,26 +422,25 @@ class BaseClient(ABC):
         except NetworkError as e:
             logger.error(f"Failed to fetch cells: {e}")
             return []
+        
+    async def list_tools(self) -> List[Dict[str, Any]]:
+        """List all available Neuronum tools"""
+        full_url = f"https://{self.network}/api/list_tools"
+        payload = {"cell": self.to_dict()}
+        
+        try:
+            data = await self._network_client.post_request(full_url, payload)
+            tools = data.get("Tools", []) if data else []
+            return tools
+        except NetworkError as e:
+            logger.error(f"Failed to fetch cells: {e}")
+            return []
     
     async def activate_tx(
-        self, 
+        self,
         data: Dict[str, Any]
     ) -> Optional[Dict[str, Any]]:
-        """
-        Activate a transaction with the specified cell.
-        
-        Args:
-            cell_id: Target cell identifier
-            data: Transaction data to encrypt and send
-            
-        Returns:
-            Decrypted response dict or None on failure
-            
-        Raises:
-            CellNotFoundError: If cell_id is not found
-            EncryptionError: If encryption/decryption fails
-            NetworkError: If network request fails
-        """
+        """Activate encrypted transaction with cell and return decrypted response"""
         if not self._crypto:
             raise EncryptionError("Crypto manager not initialized")
         
@@ -461,12 +448,9 @@ class BaseClient(ABC):
         
         url = f"https://{self.network}/api/activate_tx/{cell_id}"
         payload = {"cell": self.to_dict()}
-        
-        # Get target cell's public key
+
         public_key_pem_str = await self._get_target_cell_public_key(cell_id)
         public_key_object = self._crypto.load_public_key_from_pem(public_key_pem_str)
-        
-        # Prepare and encrypt data
         data_to_encrypt = data.copy()
         data_to_encrypt["public_key"] = self._crypto.get_public_key_pem()
         encrypted_payload = self._crypto.encrypt_with_ecdh_aesgcm(
@@ -480,10 +464,9 @@ class BaseClient(ABC):
         if not response_data or "response" not in response_data:
             logger.warning("Unexpected or missing response")
             return response_data
-        
+
         inner_response = response_data["response"]
-        
-        # Decrypt response if encrypted
+
         if "ciphertext" in inner_response:
             try:
                 ephemeral_public_key_bytes = CryptoManager.safe_b64decode(
@@ -503,21 +486,7 @@ class BaseClient(ABC):
             return inner_response
     
     async def stream(self, data: Dict[str, Any]) -> bool:
-        """
-        Stream data to a target cell.
-        
-        Args:
-            cell_id: Target cell identifier
-            data: Data to encrypt and stream
-            
-        Returns:
-            True if successful, False otherwise
-            
-        Raises:
-            ValueError: If not called from Cell instance or host not set
-            CellNotFoundError: If cell_id is not found
-            EncryptionError: If encryption fails
-        """
+        """Stream encrypted data to target cell via WebSocket"""
         if not isinstance(self, Cell):
             raise ValueError("stream must be called from a Cell instance")
         
@@ -526,14 +495,11 @@ class BaseClient(ABC):
         
         if not self._crypto:
             raise EncryptionError("Crypto manager not initialized")
-        
+
         cell_id = self.host.split("@", 1)[-1]
-        
-        # Get target cell's public key
+
         public_key_pem_str = await self._get_target_cell_public_key(cell_id)
         public_key_object = self._crypto.load_public_key_from_pem(public_key_pem_str)
-        
-        # Prepare and encrypt data
         data_to_encrypt = data.copy()
         data_to_encrypt["public_key"] = self._crypto.get_public_key_pem()
         encrypted_payload = self._crypto.encrypt_with_ecdh_aesgcm(
@@ -598,7 +564,6 @@ class Cell(BaseClient):
                     backend=default_backend()
                 )
             
-            # Check file permissions (must be 0600 or stricter)
             stat = os.stat(key_path)
             if stat.st_mode & 0o177:
                 logger.warning(

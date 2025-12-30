@@ -20,6 +20,10 @@
 </p>
 
 ---
+### 2025.12.0.dev10 / Development Release
+**Changes:**
+- Code Readability Update in: `main.py` and `neuronum.py` 
+
 ### 2025.12.0.dev9 / Development Release
 **Changes:**
 - `neuronum start-server` always uses Path.home() / "neuronum-server" as SERVER_DIR

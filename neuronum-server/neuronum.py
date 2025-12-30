@@ -23,15 +23,14 @@ from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePrivateKey
 import hashlib
 import asyncio
 
-# Configure logging
+# Logging Configuration
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
 
-
-# Custom Exceptions
+# Exceptions
 class NeuronumError(Exception):
     """Base exception for Neuronum errors"""
     pass
@@ -470,21 +469,12 @@ class BaseClient(ABC):
         raise CellNotFoundError(f"Cell not found: {cell_id}")
     
     async def list_cells(self, update: bool = False) -> List[Dict[str, Any]]:
-        """
-        List all available cells.
-        
-        Args:
-            update: Force cache refresh if True
-            
-        Returns:
-            List of cell information dictionaries
-        """
+        """List all available cells with optional cache refresh"""
         if not update:
             cached_cells = await self._cache_manager.get_cells()
             if cached_cells is not None:
                 return cached_cells
-        
-        # Fetch from API
+
         full_url = f"https://{self.network}/api/list_cells"
         payload = {"cell": self.to_dict()}
         
@@ -498,7 +488,7 @@ class BaseClient(ABC):
             return []
         
     async def list_tools(self) -> List[Dict[str, Any]]:
-        # Fetch Tasks from API
+        """List all available Neuronum tools"""
         full_url = f"https://{self.network}/api/list_tools"
         payload = {"cell": self.to_dict()}
         
@@ -511,23 +501,12 @@ class BaseClient(ABC):
             return []
     
     async def tx_response(
-        self, 
-        transmitter_id: str, 
-        data: Dict[str, Any], 
+        self,
+        transmitter_id: str,
+        data: Dict[str, Any],
         client_public_key_str: str
     ) -> None:
-        """
-        Send an encrypted response to a transmitter.
-        
-        Args:
-            transmitter_id: ID of the transmitter
-            data: Response data to encrypt
-            client_public_key_str: Client's public key in PEM format
-            
-        Raises:
-            EncryptionError: If encryption fails
-            NetworkError: If network request fails
-        """
+        """Send encrypted response to transmitter"""
         if not self._crypto:
             raise EncryptionError("Crypto manager not initialized")
         
@@ -544,36 +523,20 @@ class BaseClient(ABC):
         logger.info(f"Response sent to transmitter {transmitter_id}")
     
     async def activate_tx(
-        self, 
-        cell_id: str, 
+        self,
+        cell_id: str,
         data: Dict[str, Any]
     ) -> Optional[Dict[str, Any]]:
-        """
-        Activate a transaction with the specified cell.
-        
-        Args:
-            cell_id: Target cell identifier
-            data: Transaction data to encrypt and send
-            
-        Returns:
-            Decrypted response dict or None on failure
-            
-        Raises:
-            CellNotFoundError: If cell_id is not found
-            EncryptionError: If encryption/decryption fails
-            NetworkError: If network request fails
-        """
+        """Activate encrypted transaction with cell and return decrypted response"""
         if not self._crypto:
             raise EncryptionError("Crypto manager not initialized")
         
         url = f"https://{self.network}/api/activate_tx/{cell_id}"
         payload = {"cell": self.to_dict()}
-        
-        # Get target cell's public key
+
         public_key_pem_str = await self._get_target_cell_public_key(cell_id)
         public_key_object = self._crypto.load_public_key_from_pem(public_key_pem_str)
-        
-        # Prepare and encrypt data
+
         data_to_encrypt = data.copy()
         data_to_encrypt["public_key"] = self._crypto.get_public_key_pem()
         encrypted_payload = self._crypto.encrypt_with_ecdh_aesgcm(
@@ -589,8 +552,7 @@ class BaseClient(ABC):
             return response_data
         
         inner_response = response_data["response"]
-        
-        # Decrypt response if encrypted
+
         if "ciphertext" in inner_response:
             try:
                 ephemeral_public_key_bytes = CryptoManager.safe_b64decode(
@@ -610,15 +572,7 @@ class BaseClient(ABC):
             return inner_response
     
     async def sync(self) -> AsyncGenerator[Dict[str, Any], None]:
-        """
-        Sync with the network and yield operations as they arrive.
-
-        Yields:
-            Operation dictionaries with decrypted data
-
-        Raises:
-            ValueError: If not called from Cell instance or host not set
-        """
+        """Sync with network and yield operations as they arrive"""
         if not isinstance(self, Cell):
             raise ValueError("sync must be called from a Cell instance")
 
@@ -633,7 +587,6 @@ class BaseClient(ABC):
         retry_count = 0
         while True:
             try:
-                # Generate fresh auth payload with current timestamp for each connection attempt
                 auth_payload = self.to_dict()
 
                 ssl_context = ssl.create_default_context()
@@ -647,7 +600,7 @@ class BaseClient(ABC):
                 ) as ws:
                     await ws.send(json.dumps(auth_payload))
                     logger.info(f"Connected and authenticated to {cell}")
-                    retry_count = 0  # Reset on successful connection
+                    retry_count = 0
 
                     while True:
                         try:
@@ -684,7 +637,6 @@ class BaseClient(ABC):
                                 logger.warning("Received unencrypted data")
 
                         except asyncio.TimeoutError:
-                            # Ping is handled automatically by websockets library
                             continue
                         except ConnectionClosed as e:
                             logger.warning(f"Connection closed: {e.code} - {e.reason}")
@@ -698,28 +650,13 @@ class BaseClient(ABC):
             except Exception as e:
                 logger.error(f"General error in sync: {e}")
 
-            # Fixed 5-second retry interval for reconnection
             retry_count += 1
             delay = 5.0
             logger.info(f"Reconnecting in {delay}s (attempt {retry_count})")
             await asyncio.sleep(delay)
     
     async def stream(self, cell_id: str, data: Dict[str, Any]) -> bool:
-        """
-        Stream data to a target cell.
-        
-        Args:
-            cell_id: Target cell identifier
-            data: Data to encrypt and stream
-            
-        Returns:
-            True if successful, False otherwise
-            
-        Raises:
-            ValueError: If not called from Cell instance or host not set
-            CellNotFoundError: If cell_id is not found
-            EncryptionError: If encryption fails
-        """
+        """Stream encrypted data to target cell via WebSocket"""
         if not isinstance(self, Cell):
             raise ValueError("stream must be called from a Cell instance")
         
@@ -728,12 +665,10 @@ class BaseClient(ABC):
         
         if not self._crypto:
             raise EncryptionError("Crypto manager not initialized")
-        
-        # Get target cell's public key
+
         public_key_pem_str = await self._get_target_cell_public_key(cell_id)
         public_key_object = self._crypto.load_public_key_from_pem(public_key_pem_str)
-        
-        # Prepare and encrypt data
+
         data_to_encrypt = data.copy()
         data_to_encrypt["public_key"] = self._crypto.get_public_key_pem()
         encrypted_payload = self._crypto.encrypt_with_ecdh_aesgcm(
@@ -776,7 +711,7 @@ class BaseClient(ABC):
             return False
         
     def sign_connect_message(self, private_key: EllipticCurvePrivateKey, message: bytes) -> str:
-        """Signs a message using the given private key and returns a base64 encoded signature."""
+        """Sign message using private key and return base64-encoded signature"""
         try:
             signature = private_key.sign(
                 message,
@@ -784,7 +719,7 @@ class BaseClient(ABC):
             )
             return base64.b64encode(signature).decode()
         except Exception as e:
-            print(f"❌ Error signing message: {e}")
+            print(f"Error: Error signing message: {e}")
             return ""
         
     async def connect_cell(self, mnemonic):
@@ -794,7 +729,7 @@ class BaseClient(ABC):
 
         print(mnemonic)
         if not Bip39MnemonicValidator(Bip39Languages.ENGLISH).IsValid(mnemonic):
-            print("❌ Invalid mnemonic. Please ensure it is 12 valid BIP-39 words.")
+            print("Error: Invalid mnemonic. Please ensure it is 12 valid BIP-39 words.")
             return
 
         try:
@@ -816,7 +751,7 @@ class BaseClient(ABC):
             )
 
         except Exception as e:
-            print(f"❌ Error generating keys from mnemonic: {e}")
+            print(f"Error: Error generating keys from mnemonic: {e}")
             return
         
         timestamp = str(int(time.time()))
@@ -866,7 +801,7 @@ class BaseClient(ABC):
 
             return host
         else:
-            print("❌ Failed to retrieve host from server.")
+            print("Error: Failed to retrieve host from server.")
 
     async def disconnect_cell(self):
         if self.host:
@@ -878,15 +813,15 @@ class BaseClient(ABC):
                 neuronum_folder_path / "cells.json",
                 neuronum_folder_path / "nodes.json",
             ]
-            
+
             for file_path in files_to_delete:
                 try:
-                    if file_path.exists(): 
+                    if file_path.exists():
                         await asyncio.to_thread(os.unlink, file_path)
                 except Exception as e:
                     print(f"Warning: Failed to delete {file_path.name}: {e}")
         else:
-            print(f"❌ Neuronum Cell '{self.host}' deletion failed on server. (Status was not True)")
+            print(f"Error: Neuronum Cell '{self.host}' deletion failed on server.")
 
     async def delete_cell(self):
         if not self.host:
@@ -919,7 +854,7 @@ class BaseClient(ABC):
             return
 
         if status:
-            print(f"✅ Neuronum Cell '{self.host}' successfully deleted from server. Removing local files...")
+            print(f"Neuronum Cell '{self.host}' successfully deleted from server. Removing local files...")
 
             neuronum_folder_path = Path.home() / ".neuronum"
             files_to_delete = [
@@ -929,18 +864,18 @@ class BaseClient(ABC):
                 neuronum_folder_path / "cells.json",
                 neuronum_folder_path / "nodes.json",
             ]
-            
+
             for file_path in files_to_delete:
                 try:
-                    if file_path.exists(): 
+                    if file_path.exists():
                         await asyncio.to_thread(os.unlink, file_path)
                 except Exception as e:
                     print(f"Warning: Failed to delete {file_path.name}: {e}")
         else:
-            print(f"❌ Neuronum Cell '{self.host}' deletion failed on server. (Status was not True)")
+            print(f"Error: Neuronum Cell '{self.host}' deletion failed on server.")
 
     def derive_keys_from_mnemonic(self, mnemonic: str):
-        """Derives EC-SECP256R1 keys from a BIP-39 mnemonic's seed."""
+        """Derive EC-SECP256R1 keys from BIP-39 mnemonic"""
         try:
             seed = Bip39SeedGenerator(mnemonic).Generate()
             digest = hashlib.sha256(seed).digest()
@@ -1009,7 +944,7 @@ class BaseClient(ABC):
             challenge_value = self.base64url_encode(key_hash)
             return challenge_value
         except Exception as e:
-            print(f"❌ Error creating DNS challenge value: {e}")
+            print(f"Error: Error creating DNS challenge value: {e}")
             return ""
         
     async def confirm_business(self):
@@ -1090,7 +1025,6 @@ class Cell(BaseClient):
                     backend=default_backend()
                 )
             
-            # Check file permissions (must be 0600 or stricter)
             stat = os.stat(key_path)
             if stat.st_mode & 0o177:
                 logger.warning(
