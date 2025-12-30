@@ -537,18 +537,7 @@ async def async_update_tool(config_data, tool_script: str, tool_id: str, audienc
         if response_data.get("success"):
             tool_id = response_data.get("tool_id")
             message = response_data.get("message", "Tool updated!")
-            
-            # Check if DNS verification is needed
-            if "verify Ownership" in message:
-                click.echo(f"Tool '{tool_id}' updated as private.")
-                click.echo(f"{message}")
-                click.echo(f"Please use the ceLL Client (ceLLai) software to verify ownership over your domain and publish tools")
-            else:
-                click.echo(f"Tool '{tool_id}' updated successfully!")
-                if audience == "public":
-                    click.echo(f"Audience: Public")
-                else:
-                    click.echo(f"Audience: Private")
+            click.echo(f"Tool '{tool_id}' updated successfully!")
         else:
             error_message = response_data.get("message", "Unknown error")
             click.echo(f"Error:Failed to update tool: {error_message}")
@@ -745,6 +734,126 @@ def stop_server(server_dir):
     except Exception as e:
         click.echo(f"Error:Unexpected error: {e}")
 
+
+@click.command()
+@click.option('--server-dir', default=None, help='Path to neuronum-server directory (default: ~/neuronum-server)')
+def status(server_dir):
+    """Check if Neuronum Server and vLLM Server are currently running."""
+
+    # Determine server directory
+    if server_dir is None:
+        server_dir = SERVER_DIR
+    else:
+        server_dir = Path(server_dir)
+
+    if not server_dir.exists():
+        click.echo(f"Error: Neuronum Server directory not found at {server_dir}")
+        return
+
+    server_pid_file = server_dir / ".server_pid"
+    vllm_pid_file = server_dir / ".vllm_pid"
+
+    def is_process_running(pid_file):
+        """Check if process with PID from file is running."""
+        if not pid_file.exists():
+            return False, None
+
+        try:
+            with open(pid_file, 'r') as f:
+                pid = int(f.read().strip())
+
+            # Check if process exists
+            os.kill(pid, 0)
+            return True, pid
+        except (OSError, ValueError, ProcessLookupError):
+            return False, None
+
+    click.echo("=" * 50)
+    click.echo("Neuronum Server Status")
+    click.echo("=" * 50)
+
+    # Check Neuronum Server
+    server_running, server_pid = is_process_running(server_pid_file)
+    if server_running:
+        click.echo(f"Neuronum Server: RUNNING (PID: {server_pid})")
+    else:
+        click.echo("Neuronum Server: NOT RUNNING")
+
+    # Check vLLM Server
+    vllm_running, vllm_pid = is_process_running(vllm_pid_file)
+    if vllm_running:
+        click.echo(f"vLLM Server:     RUNNING (PID: {vllm_pid})")
+    else:
+        click.echo("vLLM Server:     NOT RUNNING")
+
+    click.echo("=" * 50)
+
+
+@click.command()
+@click.argument('prompt', required=False)
+def open_chat(prompt):
+    """Send a prompt to your running Neuronum server and get a response."""
+    asyncio.run(async_chat(prompt))
+
+
+async def async_chat(prompt):
+    """Async implementation of chat command."""
+    from neuronum.neuronum import Cell
+
+    # Check if credentials exist
+    if not ENV_FILE.exists():
+        click.echo("Error: No Cell credentials found!")
+        click.echo("Please run 'neuronum create-cell' or 'neuronum connect-cell' first")
+        return
+
+    try:
+        async with Cell() as cell:
+            # If no prompt provided, enter interactive mode
+            if not prompt:
+                click.echo("Neuronum Chat - Type your messages below (Ctrl+C to exit)")
+                click.echo("=" * 50)
+
+                while True:
+                    try:
+                        user_input = click.prompt("You", type=str)
+                        if not user_input.strip():
+                            continue
+
+                        # Send prompt to server
+                        response = await cell.activate_tx({
+                            "type": "prompt",
+                            "prompt": user_input
+                        })
+
+                        if response and "json" in response:
+                            click.echo(f"Agent: {response['json']}")
+                        elif response:
+                            click.echo(f"Agent: {json.dumps(response, indent=2)}")
+                        else:
+                            click.echo("Error: No response from server")
+
+                        click.echo()
+
+                    except KeyboardInterrupt:
+                        click.echo("\nExiting chat...")
+                        break
+            else:
+                # Single prompt mode
+                response = await cell.activate_tx({
+                    "type": "prompt",
+                    "prompt": prompt
+                })
+
+                if response and "json" in response:
+                    click.echo(response['json'])
+                elif response:
+                    click.echo(json.dumps(response, indent=2))
+                else:
+                    click.echo("Error: No response from server")
+
+    except Exception as e:
+        click.echo(f"Error: {e}")
+
 # CLI Command Registration
 
 cli.add_command(create_cell)
@@ -757,6 +866,8 @@ cli.add_command(update_tool)
 cli.add_command(delete_tool)
 cli.add_command(start_server)
 cli.add_command(stop_server)
+cli.add_command(status)
+cli.add_command(open_chat)
 
 if __name__ == "__main__":
     cli()

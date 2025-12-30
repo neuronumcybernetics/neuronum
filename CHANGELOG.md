@@ -20,6 +20,10 @@
 </p>
 
 ---
+### 2025.12.0.dev11 / Development Release
+**Changes:**
+- `status` and `open-chat` added to cli: use to check the server status (if running or not) and open a simple terminal interface to chat with your server  
+
 ### 2025.12.0.dev10 / Development Release
 **Changes:**
 - Code Readability Update in: `main.py` and `neuronum.py` 

@@ -58,7 +58,7 @@ source ~/neuronum-venv/bin/activate
 
 Install the Neuronum SDK:
 ```sh
-pip install neuronum==2025.12.0.dev10
+pip install neuronum==2025.12.0.dev11
 ```
 
 > **Note:** Always activate this virtual environment (`source ~/neuronum-venv/bin/activate`) before running any `neuronum` commands.
@@ -93,6 +93,14 @@ This command will:
 - Install all dependencies (vLLM, PyTorch, etc.)
 - Start the vLLM server in the background
 - Launch the Neuronum Server
+
+**Check Server Status**
+
+```sh
+neuronum status
+```
+
+This will show if the Neuronum Server and vLLM Server are currently running with their PIDs.
 
 **Viewing Logs**
 
@@ -162,6 +170,19 @@ neuronum start-server
 
 ### **Neuronum Client API**
 **Manage and call your Agent with the Neuronum Client API using different message types**
+
+You can interact with your server using either the CLI chat client or the Python API:
+
+**Quick Start - CLI Chat Client**
+```sh
+# Interactive chat mode
+neuronum open-chat
+
+# Single prompt mode
+neuronum open-chat "What is the weather today?"
+```
+
+**Python API**
 ```python
 import asyncio
 from neuronum import Cell
