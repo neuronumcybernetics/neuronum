@@ -111,6 +111,11 @@ async def store_message(user, role, message, db_path=DB_PATH):
         )
         await db.commit()
 
+async def store_action(user, action_type: str, action_details: str, db_path=DB_PATH):
+    """Store user action as a system message for conversation context"""
+    action_message = f"[Action: {action_type}] {action_details}"
+    await store_message(user, "system", action_message, db_path)
+
 async def fetch_latest_messages(user, limit=CONVERSATION_HISTORY_LIMIT, db_path=DB_PATH) -> List[Tuple[str, str]]:
     """Fetch latest N messages for conversation history"""
     async with aiosqlite.connect(db_path) as db:
@@ -594,9 +599,16 @@ async def handle_add_knowledge(cell, transmitter: dict):
     data = transmitter.get("data", {})
     knowledge_topic = data.get("knowledge_topic", None)
     knowledge_data = data.get("knowledge_data", None)
+    operator = data.get("operator", "default_user")
 
     logging.info("Adding knowledge to database...")
     await add_knowledge_entry(knowledge_topic, knowledge_data)
+
+    await store_action(
+        operator,
+        "add_knowledge",
+        f"Added knowledge on topic '{knowledge_topic}': {knowledge_data[:100]}..." if len(knowledge_data) > 100 else f"Added knowledge on topic '{knowledge_topic}': {knowledge_data}"
+    )
 
     await send_cell_response(
         cell,
@@ -622,9 +634,16 @@ async def handle_update_knowledge(cell, transmitter: dict):
     data = transmitter.get("data", {})
     knowledge_id = data.get("knowledge_id", None)
     knowledge_data = data.get("knowledge_data", None)
+    operator = data.get("operator", "default_user")
 
     logging.info("Updating knowledge in database...")
     await update_knowledge_entry(knowledge_id, knowledge_data)
+
+    await store_action(
+        operator,
+        "update_knowledge",
+        f"Updated knowledge ID {knowledge_id}: {knowledge_data[:100]}..." if len(knowledge_data) > 100 else f"Updated knowledge ID {knowledge_id}: {knowledge_data}"
+    )
 
     await send_cell_response(
         cell,
@@ -637,9 +656,16 @@ async def handle_delete_knowledge(cell, transmitter: dict):
     """Handle deleting knowledge from database"""
     data = transmitter.get("data", {})
     knowledge_id = data.get("knowledge_id", None)
+    operator = data.get("operator", "default_user")
 
     logging.info("Deleting knowledge from database...")
     await delete_knowledge_entry(knowledge_id)
+
+    await store_action(
+        operator,
+        "delete_knowledge",
+        f"Deleted knowledge entry with ID {knowledge_id}"
+    )
 
     await send_cell_response(
         cell,
@@ -1035,6 +1061,7 @@ async def handle_add_tool(cell, transmitter: dict):
     data = transmitter.get("data", {})
     tool_id = data.get("tool_id", "")
     variables = data.get("variables", "")
+    operator = data.get("operator", "default_user")
 
     if not tool_id:
         logging.error("No tool_id provided")
@@ -1058,6 +1085,7 @@ async def handle_add_tool(cell, transmitter: dict):
         script = tool.get("script", "")
         config = tool.get("config", "")
         author = tool.get("author", "Unknown")
+        tool_name = tool.get("name", tool_id)
 
         if not script:
             error_msg = f"Tool '{tool_id}' has no script content"
@@ -1116,6 +1144,13 @@ async def handle_add_tool(cell, transmitter: dict):
             logging.info(f"Tool config saved to {config_path}")
 
         logging.info(f"Tool '{tool_id}' successfully added to tools")
+
+        await store_action(
+            operator,
+            "add_tool",
+            f"Installed tool '{tool_name}' (ID: {tool_id})"
+        )
+
         logging.info("Restarting agent to load new tool...")
 
         await cell.close()
@@ -1133,6 +1168,7 @@ async def handle_delete_tool(cell, transmitter: dict):
     """Handle deleting tool from tools directory and restart agent"""
     data = transmitter.get("data", {})
     tool_id = data.get("tool_id", None)
+    operator = data.get("operator", "default_user")
 
     if not tool_id:
         logging.error("No tool_id provided for deletion")
@@ -1162,6 +1198,13 @@ async def handle_delete_tool(cell, transmitter: dict):
             return
 
         logging.info(f"✅ Tool '{tool_id}' successfully deleted. Files removed: {', '.join(files_deleted)}")
+
+        await store_action(
+            operator,
+            "delete_tool",
+            f"Removed tool with ID: {tool_id}"
+        )
+
         logging.info("🔄 Restarting agent...")
 
         await cell.close()
@@ -1180,6 +1223,7 @@ async def handle_delete_task(cell, transmitter: dict):
     """Handle deleting task from tasks directory and restart agent"""
     data = transmitter.get("data", {})
     task_id = data.get("task_id", None)
+    operator = data.get("operator", "default_user")
 
     if not task_id:
         logging.error("No task_id provided for deletion")
@@ -1209,6 +1253,13 @@ async def handle_delete_task(cell, transmitter: dict):
             logging.info(f"Removed task '{task_name}' from active tasks")
 
         logging.info(f"Task '{task_name}' (ID: {task_id}) successfully deleted")
+
+        await store_action(
+            operator,
+            "delete_task",
+            f"Deleted scheduled task '{task_name}' (ID: {task_id})"
+        )
+
         logging.info("Restarting agent...")
 
         await cell.close()
@@ -1231,6 +1282,7 @@ async def handle_add_task(cell, transmitter: dict):
     input_type = data.get("input_type", "")
     input_data = data.get("input_data", "")
     schedule = data.get("schedule", "")
+    operator = data.get("operator", "default_user")
 
     if not task_name:
         logging.error("No task name provided")
@@ -1315,6 +1367,13 @@ async def handle_add_task(cell, transmitter: dict):
         active_tasks[task_name] = task_data
 
         logging.info(f"Task '{task_name}' successfully added with ID: {task_id}")
+
+        await store_action(
+            operator,
+            "add_task",
+            f"Created scheduled task '{task_name}' - runs {schedule} to execute {function_name} on tool {tool_id}"
+        )
+
         logging.info("Restarting agent to load new task...")
 
         await cell.close()
