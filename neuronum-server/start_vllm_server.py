@@ -48,14 +48,8 @@ def start_vllm_server(model: str, host: str, port: int):
     logger.info("=" * 70)
 
     try:
-        subprocess.run(cmd, check=True)
-    except KeyboardInterrupt:
-        logger.info("\n" + "=" * 70)
-        logger.info("Server stopped by user (Ctrl+C)")
-        logger.info("=" * 70)
-    except subprocess.CalledProcessError as e:
-        logger.error(f"Server exited with error code {e.returncode}")
-        sys.exit(e.returncode)
+        import os
+        os.execvp("vllm", cmd)
     except FileNotFoundError:
         logger.error("vLLM command not found. Make sure vLLM is installed:")
         logger.error("  pip install vllm")
