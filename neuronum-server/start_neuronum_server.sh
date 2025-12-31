@@ -11,6 +11,65 @@ VLLM_PID_FILE=".vllm_pid"
 SERVER_LOG_FILE="server.log"
 SERVER_PID_FILE=".server_pid"
 
+show_logo() {
+    local CYAN='\033[38;5;44m'
+    local RESET='\033[0m'
+
+    # Get terminal width, default to 80 if not available
+    local term_width=$(tput cols 2>/dev/null || echo 80)
+    local logo_width=80
+    local padding=$(( (term_width - logo_width) / 2 ))
+
+    # Ensure padding is not negative
+    if [ $padding -lt 0 ]; then
+        padding=0
+    fi
+
+    local spaces=$(printf '%*s' "$padding" '')
+
+    echo -e "${CYAN}"
+    echo ""
+    while IFS= read -r line; do
+        echo "${spaces}${line}"
+    done << 'EOF'
+                         .,:;+**?%%%SSSSSS%%%??*+;:,.
+                     .;*%#@@@@@@@@@@@@@@@@@@@@@@@@@@#S?+,
+                     :#@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@*
+                      .:+?S#@@@@@@@@@@@@@@@@@@@@@@#S?*:.
+                 .++,      .,::;+**????????**+;;:,.      ,++.
+                 %@@@?,                                :%@@@%.
+                ;@@@@@#;                              *@@@@@@;
+                %@@@@@@@,                            +@@@@@@@?
+                S@@@@@@@?                           .#@@@@@@@S
+                S@@@@@@@?                           .#@@@@@@@S
+                %@@@@@@@:                            *@@@@@@@%
+                +@@@@@@+                             .?@@@@@@+
+                .S@@@S:                                ;S@@@S.
+                 ,??;.               ....               .;??,
+                        .,:;+*??%%SSSSSSSSSSS%%?**+;:,.
+                     ;%S#@@@@@@@@@@@@@@@@@@@@@@@@@@@@@#%+.
+                     ;%#@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@#S*.
+                       .,:+?%%S###@@@@@@@@@@###SS%?*;:.
+                               ..,,,::::::,,,...
+EOF
+    echo ""
+    echo "${spaces}   *****************************************************************************"
+    echo "${spaces}   *****************************************************************************"
+    echo "${spaces}   **                                                                         **"
+    echo "${spaces}   **                    Neuronum - The Agentic Webserver                     **"
+    echo "${spaces}   **                                                                         **"
+    echo "${spaces}   **   ┌─────────────────────────────────────────────────────────────────┐   **"
+    echo "${spaces}   **   │   Repository: github.com/neuronumcybernetics/neuronum-server    │   **"
+    echo "${spaces}   **   │   Contact:    welcome@neuronum.net                              │   **"
+    echo "${spaces}   **   │   Version:    2025.12.0.dev12                                   │   **"
+    echo "${spaces}   **   └─────────────────────────────────────────────────────────────────┘   **"
+    echo "${spaces}   **                                                                         **"
+    echo "${spaces}   *****************************************************************************"
+    echo "${spaces}   *****************************************************************************"
+    echo ""
+    echo -e "${RESET}"
+}
+
 check_python() {
     if command -v python3 &> /dev/null; then
         PYTHON_VERSION=$(python3 --version | cut -d' ' -f2)
@@ -57,11 +116,13 @@ install_dependencies() {
         exit 1
     fi
 
-    echo "Upgrading pip..."
-    pip install --upgrade pip
+    echo -n "Upgrading pip... "
+    pip install --upgrade pip --quiet
+    echo "✓"
 
-    echo "Installing dependencies from requirements.txt..."
-    pip install -r requirements.txt
+    echo -n "Installing dependencies from requirements.txt... "
+    pip install -r requirements.txt --quiet
+    echo "✓"
 
     echo "All dependencies installed"
 }
@@ -231,7 +292,9 @@ cleanup() {
 trap cleanup ERR
 
 main() {
+    show_logo
     echo "Neuronum Server Setup"
+    echo ""
 
     check_python
     create_venv
