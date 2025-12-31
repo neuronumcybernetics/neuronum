@@ -292,7 +292,6 @@ cleanup() {
 trap cleanup ERR
 
 main() {
-    show_logo
     echo "Neuronum Server Setup"
     echo ""
 
@@ -303,6 +302,9 @@ main() {
     check_config
     start_vllm
     start_server
+
+    echo ""
+    show_logo
 }
 
 main
