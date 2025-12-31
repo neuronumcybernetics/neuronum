@@ -25,9 +25,7 @@
 ### **About the Neuronum SDK**
 The Neuronum SDK provides everything you need to setup your favorite AI model as self-hosted agentic backend. It includes the [Neuronum Server](#neuronum-server), an open source agent-wrapper that transforms your model into an executable assistant that can be managed and called with the [Neuronum Client API](#neuronum-client-api) and the [Neuronum Tools CLI](#neuronum-tools-cli) to develop and publish MCP-compliant Tools that can be installed locally on your [Neuronum Server](#neuronum-server)
 
-### **Quick Demo**
-<video src="https://github.com/neuronumcybernetics/neuronum-sdk-python/raw/main/demo.mp4" controls width="600"></video>
-
+https://github.com/user-attachments/assets/0e1df98a-e0e9-465f-a602-3b58a82a61ca
 
 > **Protocol Note:** The Neuronum SDK is powered by an end-to-end encrypted communication protocol based on public/private key pairs derived from a randomly generated 12-word mnemonic. All data is relayed through neuronum.net, providing secure communication without the need to set up public web servers or expose your infrastructure to the public internet.
 
