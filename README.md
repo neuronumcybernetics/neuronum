@@ -58,13 +58,12 @@ source ~/neuronum-venv/bin/activate
 
 Install the Neuronum SDK:
 ```sh
-pip install neuronum==2025.12.0.dev11
+pip install neuronum==2025.12.0.dev12
 ```
 
 > **Note:** Always activate this virtual environment (`source ~/neuronum-venv/bin/activate`) before running any `neuronum` commands.
 
-**Create a Neuronum Cell**
-<br>The Neuronum Cell is your secure identity to interact with the Network
+**Create a Neuronum Cell (secure Identity)**
 ```sh
 neuronum create-cell
 ```

@@ -163,23 +163,12 @@ def create_cell():
     if not private_key:
         return
 
-    # 3. Generate SSH public key (OpenSSH format)
-    try:
-        ssh_public = public_key.public_bytes(
-            encoding=serialization.Encoding.OpenSSH,
-            format=serialization.PublicFormat.OpenSSH
-        )
-    except Exception as e:
-        click.echo(f"Error:Error generating SSH public key: {e}")
-        return
-
-    # 4. Call API to create the cell
+    # 3. Call API to create the cell
     click.echo("Registering new Cell on Neuronum network...")
     url = f"{API_BASE_URL}/create_community_cell"
 
     payload = {
-        "public_key": pem_public.decode("utf-8"),
-        "ssh_public_key": ssh_public.decode("utf-8")
+        "public_key": pem_public.decode("utf-8")
     }
 
     try:

@@ -20,6 +20,10 @@
 </p>
 
 ---
+### 2025.12.0.dev12 / Development Release
+**Changes:**
+- `neuronum create-cell` no longer dervis ssh_public_key from seed (12-word-mnemonic)
+
 ### 2025.12.0.dev11 / Development Release
 **Changes:**
 - `status` and `open-chat` added to cli: use to check the server status (if running or not) and open a simple terminal interface to chat with your server  
