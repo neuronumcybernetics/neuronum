@@ -1279,10 +1279,35 @@ async def handle_add_task(cell, transmitter: dict):
     task_description = data.get("description", "")
     tool_id = data.get("tool_id", "")
     function_name = data.get("function_name", "")
-    input_type = data.get("input_type", "")
-    input_data = data.get("input_data", "")
     schedule = data.get("schedule", "")
     operator = data.get("operator", "default_user")
+
+    # Only support simplified resource format
+    resource = data.get("resource", None)
+
+    if not resource:
+        logging.error("No resource provided in add_task request")
+        await send_cell_response(
+            cell,
+            transmitter.get("transmitter_id"),
+            {"json": {"error": "Resource field is required"}},
+            data.get("public_key", "")
+        )
+        return
+
+    # Validate resource has prompt
+    if "prompt" not in resource:
+        logging.error("Resource missing required 'prompt' field")
+        await send_cell_response(
+            cell,
+            transmitter.get("transmitter_id"),
+            {"json": {"error": "resource.prompt is required"}},
+            data.get("public_key", "")
+        )
+        return
+
+    # Convert to array format for task_executor
+    resources = [resource]
 
     if not task_name:
         logging.error("No task name provided")
@@ -1324,16 +1349,6 @@ async def handle_add_task(cell, transmitter: dict):
         )
         return
 
-    if not input_type:
-        logging.error("No input_type provided")
-        await send_cell_response(
-            cell,
-            transmitter.get("transmitter_id"),
-            {"json": {"error": "Input type is required"}},
-            data.get("public_key", "")
-        )
-        return
-
     try:
         import uuid
         from datetime import datetime
@@ -1347,8 +1362,7 @@ async def handle_add_task(cell, transmitter: dict):
             "description": task_description,
             "tool_id": tool_id,
             "function_name": function_name,
-            "input_type": input_type,
-            "input_data": input_data,
+            "resources": resources,
             "schedule": schedule,
             "status": "active",
             "created_at": datetime.now().isoformat()
@@ -1362,7 +1376,7 @@ async def handle_add_task(cell, transmitter: dict):
 
         logging.info(f"Task '{task_name}' saved to {task_path}")
         logging.info(f"   Tool: {tool_id}, Function: {function_name}")
-        logging.info(f"   Input Type: {input_type}, Schedule: {schedule}")
+        logging.info(f"   Resources: {len(resources)} resource(s), Schedule: {schedule}")
 
         active_tasks[task_name] = task_data
 
@@ -1461,7 +1475,7 @@ async def server_main():
         logging.info(f"Agent started as Cell: {cell.host}")
         logging.info(f"Agent running with {tool_count} Tools")
 
-        scheduler_task = asyncio.create_task(task_executor.task_scheduler(cell, TASKS_DIR, create_chat_completion))
+        scheduler_task = asyncio.create_task(task_executor.task_scheduler_loop(cell, create_chat_completion))
         logging.info("Task scheduler started in background")
         
         if not cell.host.startswith("neuronumagent"):

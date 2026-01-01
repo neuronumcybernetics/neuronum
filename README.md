@@ -180,7 +180,7 @@ You can interact with your server using either the CLI chat client or the Python
 neuronum open-chat
 
 # Single prompt mode
-neuronum open-chat "What is the weather today?"
+neuronum open-chat "Explain what a black hole is in one sentence"
 ```
 
 **Python API**
@@ -279,18 +279,39 @@ async def main():
         # Example 5: Task Scheduling (Automated Workflows)
         # ============================================
 
-        # Add a scheduled task
+        # LLM automatically handles parameter extraction
         add_task_data = {
             "type": "add_task",
             "name": "Daily Report",
-            "description": "Send daily summary email",
+            "description": "Send daily summary email with analytics data",
             "tool_id": "email-tool-id",
             "function_name": "send_email",
-            "input_type": "prompt",  # or "static"
-            "input_data": "Send daily summary to manager@company.com",
+            "resource": {
+                "prompt": "Fetch the daily metrics, summarize it and send daily summary to manager@company.com",
+                "tool_id": "analytics-tool-id",
+                "function_name": "fetch_daily_metrics"
+            },
             "schedule": "weekdays@1704067200,1704153600"  # Days@Unix timestamps
         }
         await cell.stream(add_task_data)
+        # The server will:
+        # 1. Call analytics-tool-id/fetch_daily_metrics using LLM to extract parameters from prompt
+        # 2. Combine the prompt + tool result
+        # 3. Call email-tool-id/send_email with the combined data
+
+        # Alternative: Just a prompt (no tool)
+        simple_task_data = {
+            "type": "add_task",
+            "name": "Morning Greeting",
+            "description": "Send morning greeting",
+            "tool_id": "email-tool-id",
+            "function_name": "send_email",
+            "resource": {
+                "prompt": "Send good morning email to team@company.com"
+            },
+            "schedule": "weekdays@28800"
+        }
+        await cell.stream(simple_task_data)
 
         # Delete a task
         delete_task_data = {
