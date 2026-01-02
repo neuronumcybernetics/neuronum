@@ -170,7 +170,7 @@ neuronum start-server
 
 
 ### **Neuronum Client API**
-**Manage and call your Agent with the Neuronum Client API using different message types**
+**Manage and call your Agent with ["kybercell" (official Neuronum Client)](https://neuronum.net/kybercell) or build your own custom Client using the Neuronum Client API**
 
 You can interact with your server using either the CLI chat client or the Python API:
 
