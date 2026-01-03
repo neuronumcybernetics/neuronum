@@ -1056,7 +1056,7 @@ JSON:"""
             data.get("public_key", "")
         )
 
-async def handle_add_tool(cell, transmitter: dict):
+async def handle_install_tool(cell, transmitter: dict):
     """Handle adding new Tool tool from registry and restart agent"""
     data = transmitter.get("data", {})
     tool_id = data.get("tool_id", "")
@@ -1147,7 +1147,7 @@ async def handle_add_tool(cell, transmitter: dict):
 
         await store_action(
             operator,
-            "add_tool",
+            "install_tool",
             f"Installed tool '{tool_name}' (ID: {tool_id})"
         )
 
@@ -1425,7 +1425,7 @@ async def route_message(cell, transmitter: dict):
             "prompt": lambda: handle_prompt(cell, transmitter),
             "call_tool": lambda: handle_call_tool(cell, transmitter),
             "get_tools": lambda: handle_get_tools(cell, transmitter),
-            "add_tool": lambda: handle_add_tool(cell, transmitter),
+            "install_tool": lambda: handle_install_tool(cell, transmitter),
             "add_task": lambda: handle_add_task(cell, transmitter),
             "delete_tool": lambda: handle_delete_tool(cell, transmitter),
             "delete_task": lambda: handle_delete_task(cell, transmitter)

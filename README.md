@@ -261,11 +261,11 @@ async def main():
 
         # Add a tool (requires tool to be published)
         # Use stream() instead of activate_tx() to listen for agent restart
-        add_tool_data = {
-            "type": "add_tool",
+        install_tool_data = {
+            "type": "install_tool",
             "tool_id": "019ac60e-cccc-7af5-b087-f6fcf1ba1299"
         }
-        await cell.stream(add_tool_data)
+        await cell.stream(install_tool_data)
         # Agent will restart and send "ping" when ready
 
         # Delete a tool
