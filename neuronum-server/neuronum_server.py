@@ -690,14 +690,18 @@ async def handle_fetch_knowledge(cell, transmitter: dict):
     )
 
 async def handle_download_log(cell, transmitter: dict):
-    """Handle downloading agent log file and clear it after download"""
+    """Handle downloading last 100 lines from agent log file"""
     data = transmitter.get("data", {})
-    logging.info("Fetching log from server.log...")
+    logging.info("Fetching last 100 lines from server.log...")
 
     try:
+        # Read the last 100 lines from the log file
         with open("server.log", "r") as f:
-            agent_log = f.read()
-        logging.info("Agent log fetched successfully")
+            lines = f.readlines()
+            last_100_lines = lines[-100:] if len(lines) > 100 else lines
+            agent_log = ''.join(last_100_lines)
+
+        logging.info(f"Agent log fetched successfully ({len(last_100_lines)} lines)")
 
         await send_cell_response(
             cell,
@@ -705,10 +709,6 @@ async def handle_download_log(cell, transmitter: dict):
             {"json": {"log": agent_log}},
             data.get("public_key", "")
         )
-
-        with open("server.log", "w") as f:
-            f.write('')
-        logging.info("Agent log cleared after download")
 
     except Exception as e:
         agent_log = f"Error reading agent log: {e}"
