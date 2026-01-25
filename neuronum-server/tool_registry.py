@@ -114,10 +114,12 @@ class MCPServerClient:
 
         return tools
 
-    async def call_tool(self, tool_name: str, arguments: Dict[str, Any]) -> Any:
+    async def call_tool(self, tool_name: str, arguments: Dict[str, Any], operator: str = None) -> Any:
+        # Inject operator into arguments so tools can access it securely
+        injected_arguments = {**arguments, "operator": operator} if operator else arguments
         response = await self._send_request("tools/call", {
             "name": tool_name,
-            "arguments": arguments
+            "arguments": injected_arguments
         })
 
         result = response.get("result", {})
@@ -216,7 +218,7 @@ class MCPRegistry:
 
         return None
 
-    async def call_tool(self, tool_name: str, parameters: Dict[str, Any]) -> Any:
+    async def call_tool(self, tool_name: str, parameters: Dict[str, Any], operator: str = None) -> Any:
         client = await self.find_tool(tool_name)
 
         if client is None:
@@ -226,9 +228,9 @@ class MCPRegistry:
                 f"Available tools: {', '.join(available)}"
             )
 
-        self._logger.debug(f"Calling {tool_name} from {client.server_name} server")
+        self._logger.debug(f"Calling {tool_name} from {client.server_name} server (operator: {operator})")
 
-        return await client.call_tool(tool_name, parameters)
+        return await client.call_tool(tool_name, parameters, operator)
 
     async def get_server_info(self) -> Dict[str, Any]:
         info = {

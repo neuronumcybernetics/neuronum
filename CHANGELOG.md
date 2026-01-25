@@ -91,7 +91,7 @@
 #### Security Features
 - **Automatic Permission Enforcement** - Auto-fixes insecure private key permissions (0600)
 - **Timestamp Validation** - Prevents replay attacks with time-based authentication
-- **SQL Injection Protection** - Parameterized queries and FTS5 operator sanitization
+- **SQL Injection Protection** - Parameterized queries and FTS5 cell_id sanitization
 - **Shell Injection Protection** - Safe subprocess execution without shell=True
 - **Resource Leak Prevention** - Proper cleanup of connections and sessions
 - **Secure Credential Storage** - Credentials stored in `~/.neuronum/` (home directory)

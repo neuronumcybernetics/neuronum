@@ -195,6 +195,8 @@ async def main():
         # ============================================
         # Example 1: Send a prompt to your Agent
         # ============================================
+        # The agent will answer questions using its knowledge base
+        # and can execute tools conversationally when needed
         prompt_data = {
             "type": "prompt",
             "prompt": "Explain what a black hole is in one sentence"
@@ -203,14 +205,25 @@ async def main():
         print(tx_response)
 
         # ============================================
-        # Example 2: Call a Tool with natural language
+        # Example 2: Action Approval Flow
         # ============================================
-        tool_call_data = {
-            "type": "call_tool",
-            "tool_id": "your-tool-id",  # The tool you want to use
-            "prompt": "Send an email to john@example.com with subject 'Meeting' and body 'See you at 3pm'"
+        # When the agent suggests a tool action, it returns an action_id
+        # The client can then approve or decline the action
+
+        # Approve a pending action
+        approve_data = {
+            "type": "approve",
+            "action_id": 123  # ID returned from prompt response
         }
-        tx_response = await cell.activate_tx(tool_call_data)
+        tx_response = await cell.activate_tx(approve_data)
+        print(tx_response)
+
+        # Decline a pending action
+        decline_data = {
+            "type": "decline",
+            "action_id": 123
+        }
+        tx_response = await cell.activate_tx(decline_data)
         print(tx_response)
 
         # ============================================
@@ -218,35 +231,52 @@ async def main():
         # ============================================
 
         # Add knowledge to agent's database
-        add_knowledge_data = {
-            "type": "add_knowledge",
+        upload_knowledge_data = {
+            "type": "upload_knowledge",
             "knowledge_topic": "Company Policy",
             "knowledge_data": "Our company operates from 9 AM to 5 PM Monday through Friday."
         }
-        tx_response = await cell.activate_tx(add_knowledge_data)
+        tx_response = await cell.activate_tx(upload_knowledge_data)
 
         # Update existing knowledge
         update_knowledge_data = {
             "type": "update_knowledge",
-            "knowledge_id": "12345",  # ID from previous add
+            "knowledge_id": "abc123...",  # SHA256 hash ID from previous add
             "knowledge_data": "Updated: Company operates 8 AM to 6 PM Monday through Friday."
         }
         tx_response = await cell.activate_tx(update_knowledge_data)
 
         # Fetch all knowledge
-        fetch_data = {"type": "fetch_all_knowledge"}
-        knowledge_list = await cell.activate_tx(fetch_data)
+        get_knowledge_data = {"type": "get_knowledge"}
+        knowledge_list = await cell.activate_tx(get_knowledge_data)
         print(knowledge_list)
+        # Returns: [{"knowledge_id": "...", "topic": "...", "content": "..."}, ...]
 
         # Delete knowledge
         delete_knowledge_data = {
             "type": "delete_knowledge",
-            "knowledge_id": "12345"
+            "knowledge_id": "abc123..."
         }
         tx_response = await cell.activate_tx(delete_knowledge_data)
 
         # ============================================
-        # Example 4: Tool Management
+        # Example 4: Icebreaker (Welcome Message)
+        # ============================================
+
+        # Get the icebreaker/welcome message
+        get_icebreaker_data = {"type": "get_icebreaker"}
+        icebreaker = await cell.activate_tx(get_icebreaker_data)
+        print(icebreaker)
+
+        # Update the icebreaker message
+        update_icebreaker_data = {
+            "type": "update_icebreaker",
+            "icebreaker": "Welcome! How can I help you today?"
+        }
+        tx_response = await cell.activate_tx(update_icebreaker_data)
+
+        # ============================================
+        # Example 5: Tool Management
         # ============================================
 
         # List all available tools on Neuronum network
@@ -254,16 +284,18 @@ async def main():
         print(available_tools)
         # Returns list of tools with metadata: [{"tool_id": "...", "name": "...", "description": "..."}, ...]
 
-        # Get all installed tools and tasks on your agent
+        # Get all installed tools on your agent
         get_tools_data = {"type": "get_tools"}
         tools_info = await cell.activate_tx(get_tools_data)
         print(tools_info)
+        # Returns: {"tools": {"tool_id": {config_data}, ...}}
 
-        # Add a tool (requires tool to be published)
+        # Install a tool (requires tool to be published)
         # Use stream() instead of activate_tx() to listen for agent restart
         install_tool_data = {
             "type": "install_tool",
-            "tool_id": "019ac60e-cccc-7af5-b087-f6fcf1ba1299"
+            "tool_id": "019ac60e-cccc-7af5-b087-f6fcf1ba1299",
+            "variables": {"API_TOKEN": "your-token"}  # Optional: tool variables
         }
         await cell.stream(install_tool_data)
         # Agent will restart and send "ping" when ready
@@ -274,65 +306,26 @@ async def main():
             "tool_id": "019ac60e-cccc-7af5-b087-f6fcf1ba1299"
         }
         await cell.stream(delete_tool_data)
+        # Agent will restart after deletion
 
         # ============================================
-        # Example 5: Task Scheduling (Automated Workflows)
+        # Example 6: Actions Audit Log
         # ============================================
 
-        # LLM automatically handles parameter extraction
-        add_task_data = {
-            "type": "add_task",
-            "name": "Daily Report",
-            "description": "Send daily summary email with analytics data",
-            "tool_id": "email-tool-id",
-            "function_name": "send_email",
-            "resource": {
-                "prompt": "Fetch the daily metrics, summarize it and send daily summary to manager@company.com",
-                "tool_id": "analytics-tool-id",
-                "function_name": "fetch_daily_metrics"
-            },
-            "schedule": "weekdays@1704067200,1704153600"  # Days@Unix timestamps
-        }
-        await cell.stream(add_task_data)
-        # The server will:
-        # 1. Call analytics-tool-id/fetch_daily_metrics using LLM to extract parameters from prompt
-        # 2. Combine the prompt + tool result
-        # 3. Call email-tool-id/send_email with the combined data
-
-        # Alternative: Just a prompt (no tool)
-        simple_task_data = {
-            "type": "add_task",
-            "name": "Morning Greeting",
-            "description": "Send morning greeting",
-            "tool_id": "email-tool-id",
-            "function_name": "send_email",
-            "resource": {
-                "prompt": "Send good morning email to team@company.com"
-            },
-            "schedule": "weekdays@28800"
-        }
-        await cell.stream(simple_task_data)
-
-        # Delete a task
-        delete_task_data = {
-            "type": "delete_task",
-            "task_id": "task-uuid-here"
-        }
-        await cell.stream(delete_task_data)
+        # Get all actions (audit log)
+        get_actions_data = {"type": "get_actions"}
+        actions = await cell.activate_tx(get_actions_data)
+        print(actions)
+        # Returns list of actions with status, tool info, timestamps, etc.
 
         # ============================================
-        # Example 6: Agent Status & Logs
+        # Example 7: Agent Status
         # ============================================
 
         # Check if agent is running
         status_data = {"type": "get_agent_status"}
         status = await cell.activate_tx(status_data)
-        print(status)  # Returns: {"json": "agent running"}
-
-        # Download agent logs
-        log_data = {"type": "download_log"}
-        logs = await cell.activate_tx(log_data)
-        print(logs["json"]["log"])  # Full log content
+        print(status)  # Returns: {"json": "running"}
 
 if __name__ == '__main__':
     asyncio.run(main())
