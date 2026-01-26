@@ -197,10 +197,28 @@ class MCPRegistry:
 
     async def get_all_tools(self) -> List[Dict[str, Any]]:
         all_tools = []
+        tools_dir = Path(__file__).parent / "tools"
 
         for server_name, client in self.servers.items():
             try:
                 tools = await client.list_tools()
+
+                # Try to enrich with .config data
+                config_path = tools_dir / f"{server_name}.config"
+                if config_path.exists():
+                    try:
+                        with open(config_path, 'r') as f:
+                            config = json.load(f)
+                        tool_meta = config.get("tool_meta", {})
+
+                        # Enrich tools with package-level metadata from config
+                        for tool in tools:
+                            tool["tool_id"] = tool_meta.get("tool_id", server_name)
+                            tool["package_name"] = tool_meta.get("name")
+                            tool["package_description"] = tool_meta.get("description")
+                    except Exception as e:
+                        self._logger.warning(f"Could not load config for {server_name}: {e}")
+
                 all_tools.extend(tools)
             except Exception as e:
                 self._logger.error(f"Error getting tools from {server_name}: {e}")

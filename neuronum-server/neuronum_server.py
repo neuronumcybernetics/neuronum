@@ -1057,8 +1057,14 @@ async def handle_prompt(cell, transmitter: dict):
                 is_required = "(REQUIRED)" if param_name in required_params else "(optional)"
                 params_desc.append(f"  - {param_name} {is_required}: {param_def.get('description', '')}")
 
+            package_info = ""
+            if tool.get("package_name"):
+                package_info = f"\nPackage: {tool['package_name']}"
+                if tool.get("package_description"):
+                    package_info += f" - {tool['package_description']}"
+
             tool_info = f"""Tool: {tool['name']}
-Description: {tool.get('description', 'No description')}
+Description: {tool.get('description', 'No description')}{package_info}
 Parameters:
 {chr(10).join(params_desc) if params_desc else '  none'}"""
             tool_info_list.append(tool_info)
