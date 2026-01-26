@@ -20,6 +20,11 @@
 </p>
 
 ---
+### 2026.01.0.dev1 / Development Release
+**Changes:**
+- `neuronum open-chat` removed from CLI
+- new `cell_id` parameter for `cell.stream()` and `cell.activate_tx()` methods to send data to a specific cell
+
 ### 2025.12.0.dev12 / Development Release
 **Changes:**
 - `neuronum create-cell` no longer dervis ssh_public_key from seed (12-word-mnemonic)

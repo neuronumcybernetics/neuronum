@@ -60,7 +60,7 @@ source ~/neuronum-venv/bin/activate
 
 Install the Neuronum SDK:
 ```sh
-pip install neuronum==2025.12.0.dev12
+pip install neuronum==2026.01.0.dev1
 ```
 
 > **Note:** Always activate this virtual environment (`source ~/neuronum-venv/bin/activate`) before running any `neuronum` commands.
@@ -172,17 +172,6 @@ neuronum start-server
 ### **Neuronum Client API**
 **Manage and call your Agent with ["kybercell" (official Neuronum Client)](https://neuronum.net/kybercell) or build your own custom Client using the Neuronum Client API**
 
-You can interact with your server using either the CLI chat client or the Python API:
-
-**Quick Start - CLI Chat Client**
-```sh
-# Interactive chat mode
-neuronum open-chat
-
-# Single prompt mode
-neuronum open-chat "Explain what a black hole is in one sentence"
-```
-
 **Python API**
 ```python
 import asyncio
@@ -193,6 +182,19 @@ async def main():
     async with Cell() as cell:
 
         # ============================================
+        # Target Cell ID
+        # ============================================
+        cell_id = "id::cell"
+
+        # ============================================
+        # Core Methods
+        # ============================================
+        # cell.activate_tx(cell_id, data)  - Send request and wait for response
+        # cell.stream(cell_id, data)       - Send request via WebSocket (no response)
+        # cell.sync()                      - Receive incoming requests
+        # cell.tx_response(transmitter_id, data, public_key)  - Send response to a request
+
+        # ============================================
         # Example 1: Send a prompt to your Agent
         # ============================================
         # The agent will answer questions using its knowledge base
@@ -201,7 +203,7 @@ async def main():
             "type": "prompt",
             "prompt": "Explain what a black hole is in one sentence"
         }
-        tx_response = await cell.activate_tx(prompt_data)
+        tx_response = await cell.activate_tx(cell_id, prompt_data)
         print(tx_response)
 
         # ============================================
@@ -215,7 +217,7 @@ async def main():
             "type": "approve",
             "action_id": 123  # ID returned from prompt response
         }
-        tx_response = await cell.activate_tx(approve_data)
+        tx_response = await cell.activate_tx(cell_id, approve_data)
         print(tx_response)
 
         # Decline a pending action
@@ -223,7 +225,7 @@ async def main():
             "type": "decline",
             "action_id": 123
         }
-        tx_response = await cell.activate_tx(decline_data)
+        tx_response = await cell.activate_tx(cell_id, decline_data)
         print(tx_response)
 
         # ============================================
@@ -236,7 +238,7 @@ async def main():
             "knowledge_topic": "Company Policy",
             "knowledge_data": "Our company operates from 9 AM to 5 PM Monday through Friday."
         }
-        tx_response = await cell.activate_tx(upload_knowledge_data)
+        tx_response = await cell.activate_tx(cell_id, upload_knowledge_data)
 
         # Update existing knowledge
         update_knowledge_data = {
@@ -244,11 +246,11 @@ async def main():
             "knowledge_id": "abc123...",  # SHA256 hash ID from previous add
             "knowledge_data": "Updated: Company operates 8 AM to 6 PM Monday through Friday."
         }
-        tx_response = await cell.activate_tx(update_knowledge_data)
+        tx_response = await cell.activate_tx(cell_id, update_knowledge_data)
 
         # Fetch all knowledge
         get_knowledge_data = {"type": "get_knowledge"}
-        knowledge_list = await cell.activate_tx(get_knowledge_data)
+        knowledge_list = await cell.activate_tx(cell_id, get_knowledge_data)
         print(knowledge_list)
         # Returns: [{"knowledge_id": "...", "topic": "...", "content": "..."}, ...]
 
@@ -257,7 +259,7 @@ async def main():
             "type": "delete_knowledge",
             "knowledge_id": "abc123..."
         }
-        tx_response = await cell.activate_tx(delete_knowledge_data)
+        tx_response = await cell.activate_tx(cell_id, delete_knowledge_data)
 
         # ============================================
         # Example 4: Icebreaker (Welcome Message)
@@ -265,7 +267,7 @@ async def main():
 
         # Get the icebreaker/welcome message
         get_icebreaker_data = {"type": "get_icebreaker"}
-        icebreaker = await cell.activate_tx(get_icebreaker_data)
+        icebreaker = await cell.activate_tx(cell_id, get_icebreaker_data)
         print(icebreaker)
 
         # Update the icebreaker message
@@ -273,7 +275,7 @@ async def main():
             "type": "update_icebreaker",
             "icebreaker": "Welcome! How can I help you today?"
         }
-        tx_response = await cell.activate_tx(update_icebreaker_data)
+        tx_response = await cell.activate_tx(cell_id, update_icebreaker_data)
 
         # ============================================
         # Example 5: Tool Management
@@ -286,7 +288,7 @@ async def main():
 
         # Get all installed tools on your agent
         get_tools_data = {"type": "get_tools"}
-        tools_info = await cell.activate_tx(get_tools_data)
+        tools_info = await cell.activate_tx(cell_id, get_tools_data)
         print(tools_info)
         # Returns: {"tools": {"tool_id": {config_data}, ...}}
 
@@ -297,7 +299,7 @@ async def main():
             "tool_id": "019ac60e-cccc-7af5-b087-f6fcf1ba1299",
             "variables": {"API_TOKEN": "your-token"}  # Optional: tool variables
         }
-        await cell.stream(install_tool_data)
+        await cell.stream(cell_id, install_tool_data)
         # Agent will restart and send "ping" when ready
 
         # Delete a tool
@@ -305,7 +307,7 @@ async def main():
             "type": "delete_tool",
             "tool_id": "019ac60e-cccc-7af5-b087-f6fcf1ba1299"
         }
-        await cell.stream(delete_tool_data)
+        await cell.stream(cell_id, delete_tool_data)
         # Agent will restart after deletion
 
         # ============================================
@@ -314,7 +316,7 @@ async def main():
 
         # Get all actions (audit log)
         get_actions_data = {"type": "get_actions"}
-        actions = await cell.activate_tx(get_actions_data)
+        actions = await cell.activate_tx(cell_id, get_actions_data)
         print(actions)
         # Returns list of actions with status, tool info, timestamps, etc.
 
@@ -324,8 +326,24 @@ async def main():
 
         # Check if agent is running
         status_data = {"type": "get_agent_status"}
-        status = await cell.activate_tx(status_data)
+        status = await cell.activate_tx(cell_id, status_data)
         print(status)  # Returns: {"json": "running"}
+
+        # ============================================
+        # Example 8: Receiving Requests (Server-side)
+        # ============================================
+
+        # Listen for incoming requests using sync()
+        async for transmitter in cell.sync():
+            data = transmitter.get("data", {})
+            message_type = data.get("type")
+
+            # Send encrypted response back to the client
+            await cell.tx_response(
+                transmitter_id=transmitter.get("transmitter_id"),
+                data={"json": "Response message"},
+                client_public_key_str=data.get("public_key", "")
+            )
 
 if __name__ == '__main__':
     asyncio.run(main())

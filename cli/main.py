@@ -778,71 +778,6 @@ def status(server_dir):
     click.echo("=" * 50)
 
 
-@click.command()
-@click.argument('prompt', required=False)
-def open_chat(prompt):
-    """Send a prompt to your running Neuronum server and get a response."""
-    asyncio.run(async_chat(prompt))
-
-
-async def async_chat(prompt):
-    """Async implementation of chat command."""
-    from neuronum.neuronum import Cell
-
-    # Check if credentials exist
-    if not ENV_FILE.exists():
-        click.echo("Error: No Cell credentials found!")
-        click.echo("Please run 'neuronum create-cell' or 'neuronum connect-cell' first")
-        return
-
-    try:
-        async with Cell() as cell:
-            # If no prompt provided, enter interactive mode
-            if not prompt:
-                click.echo("Neuronum Chat - Type your messages below (Ctrl+C to exit)")
-                click.echo("=" * 50)
-
-                while True:
-                    try:
-                        user_input = click.prompt("You", type=str)
-                        if not user_input.strip():
-                            continue
-
-                        # Send prompt to server
-                        response = await cell.activate_tx({
-                            "type": "prompt",
-                            "prompt": user_input
-                        })
-
-                        if response and "json" in response:
-                            click.echo(f"Agent: {response['json']}")
-                        elif response:
-                            click.echo(f"Agent: {json.dumps(response, indent=2)}")
-                        else:
-                            click.echo("Error: No response from server")
-
-                        click.echo()
-
-                    except KeyboardInterrupt:
-                        click.echo("\nExiting chat...")
-                        break
-            else:
-                # Single prompt mode
-                response = await cell.activate_tx({
-                    "type": "prompt",
-                    "prompt": prompt
-                })
-
-                if response and "json" in response:
-                    click.echo(response['json'])
-                elif response:
-                    click.echo(json.dumps(response, indent=2))
-                else:
-                    click.echo("Error: No response from server")
-
-    except Exception as e:
-        click.echo(f"Error: {e}")
-
 # CLI Command Registration
 
 cli.add_command(create_cell)
@@ -856,7 +791,6 @@ cli.add_command(delete_tool)
 cli.add_command(start_server)
 cli.add_command(stop_server)
 cli.add_command(status)
-cli.add_command(open_chat)
 
 if __name__ == "__main__":
     cli()
