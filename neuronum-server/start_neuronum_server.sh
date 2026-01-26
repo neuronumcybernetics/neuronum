@@ -146,8 +146,46 @@ check_config() {
     echo "Configuration file validated"
 }
 
+wait_for_model_download() {
+    echo "Monitoring vLLM startup (this may take a while for large models)..."
+    echo ""
+
+    local vllm_host=$(python3 -c "from config import VLLM_HOST; print(VLLM_HOST)" 2>/dev/null)
+    local vllm_port=$(python3 -c "from config import VLLM_PORT; print(VLLM_PORT)" 2>/dev/null)
+
+    # Stream the log in real-time so user sees everything
+    tail -f "$VLLM_LOG_FILE" 2>/dev/null &
+    local tail_pid=$!
+
+    # Wait until server is ready or process dies
+    while true; do
+        # Check if vLLM process died
+        if [ -f "$VLLM_PID_FILE" ]; then
+            local pid=$(cat "$VLLM_PID_FILE")
+            if ! ps -p "$pid" > /dev/null 2>&1; then
+                kill "$tail_pid" 2>/dev/null || true
+                wait "$tail_pid" 2>/dev/null || true
+                echo ""
+                echo "Error: vLLM process died. Check $VLLM_LOG_FILE"
+                return 1
+            fi
+        fi
+
+        # Check if server is ready
+        if curl -s -f "http://${vllm_host}:${vllm_port}/health" > /dev/null 2>&1; then
+            kill "$tail_pid" 2>/dev/null || true
+            wait "$tail_pid" 2>/dev/null || true
+            echo ""
+            echo "vLLM server is ready!"
+            return 0
+        fi
+
+        sleep 2
+    done
+}
+
 wait_for_vllm_ready() {
-    local max_attempts=60
+    local max_attempts=120
     local attempt=0
 
     local vllm_host=$(python3 -c "from config import VLLM_HOST; print(VLLM_HOST)")
@@ -158,6 +196,15 @@ wait_for_vllm_ready() {
     echo "Health check endpoint: $vllm_url"
 
     while [ $attempt -lt $max_attempts ]; do
+        # Check if vLLM process is still running
+        if [ -f "$VLLM_PID_FILE" ]; then
+            local pid=$(cat "$VLLM_PID_FILE")
+            if ! ps -p "$pid" > /dev/null 2>&1; then
+                echo "Error: vLLM process died. Check $VLLM_LOG_FILE for details."
+                return 1
+            fi
+        fi
+
         if command -v curl &> /dev/null; then
             if curl -s -f "$vllm_url" > /dev/null 2>&1; then
                 echo "vLLM server is ready and accepting requests"
@@ -219,7 +266,9 @@ start_vllm() {
     fi
 
     echo "vLLM process running (PID: $VLLM_PID)"
-    wait_for_vllm_ready
+
+    # Stream log and wait for server to be ready (handles both download and loading)
+    wait_for_model_download
 }
 
 start_server() {
