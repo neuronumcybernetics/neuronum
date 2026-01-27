@@ -803,7 +803,7 @@ async def handle_get_icebreaker(cell, transmitter: dict):
     # Load and render template
     template = env.get_template("welcome.html")
     html_content = template.render(
-        welcome_message=f"Hello {operator}",
+        welcome_message=f"Welcome to Neuronum!",
     )
 
     await send_cell_response(
