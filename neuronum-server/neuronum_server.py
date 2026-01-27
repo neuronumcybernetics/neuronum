@@ -14,6 +14,7 @@ import hashlib
 import logging
 import subprocess
 import json
+from jinja2 import Environment, FileSystemLoader
 
 import tool_registry
 from config import (
@@ -34,8 +35,10 @@ from config import (
     FTS5_STOPWORDS
 )
 
-# Logging Setup
+# Setup Jinja2 environment
+env = Environment(loader=FileSystemLoader("templates"))
 
+# Logging Setup
 formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -790,14 +793,23 @@ async def handle_get_status(cell, transmitter: dict):
 async def handle_get_icebreaker(cell, transmitter: dict):
     """Handle getting the icebreaker/welcome message for customers"""
     data = transmitter.get("data", {})
+    operator = transmitter.get("operator", {})
     logging.info("Fetching icebreaker message")
 
     icebreaker = await get_setting("icebreaker")
+    if not icebreaker:
+        icebreaker = "Welcome to Neuronum Webserver!"
+
+    # Load and render template
+    template = env.get_template("welcome.html")
+    html_content = template.render(
+        welcome_message=f"Hello {operator}",
+    )
 
     await send_cell_response(
         cell,
         transmitter.get("transmitter_id"),
-        {"json": icebreaker},
+        {"json": icebreaker, "html": html_content},
         data.get("public_key", "")
     )
 
