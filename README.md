@@ -229,53 +229,47 @@ async def main():
         print(tx_response)
 
         # ============================================
-        # Example 3: Knowledge Management
+        # Example 3: Sitemap Management
         # ============================================
+        # Note: Sitemap entries are auto-indexed from templates on startup.
+        # Use these endpoints to manage existing entries.
 
-        # Add knowledge to agent's database
-        upload_knowledge_data = {
-            "type": "upload_knowledge",
-            "knowledge_topic": "Company Policy",
-            "knowledge_data": "Our company operates from 9 AM to 5 PM Monday through Friday."
+        # Update existing sitemap entry
+        update_sitemap_data = {
+            "type": "update_sitemap",
+            "sitemap_id": "abc123...",  # SHA256 hash ID from previous add
+            "file_content": "Updated pricing page content."
         }
-        tx_response = await cell.activate_tx(cell_id, upload_knowledge_data)
+        tx_response = await cell.activate_tx(cell_id, update_sitemap_data)
 
-        # Update existing knowledge
-        update_knowledge_data = {
-            "type": "update_knowledge",
-            "knowledge_id": "abc123...",  # SHA256 hash ID from previous add
-            "knowledge_data": "Updated: Company operates 8 AM to 6 PM Monday through Friday."
+        # Fetch all sitemap entries
+        get_sitemap_data = {"type": "get_sitemap"}
+        sitemap_list = await cell.activate_tx(cell_id, get_sitemap_data)
+        print(sitemap_list)
+        # Returns: [{"sitemap_id": "...", "file_name": "...", "file_content": "..."}, ...]
+
+        # Delete a sitemap entry
+        delete_sitemap_data = {
+            "type": "delete_sitemap",
+            "sitemap_id": "abc123..."
         }
-        tx_response = await cell.activate_tx(cell_id, update_knowledge_data)
-
-        # Fetch all knowledge
-        get_knowledge_data = {"type": "get_knowledge"}
-        knowledge_list = await cell.activate_tx(cell_id, get_knowledge_data)
-        print(knowledge_list)
-        # Returns: [{"knowledge_id": "...", "topic": "...", "content": "..."}, ...]
-
-        # Delete knowledge
-        delete_knowledge_data = {
-            "type": "delete_knowledge",
-            "knowledge_id": "abc123..."
-        }
-        tx_response = await cell.activate_tx(cell_id, delete_knowledge_data)
+        tx_response = await cell.activate_tx(cell_id, delete_sitemap_data)
 
         # ============================================
-        # Example 4: Icebreaker (Welcome Message)
+        # Example 4: Index (Welcome Page)
         # ============================================
 
-        # Get the icebreaker/welcome message
-        get_icebreaker_data = {"type": "get_icebreaker"}
-        icebreaker = await cell.activate_tx(cell_id, get_icebreaker_data)
-        print(icebreaker)
+        # Get the index/welcome page
+        get_index_data = {"type": "get_index"}
+        index = await cell.activate_tx(cell_id, get_index_data)
+        print(index)
 
-        # Update the icebreaker message
-        update_icebreaker_data = {
-            "type": "update_icebreaker",
-            "icebreaker": "Welcome! How can I help you today?"
+        # Update the index message
+        update_index_data = {
+            "type": "update_index",
+            "index": "Welcome! How can I help you today?"
         }
-        tx_response = await cell.activate_tx(cell_id, update_icebreaker_data)
+        tx_response = await cell.activate_tx(cell_id, update_index_data)
 
         # ============================================
         # Example 5: Tool Management
