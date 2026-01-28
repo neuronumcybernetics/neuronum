@@ -18,25 +18,21 @@ from jinja2 import Environment, FileSystemLoader
 
 import tool_registry
 from config import (
-    HOST,
-    PRIVATE_KEY,
-    PUBLIC_KEY,
     LOG_FILE,
     DB_PATH,
     MODEL_MAX_TOKENS,
     MODEL_TEMPERATURE,
     MODEL_TOP_P,
     VLLM_MODEL_NAME,
-    VLLM_HOST,
-    VLLM_PORT,
     VLLM_API_BASE,
     CONVERSATION_HISTORY_LIMIT,
     KNOWLEDGE_RETRIEVAL_LIMIT,
-    FTS5_STOPWORDS
+    FTS5_STOPWORDS,
+    TEMPLATES_DIR
 )
 
 # Setup Jinja2 environment
-env = Environment(loader=FileSystemLoader("templates"))
+env = Environment(loader=FileSystemLoader(TEMPLATES_DIR))
 
 # Logging Setup
 formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
@@ -86,7 +82,7 @@ async def enable_wal(db_path=DB_PATH):
         logging.info("WAL mode enabled.")
 
 async def init_db(db_path=DB_PATH):
-    """Initialize memory and FTS5 knowledge tables"""
+    """Initialize memory and FTS5 sitemap tables"""
     async with aiosqlite.connect(db_path) as db:
         await db.execute('''
             CREATE TABLE IF NOT EXISTS memory (
@@ -118,10 +114,10 @@ async def init_db(db_path=DB_PATH):
         ''')
         
         await db.execute('''
-            CREATE VIRTUAL TABLE IF NOT EXISTS knowledge USING fts5(
-                knowledge_id,
-                topic,
-                content,
+            CREATE VIRTUAL TABLE IF NOT EXISTS sitemap USING fts5(
+                sitemap_id,
+                file_name,
+                file_content,
                 tokenize='porter unicode61'
             )
         ''')
@@ -284,71 +280,83 @@ def validate_tool_parameters(parameters: dict, input_schema: dict) -> tuple[bool
     return True, ""
 
 
-async def add_knowledge_entry(topic: str, data: str, db_path=DB_PATH):
-    """Add knowledge entry to FTS5 table with generated ID"""
-    combined = f"{topic}:{data}"
-    knowledge_id = hashlib.sha256(combined.encode("utf-8")).hexdigest()
-    
+async def add_sitemap_entry(file_name: str, file_content: str, db_path=DB_PATH):
+    """Add sitemap entry to FTS5 table with generated ID"""
+    combined = f"{file_name}:{file_content}"
+    sitemap_id = hashlib.sha256(combined.encode("utf-8")).hexdigest()
+
     async with aiosqlite.connect(db_path) as db:
         await db.execute(
-            "INSERT INTO knowledge (knowledge_id, topic, content) VALUES (?, ?, ?)",
-            (knowledge_id, topic, data)
+            "INSERT INTO sitemap (sitemap_id, file_name, file_content) VALUES (?, ?, ?)",
+            (sitemap_id, file_name, file_content)
         )
         await db.commit()
 
-async def delete_knowledge_entry(knowledge_id: str, db_path=DB_PATH):
-    """Delete knowledge entry from FTS5 table using knowledge_id"""
-    if not knowledge_id:
-        logging.warning("Attempted to delete knowledge with a missing knowledge_id.")
+async def delete_sitemap_entry(sitemap_id: str, db_path=DB_PATH):
+    """Delete sitemap entry from FTS5 table using sitemap_id"""
+    if not sitemap_id:
+        logging.warning("Attempted to delete sitemap entry with a missing sitemap_id.")
         return False
-        
+
     async with aiosqlite.connect(db_path) as db:
         await db.execute(
-            "DELETE FROM knowledge WHERE knowledge_id = ?",
-            (knowledge_id,)
+            "DELETE FROM sitemap WHERE sitemap_id = ?",
+            (sitemap_id,)
         )
         await db.commit()
-        
+
         deleted_count = db.total_changes
-        
+
         if deleted_count > 0:
-            logging.info(f"Knowledge entry with ID '{knowledge_id}' deleted successfully.")
+            logging.info(f"Sitemap entry with ID '{sitemap_id}' deleted successfully.")
             return True
         else:
-            logging.warning(f"Knowledge entry with ID '{knowledge_id}' not found or not deleted.")
+            logging.warning(f"Sitemap entry with ID '{sitemap_id}' not found or not deleted.")
             return False
 
-async def update_knowledge_entry(knowledge_id: str, new_data: str, db_path=DB_PATH) -> bool:
-    """Update content of existing FTS5 entry"""
-    if not knowledge_id or not new_data:
-        logging.warning("Attempted to update knowledge with a missing knowledge_id or new_data.")
+async def update_sitemap_entry(sitemap_id: str, new_content: str, db_path=DB_PATH) -> bool:
+    """Update file_content of existing FTS5 sitemap entry"""
+    if not sitemap_id or not new_content:
+        logging.warning("Attempted to update sitemap with a missing sitemap_id or new_content.")
         return False
-        
+
     async with aiosqlite.connect(db_path) as db:
         await db.execute(
-            "UPDATE knowledge SET content = ? WHERE knowledge_id = ?",
-            (new_data, knowledge_id)
+            "UPDATE sitemap SET file_content = ? WHERE sitemap_id = ?",
+            (new_content, sitemap_id)
         )
         await db.commit()
-        
+
         updated_count = db.total_changes
-        
+
         if updated_count > 0:
-            logging.info(f"Knowledge entry with ID '{knowledge_id}' updated successfully.")
+            logging.info(f"Sitemap entry with ID '{sitemap_id}' updated successfully.")
             return True
         else:
-            logging.warning(f"Knowledge entry with ID '{knowledge_id}' not found or not updated.")
+            logging.warning(f"Sitemap entry with ID '{sitemap_id}' not found or not updated.")
             return False
 
-async def retrieve_knowledge(user_query: str, db_path=DB_PATH) -> str:
-    """Retrieve relevant knowledge using FTS5 keyword search"""
+async def retrieve_sitemap(user_query: str, db_path=DB_PATH, include_file_name=False):
+    """Retrieve relevant sitemap entries using FTS5 keyword search
+
+    Args:
+        user_query: The search query
+        db_path: Database path
+        include_file_name: If True, returns list of (file_name, file_content) tuples
+
+    Returns:
+        If include_file_name=False: str with joined file_content
+        If include_file_name=True: list of (file_name, file_content) tuples
+    """
     tokens = re.findall(r"\b\w+\b", user_query.lower())
 
     ENHANCED_STOPWORDS = FTS5_STOPWORDS | {"or", "and", "not", "near"}
     keywords = [t for t in tokens if t not in ENHANCED_STOPWORDS]
 
     if not keywords:
-        return "No specific business knowledge found in the database."
+        if include_file_name:
+            return []
+        return "No matching templates found in the sitemap."
 
     keywords = keywords[:10]
     quoted_keywords = [f'"{keyword}"' for keyword in keywords]
@@ -357,9 +365,9 @@ async def retrieve_knowledge(user_query: str, db_path=DB_PATH) -> str:
     async with aiosqlite.connect(db_path) as db:
         try:
             query = """
-                SELECT content, bm25(knowledge) as score
-                FROM knowledge
-                WHERE knowledge MATCH ?
+                SELECT file_name, file_content, bm25(sitemap) as score
+                FROM sitemap
+                WHERE sitemap MATCH ?
                 ORDER BY score
                 LIMIT ?
             """
@@ -367,13 +375,19 @@ async def retrieve_knowledge(user_query: str, db_path=DB_PATH) -> str:
                 rows = await cursor.fetchall()
 
                 if rows:
-                    knowledge_chunks = [row[0] for row in rows]
-                    return "\n---\n".join(knowledge_chunks)
+                    if include_file_name:
+                        return [(row[0], row[1]) for row in rows]
+                    content_chunks = [row[1] for row in rows]
+                    return "\n---\n".join(content_chunks)
                 else:
-                    return "No specific business knowledge found in the database."
+                    if include_file_name:
+                        return []
+                    return "No matching templates found in the sitemap."
         except Exception as e:
-            logging.warning(f"Knowledge retrieval error: {str(e)[:100]}")
-            return "Knowledge retrieval temporarily unavailable."
+            logging.warning(f"Sitemap retrieval error: {str(e)[:100]}")
+            if include_file_name:
+                return []
+            return "Sitemap retrieval temporarily unavailable."
 
 async def get_setting(key: str, db_path=DB_PATH) -> str:
     """Get a setting value from the settings table"""
@@ -433,23 +447,23 @@ def create_chat_completion(messages, max_tokens=MODEL_MAX_TOKENS, temperature=MO
         logging.error("Make sure vLLM is running at http://127.0.0.1:8000")
         raise
 
-async def fetch_all_knowledge(db_path=DB_PATH) -> List[dict]:
-    """Fetch all knowledge entries from FTS5 table"""
+async def fetch_all_sitemap(db_path=DB_PATH) -> List[dict]:
+    """Fetch all sitemap entries from FTS5 table"""
     async with aiosqlite.connect(db_path) as db:
-        query = "SELECT knowledge_id, topic, content FROM knowledge ORDER BY knowledge_id ASC"
+        query = "SELECT sitemap_id, file_name, file_content FROM sitemap ORDER BY sitemap_id ASC"
 
         async with db.execute(query) as cursor:
             rows = await cursor.fetchall()
 
-            knowledge_list = []
+            sitemap_list = []
             for row in rows:
-                knowledge_list.append({
-                    "knowledge_id": row[0],
-                    "topic": row[1],
-                    "content": row[2]
+                sitemap_list.append({
+                    "sitemap_id": row[0],
+                    "file_name": row[1],
+                    "file_content": row[2]
                 })
 
-            return knowledge_list
+            return sitemap_list
 
 async def fetch_all_actions(db_path=DB_PATH) -> List[dict]:
     """Fetch all action entries from actions table (audit log)"""
@@ -495,8 +509,8 @@ async def erase_data(db_path=DB_PATH):
             await db.execute("DELETE FROM memory")
             logging.info("All conversation history deleted from memory table.")
 
-            await db.execute("DELETE FROM knowledge")
-            logging.info("All knowledge entries deleted from knowledge table.")
+            await db.execute("DELETE FROM sitemap")
+            logging.info("All sitemap entries deleted from sitemap table.")
 
             await db.commit()
 
@@ -546,7 +560,7 @@ async def get_model_answer(user_id: str, user_query: str, file: bool = False, fi
 
         return answer
     else:
-        context = await retrieve_knowledge(user_query)
+        context = await retrieve_sitemap(user_query)
         augmented_system_prompt = RAG_PROMPT_TEMPLATE
         history = await fetch_latest_messages(user_id, limit=10)
 
@@ -560,7 +574,7 @@ async def get_model_answer(user_id: str, user_query: str, file: bool = False, fi
                 messages.append({"role": role, "content": message})
 
         # Add context as a separate system message if found
-        if context != "No specific business knowledge found in the database.":
+        if context != "No matching templates found in the sitemap.":
             messages.append({"role": "system", "content": f"RELEVANT CONTEXT:\n{context}"})
 
         # Add the user's actual query
@@ -654,6 +668,67 @@ Factual statement:"""
 
 
 # Infrastructure Setup
+
+async def index_templates(db_path=DB_PATH):
+    """Auto-index HTML templates into sitemap table on startup.
+
+    Scans the templates folder, strips HTML tags to extract text content,
+    and creates sitemap entries (file_name=filename, file_content=text).
+    Skips files already in the sitemap table and removes entries
+    for templates that no longer exist.
+    """
+    templates_dir = TEMPLATES_DIR
+    if not os.path.isdir(templates_dir):
+        logging.warning(f"Templates directory '{templates_dir}' not found. Skipping auto-index.")
+        return
+
+    # Get all .html files in templates folder
+    html_files = {f for f in os.listdir(templates_dir) if f.endswith(".html")}
+    logging.info(f"Found {len(html_files)} HTML templates to index")
+
+    async with aiosqlite.connect(db_path) as db:
+        # Get existing sitemap entries
+        async with db.execute("SELECT sitemap_id, file_name FROM sitemap") as cursor:
+            existing = await cursor.fetchall()
+
+        existing_files = {row[1]: row[0] for row in existing}  # file_name -> sitemap_id
+
+        # Remove entries for deleted templates
+        for file_name, sitemap_id in existing_files.items():
+            if file_name.endswith(".html") and file_name not in html_files:
+                await db.execute("DELETE FROM sitemap WHERE sitemap_id = ?", (sitemap_id,))
+                logging.info(f"Removed sitemap entry for deleted template: {file_name}")
+
+        # Add new templates that don't have entries yet
+        for filename in html_files:
+            if filename in existing_files:
+                continue
+
+            filepath = os.path.join(templates_dir, filename)
+            try:
+                with open(filepath, "r", encoding="utf-8") as f:
+                    raw_html = f.read()
+
+                # Strip HTML tags, extract text content
+                text = re.sub(r'<script[^>]*>.*?</script>', '', raw_html, flags=re.DOTALL)
+                text = re.sub(r'<style[^>]*>.*?</style>', '', text, flags=re.DOTALL)
+                text = re.sub(r'<[^>]+>', ' ', text)
+                text = re.sub(r'\s+', ' ', text).strip()
+
+                if text:
+                    combined = f"{filename}:{text}"
+                    sitemap_id = hashlib.sha256(combined.encode("utf-8")).hexdigest()
+                    await db.execute(
+                        "INSERT INTO sitemap (sitemap_id, file_name, file_content) VALUES (?, ?, ?)",
+                        (sitemap_id, filename, text)
+                    )
+                    logging.info(f"Indexed template: {filename}")
+            except Exception as e:
+                logging.warning(f"Failed to index template {filename}: {e}")
+
+        await db.commit()
+
+    logging.info("Template indexing complete")
 
 async def setup_infrastructure():
     """Initialize infrastructure for agent"""
@@ -761,23 +836,6 @@ async def send_cell_response(cell, transmitter_id: str, data: dict, public_key: 
         client_public_key_str=public_key
     )
 
-async def handle_upload_knowledge(cell, transmitter: dict):
-    """Handle adding knowledge to database"""
-    data = transmitter.get("data", {})
-    knowledge_topic = data.get("knowledge_topic", None)
-    knowledge_data = data.get("knowledge_data", None)
-    cell_id = transmitter.get("operator", "default_user")
-
-    logging.info("Adding knowledge to database...")
-    await add_knowledge_entry(knowledge_topic, knowledge_data)
-
-    await send_cell_response(
-        cell,
-        transmitter.get("transmitter_id"),
-        {"json": "knowledge updated"},
-        data.get("public_key", "")
-    )
-
 async def handle_get_status(cell, transmitter: dict):
     """Handle agent status request (health check)"""
     data = transmitter.get("data", {})
@@ -790,89 +848,87 @@ async def handle_get_status(cell, transmitter: dict):
         data.get("public_key", "")
     )
 
-async def handle_get_icebreaker(cell, transmitter: dict):
-    """Handle getting the icebreaker/welcome message for customers"""
+async def handle_get_index(cell, transmitter: dict):
+    """Handle getting the index/welcome page for customers"""
     data = transmitter.get("data", {})
     operator = transmitter.get("operator", {})
-    logging.info("Fetching icebreaker message")
+    logging.info("Fetching index page")
 
-    icebreaker = await get_setting("icebreaker")
-    if not icebreaker:
-        icebreaker = "Welcome to Neuronum Webserver!"
+    index_message = await get_setting("index")
+    if not index_message:
+        index_message = "Welcome to Neuronum Webserver!"
 
     # Load and render template
-    template = env.get_template("welcome.html")
-    html_content = template.render(
-        welcome_message=f"Welcome to Neuronum!",
-    )
+    template = env.get_template("index.html")
+    html_content = template.render()
 
     await send_cell_response(
         cell,
         transmitter.get("transmitter_id"),
-        {"json": icebreaker, "html": html_content},
+        {"json": index_message, "html": html_content},
         data.get("public_key", "")
     )
 
-async def handle_update_icebreaker(cell, transmitter: dict):
-    """Handle updating the icebreaker/welcome message"""
+async def handle_update_index(cell, transmitter: dict):
+    """Handle updating the index/welcome message"""
     data = transmitter.get("data", {})
-    icebreaker = data.get("icebreaker", "")
+    index_message = data.get("index", "")
 
-    logging.info("Updating icebreaker message...")
-    await set_setting("icebreaker", icebreaker)
+    logging.info("Updating index message...")
+    await set_setting("index", index_message)
 
     await send_cell_response(
         cell,
         transmitter.get("transmitter_id"),
-        {"json": "icebreaker updated"},
+        {"json": "index updated"},
         data.get("public_key", "")
     )
 
-async def handle_update_knowledge(cell, transmitter: dict):
-    """Handle updating existing knowledge in database"""
+async def handle_update_sitemap(cell, transmitter: dict):
+    """Handle updating existing sitemap entry in database"""
     data = transmitter.get("data", {})
-    knowledge_id = data.get("knowledge_id", None)
-    knowledge_data = data.get("knowledge_data", None)
+    sitemap_id = data.get("sitemap_id", None)
+    file_content = data.get("file_content", None)
     cell_id = transmitter.get("operator", "default_user")
 
-    logging.info("Updating knowledge in database...")
-    await update_knowledge_entry(knowledge_id, knowledge_data)
+    logging.info("Updating sitemap entry in database...")
+    await update_sitemap_entry(sitemap_id, file_content)
 
     await send_cell_response(
         cell,
         transmitter.get("transmitter_id"),
-        {"json": "knowledge updated"},
+        {"json": "sitemap updated"},
         data.get("public_key", "")
     )
 
-async def handle_delete_knowledge(cell, transmitter: dict):
-    """Handle deleting knowledge from database"""
+async def handle_delete_sitemap(cell, transmitter: dict):
+    """Handle deleting sitemap entry from database"""
     data = transmitter.get("data", {})
-    knowledge_id = data.get("knowledge_id", None)
+    sitemap_id = data.get("sitemap_id", None)
     cell_id = transmitter.get("operator", "default_user")
 
-    logging.info("Deleting knowledge from database...")
-    await delete_knowledge_entry(knowledge_id)
+    logging.info("Deleting sitemap entry from database...")
+    await delete_sitemap_entry(sitemap_id)
 
     await send_cell_response(
         cell,
         transmitter.get("transmitter_id"),
-        {"json": "knowledge deleted"},
+        {"json": "sitemap entry deleted"},
         data.get("public_key", "")
     )
 
-async def handle_get_knowledge(cell, transmitter: dict):
-    """Handle fetching all knowledge from database"""
+async def handle_get_sitemap(cell, transmitter: dict):
+    """Handle fetching all sitemap entries from database"""
     data = transmitter.get("data", {})
-    logging.info("Fetching all stored knowledge for inspection...")
+    logging.info("Fetching all sitemap entries...")
 
-    knowledge_list = await fetch_all_knowledge()
-    logging.info(knowledge_list)
+    sitemap_list = await fetch_all_sitemap()
+    logging.info(sitemap_list)
 
     await send_cell_response(
         cell,
         transmitter.get("transmitter_id"),
-        {"json": knowledge_list},
+        {"json": sitemap_list},
         data.get("public_key", "")
     )
 
@@ -1020,19 +1076,20 @@ async def handle_decline(cell, transmitter: dict):
 
 
 async def handle_prompt(cell, transmitter: dict):
-    """Handle customer prompt with conversational tool capability
+    """Handle user prompt as an agentic file server with tool capability
 
-    This customer-facing endpoint:
-    - Answers questions based on the agent's knowledge base
+    This endpoint:
+    - Retrieves relevant templates based on user query (sitemap)
+    - Uses LLM to generate a natural response based on template content
     - Can use customer-accessible tools in a conversational flow
     - Can escalate requests to the queue for employee handling
-    - Maintains separate conversation history per customer
+    - Returns both the JSON response and the matching HTML template
     """
     data = transmitter.get("data", {})
     prompt = data.get("prompt", "")
     customer_id = transmitter.get("operator", "anonymous_customer")
 
-    logging.info(f"[Customer {customer_id}]: {prompt}")
+    logging.info(f"[User {customer_id}]: {prompt}")
 
     if not prompt:
         await send_cell_response(
@@ -1044,10 +1101,25 @@ async def handle_prompt(cell, transmitter: dict):
         return
 
     try:
-        # Retrieve relevant knowledge from database
-        context = await retrieve_knowledge(prompt)
+        # Retrieve best matching template for HTML serving
+        matched_templates = await retrieve_sitemap(prompt, include_file_name=True)
 
-        # Fetch customer's conversation history
+        # Default to index.html if no match found
+        template_filename = "index.html"
+
+        if matched_templates:
+            template_filename = matched_templates[0][0]
+            logging.info(f"[Template Match]: {template_filename}")
+        else:
+            logging.info("[Template Match]: No match, defaulting to index.html")
+
+        # Fetch full sitemap for LLM context
+        all_pages = await fetch_all_sitemap()
+        sitemap_context = ""
+        for page in all_pages:
+            sitemap_context += f"\n--- PAGE: {page['file_name']} ---\n{page['file_content']}\n"
+
+        # Fetch conversation history
         customer_user_id = f"customer_{customer_id}"
         history = await fetch_latest_messages(customer_user_id, limit=10)
 
@@ -1064,7 +1136,7 @@ async def handle_prompt(cell, transmitter: dict):
 
             params_desc = []
             for param_name, param_def in properties.items():
-                if param_name == "operator":  # Hide internal operator param
+                if param_name == "operator":
                     continue
                 is_required = "(REQUIRED)" if param_name in required_params else "(optional)"
                 params_desc.append(f"  - {param_name} {is_required}: {param_def.get('description', '')}")
@@ -1083,18 +1155,23 @@ Parameters:
 
         tools_context = "\n\n".join(tool_info_list) if tool_info_list else "No tools available."
 
-        # Build system prompt with tool awareness
+        # Build system prompt with sitemap context and tool awareness
         system_prompt = textwrap.dedent(f"""
-            You are a customer service assistant that helps customers by answering questions or executing tools.
+            You are a helpful assistant for the Neuronum website. You answer questions based on the website content and can execute tools.
+
+            BEST MATCHING PAGE: {template_filename}
+
+            FULL WEBSITE CONTENT:
+            {sitemap_context if sitemap_context else "No website content available."}
 
             AVAILABLE TOOLS:
             {tools_context}
 
             DECISION RULES:
-            - If the customer asks a question → use action "answer"
-            - If the customer wants to perform an action AND a suitable tool exists → use action "tool"
+            - If the user asks a question → use action "answer"
+            - If the user wants to perform an action AND a suitable tool exists → use action "tool"
             - If you need more information to use a tool → use action "clarify"
-            - If no tool can handle the request → use action "escalate"
+            - If no tool can handle the request → use action "answer" and inform the user that no tool is installed to handle this action
 
             RESPONSE FORMAT - You MUST respond with ONLY valid JSON, nothing else:
 
@@ -1107,15 +1184,12 @@ Parameters:
             For asking clarification:
             {{"action": "clarify", "message": "What information do you need?"}}
 
-            For escalating:
-            {{"action": "escalate", "reason": "Why", "message": "Message to customer"}}
-
-            CRITICAL RULES FOR TOOL CALLS:
+            CRITICAL RULES:
+            - Answer questions based on the FULL WEBSITE CONTENT provided above
+            - Be concise and helpful
             - Copy the EXACT tool_name from AVAILABLE TOOLS
-            - Include EVERY parameter marked (REQUIRED) - missing required parameters will cause errors
-            - The "parameters" object must contain all required parameter names with appropriate values
-            - Extract parameter values from the user's request or conversation context
-            - IMPORTANT: The "message" field must be a CONFIRMATION REQUEST that includes ALL the specific details (dates, times, names, locations, etc.) so the customer can verify before approving. Example: "I'll schedule a meeting titled 'Prep Talk' for today at 4pm in Office Room 16 with Yannis. Should I proceed?"
+            - Include EVERY parameter marked (REQUIRED)
+            - The "message" field must be a CONFIRMATION REQUEST with ALL specific details so the user can verify before approving
 
             Respond with JSON only:
         """)
@@ -1127,14 +1201,10 @@ Parameters:
             if role in ["user", "assistant"]:
                 messages.append({"role": role, "content": message})
 
-        # Add knowledge context if found
-        if context != "No specific business knowledge found in the database.":
-            messages.append({"role": "system", "content": f"KNOWLEDGE CONTEXT:\n{context}"})
-
-        # Add the customer's question
+        # Add the user's question
         messages.append({"role": "user", "content": prompt})
 
-        logging.info(f"[Customer Messages for Agent]: {len(messages)} messages, {len(customer_tools)} tools available")
+        logging.info(f"[Agent]: Processing with template {template_filename}, {len(customer_tools)} tools available")
 
         # Generate response
         loop = asyncio.get_running_loop()
@@ -1143,7 +1213,7 @@ Parameters:
             response = create_chat_completion(
                 messages=messages,
                 max_tokens=MODEL_MAX_TOKENS,
-                temperature=0.3  # Lower temperature for more consistent JSON
+                temperature=0.3
             )
             content = response['choices'][0]['message']['content']
             return content.strip()
@@ -1153,7 +1223,6 @@ Parameters:
         # Parse JSON response - find JSON anywhere in the response
         result_json = result_json.replace("```json", "").replace("```", "").strip()
 
-        # Find the first '{' in the response
         json_start = result_json.find('{')
         if json_start != -1:
             brace_count = 0
@@ -1171,17 +1240,28 @@ Parameters:
         try:
             decision = json.loads(result_json)
         except json.JSONDecodeError:
-            # Fallback: treat as plain text answer
             decision = {"action": "answer", "message": result_json}
 
         action = decision.get("action", "answer")
         customer_message = decision.get("message", "I'm here to help. Could you please rephrase your question?")
 
-        logging.info(f"[Customer Agent Decision]: action={action}")
+        logging.info(f"[Agent Decision]: action={action}")
+
+        # Load the HTML template file
+        html_content = ""
+        try:
+            template = env.get_template(template_filename)
+            html_content = template.render()
+        except Exception as e:
+            logging.warning(f"Failed to load template {template_filename}: {e}")
+            try:
+                template = env.get_template("index.html")
+                html_content = template.render()
+            except Exception as e2:
+                logging.error(f"Failed to load fallback template: {e2}")
 
         if action == "answer" or action == "clarify":
-            # Simply respond to customer
-            logging.info(f"[Agent to Customer]: {customer_message}")
+            logging.info(f"[Agent to User]: {customer_message}")
 
             await store_message(customer_user_id, "user", prompt)
             await store_message(customer_user_id, "assistant", customer_message)
@@ -1189,26 +1269,20 @@ Parameters:
             await send_cell_response(
                 cell,
                 transmitter.get("transmitter_id"),
-                {"json": customer_message},
+                {"json": customer_message, "html": html_content},
                 data.get("public_key", "")
             )
 
         elif action == "tool":
-            # Execute customer tool
             tool_name = decision.get("tool_name", "")
             parameters = decision.get("parameters", {})
 
-            logging.info(f"[Customer Tool Execution]: {tool_name} with params {parameters}")
+            logging.info(f"[Tool Execution]: {tool_name} with params {parameters}")
 
-            # Verify tool is customer-accessible
             tool_info = next((t for t in customer_tools if t["name"] == tool_name), None)
             if not tool_info:
-                # Tool not available - escalate instead
-                logging.warning(f"Customer attempted to use non-accessible tool: {tool_name}")
-                customer_message = "I apologize, but I'm unable to perform that action directly. Let me forward your request to our team."
-
-                # Escalate to queue
-                await add_customer_request_to_queue(customer_id, prompt, "Tool not available for customers")
+                logging.warning(f"User attempted to use non-accessible tool: {tool_name}")
+                customer_message = "No tool is currently installed to handle this action."
 
                 await store_message(customer_user_id, "user", prompt)
                 await store_message(customer_user_id, "assistant", customer_message)
@@ -1216,15 +1290,14 @@ Parameters:
                 await send_cell_response(
                     cell,
                     transmitter.get("transmitter_id"),
-                    {"json": customer_message},
+                    {"json": customer_message, "html": html_content},
                     data.get("public_key", "")
                 )
                 return
 
-            # Store as pending action for customer approval
             action_id = await store_action_entry(
                 subject=prompt[:100],
-                context=f"Customer {customer_id} tool suggestion",
+                context=f"User {customer_id} tool suggestion",
                 original_data=json.dumps({"prompt": prompt, "customer_id": customer_id, "customer_user_id": customer_user_id}),
                 tool_name=tool_name,
                 parameter=json.dumps(parameters),
@@ -1236,45 +1309,26 @@ Parameters:
             await store_message(customer_user_id, "user", prompt)
             await store_message(customer_user_id, "assistant", customer_message)
 
-            # Send response with action_id for frontend to render approve button
             await send_cell_response(
                 cell,
                 transmitter.get("transmitter_id"),
-                {"json": customer_message, "action_id": action_id},
-                data.get("public_key", "")
-            )
-
-        elif action == "escalate":
-            # Forward request to queue for employee handling
-            reason = decision.get("reason", "Requires human assistance")
-            logging.info(f"[Customer Escalation]: {reason}")
-
-            await add_customer_request_to_queue(customer_id, prompt, reason)
-
-            await store_message(customer_user_id, "user", prompt)
-            await store_message(customer_user_id, "assistant", customer_message)
-
-            await send_cell_response(
-                cell,
-                transmitter.get("transmitter_id"),
-                {"json": customer_message},
+                {"json": customer_message, "html": html_content, "action_id": action_id},
                 data.get("public_key", "")
             )
 
         else:
-            # Unknown action - treat as answer
             await store_message(customer_user_id, "user", prompt)
             await store_message(customer_user_id, "assistant", customer_message)
 
             await send_cell_response(
                 cell,
                 transmitter.get("transmitter_id"),
-                {"json": customer_message},
+                {"json": customer_message, "html": html_content},
                 data.get("public_key", "")
             )
 
     except Exception as e:
-        logging.error(f"Error handling customer prompt: {e}")
+        logging.error(f"Error handling prompt: {e}")
         import traceback
         logging.error(traceback.format_exc())
 
@@ -1284,30 +1338,6 @@ Parameters:
             {"json": "I apologize, but I'm having trouble processing your request. Please try again."},
             data.get("public_key", "")
         )
-
-
-async def add_customer_request_to_queue(customer_id: str, prompt: str, reason: str):
-    """Add a customer request to the queue for employee handling"""
-    import uuid
-
-    queue_dir = "./queue"
-    os.makedirs(queue_dir, exist_ok=True)
-
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    unique_id = str(uuid.uuid4())[:8]
-    filename = f"customer_{timestamp}_{unique_id}.json"
-    file_path = os.path.join(queue_dir, filename)
-
-    queue_data = {
-        "prompt": f"[Customer Request from {customer_id}]\n\nOriginal request: {prompt}\n\nEscalation reason: {reason}",
-        "cell_id": customer_id,
-        "source": "customer_escalation"
-    }
-
-    with open(file_path, 'w') as f:
-        json.dump(queue_data, f)
-
-    logging.info(f"Customer request escalated to queue: {filename}")
 
 
 async def handle_get_tools(cell, transmitter: dict):
@@ -1521,7 +1551,7 @@ def is_authorized_internal_cell(operator: str, server_host: str) -> bool:
     Authorization is based on the server's cell_id (host):
     - If server is 'neuronum.net::cell', authorized operators are:
       - 'neuronum.net::cell' (the business cell itself)
-      - '*@neuronum.net::cell' (employees with emails from that domain)
+      - '*@neuronum.net::cell' (employees with cells from that domain)
 
     Args:
         operator: The cell_id of the request sender
@@ -1562,7 +1592,7 @@ CUSTOMER_ALLOWED_HANDLERS = {
     "approve",
     "decline",
     "get_agent_status",
-    "get_icebreaker"
+    "get_index"
 }
 
 
@@ -1591,13 +1621,12 @@ async def route_message(cell, transmitter: dict):
             return
 
         handlers = {
-            "update_icebreaker": lambda: handle_update_icebreaker(cell, transmitter),
-            "get_icebreaker": lambda: handle_get_icebreaker(cell, transmitter),
-            "upload_knowledge": lambda: handle_upload_knowledge(cell, transmitter),
+            "update_index": lambda: handle_update_index(cell, transmitter),
+            "get_index": lambda: handle_get_index(cell, transmitter),
             "get_agent_status": lambda: handle_get_status(cell, transmitter),
-            "update_knowledge": lambda: handle_update_knowledge(cell, transmitter),
-            "delete_knowledge": lambda: handle_delete_knowledge(cell, transmitter),
-            "get_knowledge": lambda: handle_get_knowledge(cell, transmitter),
+            "update_sitemap": lambda: handle_update_sitemap(cell, transmitter),
+            "delete_sitemap": lambda: handle_delete_sitemap(cell, transmitter),
+            "get_sitemap": lambda: handle_get_sitemap(cell, transmitter),
             "get_actions": lambda: handle_get_actions(cell, transmitter),
             "prompt": lambda: handle_prompt(cell, transmitter),
             "approve": lambda: handle_approve(cell, transmitter),
@@ -1633,6 +1662,9 @@ async def server_main():
 
         logging.info("Initializing database...")
         await initialize_database()
+
+        logging.info("Indexing templates...")
+        await index_templates()
 
         await install_tool_requirements()
 
